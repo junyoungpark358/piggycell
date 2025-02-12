@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "piggycell_backend": {
+      "main": "src/piggycell_backend/main.mo",
+      "type": "motoko"
+    },
+    "piggycell_frontend": {
+      "dependencies": [
+        "piggycell_backend"
+      ],
+      "source": [
+        "src/piggycell_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "piggycell_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
