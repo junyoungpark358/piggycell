@@ -1,28 +1,47 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
+import { useState, useEffect } from "react";
+import { piggycell_backend } from "../../declarations/piggycell_backend";
 import "./App.css";
 
 function App(): JSX.Element {
-  const [count, setCount] = useState<number>(0);
+  const [nftId, setNftId] = useState<string>("");
+  const [totalSupply, setTotalSupply] = useState<bigint>(BigInt(0));
+  const [nftOwner, setNftOwner] = useState<string>("");
+
+  useEffect(() => {
+    // NFT 총 발행량 조회
+    piggycell_backend.icrc7_supply().then((supply) => {
+      setTotalSupply(supply);
+    });
+  }, []);
+
+  const handleSearch = async () => {
+    if (!nftId) return;
+
+    try {
+      const owner = await piggycell_backend.icrc7_owner_of(BigInt(nftId));
+      setNftOwner(owner ? JSON.stringify(owner) : "소유자 없음");
+    } catch (error) {
+      setNftOwner("조회 실패");
+    }
+  };
 
   return (
-    <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
+    <main>
+      <h1>PiggyCell NFT</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+        <p>총 발행량: {totalSupply.toString()}</p>
+        <div>
+          <input
+            type="text"
+            value={nftId}
+            onChange={(e) => setNftId(e.target.value)}
+            placeholder="NFT ID를 입력하세요"
+          />
+          <button onClick={handleSearch}>조회</button>
+        </div>
+        {nftOwner && <p>소유자: {nftOwner}</p>}
       </div>
-    </div>
+    </main>
   );
 }
 
