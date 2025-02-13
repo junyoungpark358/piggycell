@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,7 +8,7 @@ import {
   Link,
   Outlet,
 } from "react-router-dom";
-import { Layout, Menu } from "antd";
+import { Layout, Menu, Button } from "antd";
 import type { MenuProps } from "antd";
 import {
   HomeOutlined,
@@ -27,6 +27,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminNFTManagement from "./pages/admin/NFTManagement";
 import AdminRevenue from "./pages/admin/Revenue";
 import "./App.css";
+import { AuthManager } from "./utils/auth";
 
 const { Header, Content, Footer } = Layout;
 
@@ -39,8 +40,31 @@ type MenuItem = {
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
-  // 개발을 위해 임시로 항상 관리자 모드로 설정
-  const isAdmin = true;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const authManager = AuthManager.getInstance();
+      await authManager.init();
+      const authenticated = await authManager.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setIsLoading(false);
+      setIsAdmin(true);
+    };
+    initAuth();
+  }, []);
+
+  const handleLogin = async () => {
+    const authManager = AuthManager.getInstance();
+    await authManager.login();
+  };
+
+  const handleLogout = async () => {
+    const authManager = AuthManager.getInstance();
+    await authManager.logout();
+  };
 
   const userMenuItems: MenuItem[] = [
     { key: "/", label: "PiggyCell", icon: null, path: "/" },
@@ -85,27 +109,36 @@ const MainLayout: React.FC = () => {
     },
   ];
 
-  const items: MenuProps["items"] = isAdmin
-    ? [
-        ...userMenuItems.map((item) => ({
-          key: item.key,
-          label: <Link to={item.path}>{item.label}</Link>,
-          icon: item.icon,
-          className: item.key === "/" ? "logo-menu-item" : "",
-        })),
-        { type: "divider" },
-        ...adminMenuItems.map((item) => ({
-          key: item.key,
-          label: <Link to={item.path}>{item.label}</Link>,
-          icon: item.icon,
-        })),
-      ]
-    : userMenuItems.map((item) => ({
-        key: item.key,
-        label: <Link to={item.path}>{item.label}</Link>,
-        icon: item.icon,
-        className: item.key === "/" ? "logo-menu-item" : "",
-      }));
+  const items: MenuProps["items"] = [
+    ...userMenuItems.map((item) => ({
+      key: item.key,
+      label: <Link to={item.path}>{item.label}</Link>,
+      icon: item.icon,
+      className: item.key === "/" ? "logo-menu-item" : "",
+    })),
+    {
+      key: "auth",
+      label: isAuthenticated ? (
+        <Button onClick={handleLogout}>로그아웃</Button>
+      ) : (
+        <Button onClick={handleLogin}>로그인</Button>
+      ),
+    },
+    ...(isAuthenticated && isAdmin
+      ? [
+          { type: "divider" as const },
+          ...adminMenuItems.map((item) => ({
+            key: item.key,
+            label: <Link to={item.path}>{item.label}</Link>,
+            icon: item.icon,
+          })),
+        ]
+      : []),
+  ];
+
+  if (isLoading) {
+    return <div>로딩 중...</div>;
+  }
 
   return (
     <Layout>

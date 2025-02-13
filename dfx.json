@@ -5,14 +5,20 @@
       "type": "motoko"
     },
     "piggycell_frontend": {
-      "dependencies": [
-        "piggycell_backend"
-      ],
-      "source": [
-        "src/piggycell_frontend/dist"
-      ],
+      "dependencies": ["piggycell_backend"],
+      "source": ["src/piggycell_frontend/dist"],
       "type": "assets",
       "workspace": "piggycell_frontend"
+    },
+    "internet_identity": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      }
     }
   },
   "defaults": {
