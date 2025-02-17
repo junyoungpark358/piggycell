@@ -116,14 +116,6 @@ const MainLayout: React.FC = () => {
       icon: item.icon,
       className: item.key === "/" ? "logo-menu-item" : "",
     })),
-    {
-      key: "auth",
-      label: isAuthenticated ? (
-        <Button onClick={handleLogout}>로그아웃</Button>
-      ) : (
-        <Button onClick={handleLogin}>로그인</Button>
-      ),
-    },
     ...(isAuthenticated && isAdmin
       ? [
           { type: "divider" as const },
@@ -134,6 +126,14 @@ const MainLayout: React.FC = () => {
           })),
         ]
       : []),
+    {
+      key: "auth",
+      label: isAuthenticated ? (
+        <Button onClick={handleLogout}>로그아웃</Button>
+      ) : (
+        <Button onClick={handleLogin}>로그인</Button>
+      ),
+    },
   ];
 
   if (isLoading) {
