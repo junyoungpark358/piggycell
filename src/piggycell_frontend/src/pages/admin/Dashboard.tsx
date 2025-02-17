@@ -12,7 +12,7 @@ const AdminDashboard = () => {
     {
       key: "1",
       type: "NFT 판매",
-      nftId: "충전기 #1",
+      nftId: "충전 허브 #1",
       user: "0x1234...5678",
       amount: 100,
       date: "2024-02-12",
@@ -20,7 +20,7 @@ const AdminDashboard = () => {
     {
       key: "2",
       type: "스테이킹 보상",
-      nftId: "충전기 #2",
+      nftId: "충전 허브 #2",
       user: "0x8765...4321",
       amount: 5.5,
       date: "2024-02-12",

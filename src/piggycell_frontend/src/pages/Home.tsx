@@ -13,7 +13,7 @@ const Home = () => {
           PiggyCell에 오신 것을 환영합니다
         </h1>
         <p className="text-gray-600">
-          충전기 NFT를 통해 안정적인 수익을 창출하세요
+          충전 허브 NFT를 통해 안정적인 수익을 창출하세요
         </p>
       </div>
 
@@ -61,7 +61,7 @@ const Home = () => {
               styles={{ header: { borderBottom: 0 } }}
             >
               <p className="text-gray-600">
-                마켓에서 원하는 충전기 NFT를 구매하세요.
+                마켓에서 원하는 충전 허브 NFT를 구매하세요.
               </p>
             </Card>
           </Col>

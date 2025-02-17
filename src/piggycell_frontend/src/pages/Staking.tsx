@@ -11,24 +11,27 @@ const Staking = () => {
   const stakingNFTs = [
     {
       id: 1,
-      name: "충전기 #1",
+      name: "충전 허브 #1",
       stakedAt: "2024-02-01",
       earnings: 25.5,
       status: "staking",
+      chargerCount: 8,
     },
     {
       id: 2,
-      name: "충전기 #2",
+      name: "충전 허브 #2",
       stakedAt: "2024-02-05",
       earnings: 18.2,
       status: "staking",
+      chargerCount: 6,
     },
     {
       id: 3,
-      name: "충전기 #3",
+      name: "충전 허브 #3",
       stakedAt: "2024-02-10",
       earnings: 10.8,
       status: "unstaked",
+      chargerCount: 4,
     },
   ];
 
@@ -93,6 +96,10 @@ const Staking = () => {
                   <FieldTimeOutlined className="mr-1 text-[#38bdf8]" />
                   {nft.stakedAt}
                 </div>
+              </div>
+              <div className="nft-info">
+                <div className="label">충전기 수</div>
+                <div className="value">{nft.chargerCount}대</div>
               </div>
               <div className="nft-info">
                 <div className="label">현재 수익</div>

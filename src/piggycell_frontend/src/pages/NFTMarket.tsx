@@ -10,24 +10,27 @@ const NFTMarket = () => {
   const nfts = [
     {
       id: 1,
-      name: "충전기 #1",
+      name: "충전 허브 #1",
       location: "서울시 강남구",
       price: 100,
       status: "available",
+      chargerCount: 8,
     },
     {
       id: 2,
-      name: "충전기 #2",
+      name: "충전 허브 #2",
       location: "서울시 서초구",
       price: 150,
       status: "available",
+      chargerCount: 6,
     },
     {
       id: 3,
-      name: "충전기 #3",
+      name: "충전 허브 #3",
       location: "서울시 송파구",
       price: 120,
       status: "sold",
+      chargerCount: 4,
     },
   ];
 
@@ -36,7 +39,7 @@ const NFTMarket = () => {
       <h1>NFT 마켓</h1>
       <div className="search-box mx-auto mb-8">
         <Input
-          placeholder="충전기 검색..."
+          placeholder="충전 허브 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
           className="w-full"
         />
@@ -66,6 +69,10 @@ const NFTMarket = () => {
                   />
                   {nft.location}
                 </div>
+              </div>
+              <div className="nft-info">
+                <div className="label">충전기 수</div>
+                <div className="value">{nft.chargerCount}대</div>
               </div>
               <div className="nft-info">
                 <div className="label">가격</div>

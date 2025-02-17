@@ -12,15 +12,15 @@ import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import TrieMap "mo:base/TrieMap";
-import ChargerNFT "./ChargerNFT";
+import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
 
 actor Main {
-    private let nft = ChargerNFT.NFTCanister(Principal.fromText("2vxsx-fae"));  // dfx identity get-principal 으로 얻은 값으로 변경 필요
+    private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("2vxsx-fae"));  // dfx identity get-principal 으로 얻은 값으로 변경 필요
     private let adminManager = Admin.AdminManager();
 
     // ICRC-7 표준 메소드
-    public query func icrc7_collection_metadata() : async [(Text, ChargerNFT.Metadata)] {
+    public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
         nft.icrc7_collection_metadata()
     };
 
@@ -28,19 +28,19 @@ actor Main {
         nft.icrc7_supply()
     };
 
-    public query func icrc7_owner_of(token_id: Nat) : async ?ChargerNFT.Account {
+    public query func icrc7_owner_of(token_id: Nat) : async ?ChargerHubNFT.Account {
         nft.icrc7_owner_of(token_id)
     };
 
-    public query func icrc7_balance_of(account: ChargerNFT.Account) : async Nat {
+    public query func icrc7_balance_of(account: ChargerHubNFT.Account) : async Nat {
         nft.icrc7_balance_of(account)
     };
 
-    public query func icrc7_tokens_of(account: ChargerNFT.Account) : async [Nat] {
+    public query func icrc7_tokens_of(account: ChargerHubNFT.Account) : async [Nat] {
         nft.icrc7_tokens_of(account)
     };
 
-    public query func icrc7_metadata(token_id: Nat) : async ?[(Text, ChargerNFT.Metadata)] {
+    public query func icrc7_metadata(token_id: Nat) : async ?[(Text, ChargerHubNFT.Metadata)] {
         nft.icrc7_metadata(token_id)
     };
 
@@ -84,14 +84,14 @@ actor Main {
     };
 
     // 관리자 기능
-    public shared({ caller }) func mint(args: ChargerNFT.MintArgs) : async Result.Result<Nat, Text> {
+    public shared({ caller }) func mint(args: ChargerHubNFT.MintArgs) : async Result.Result<Nat, Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 NFT를 발행할 수 있습니다.");
         };
         nft.mint(caller, args)
     };
 
-    public shared({ caller }) func updateMetadata(token_id: Nat, new_metadata: [(Text, ChargerNFT.Metadata)]) : async Result.Result<(), Text> {
+    public shared({ caller }) func updateMetadata(token_id: Nat, new_metadata: [(Text, ChargerHubNFT.Metadata)]) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 메타데이터를 수정할 수 있습니다.");
         };
@@ -100,13 +100,13 @@ actor Main {
 
     public shared({ caller }) func updateChargerHubStatus(token_id: Nat, status: Text) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
-            return #err("관리자만 충전기 상태를 수정할 수 있습니다.");
+            return #err("관리자만 충전 허브 상태를 수정할 수 있습니다.");
         };
         nft.updateChargerHubStatus(caller, token_id, status)
     };
 
     // 전송 기능
-    public shared({ caller }) func icrc7_transfer(args: ChargerNFT.TransferArgs) : async Result.Result<(), Text> {
+    public shared({ caller }) func icrc7_transfer(args: ChargerHubNFT.TransferArgs) : async Result.Result<(), Text> {
         nft.icrc7_transfer(caller, args)
     };
 };

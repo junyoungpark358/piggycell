@@ -31,11 +31,8 @@ module {
 
     // 충전기 허브 메타데이터
     public type ChargerHubMetadata = {
-        name: Text;
         location: Text;
-        chargingSpeed: Nat;
-        connectedChargers: Nat;
-        lastMaintenanceDate: Int;
+        chargerCount: Nat;
         status: Text;
     };
 

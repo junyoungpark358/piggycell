@@ -11,27 +11,30 @@ const Revenue = () => {
   const revenueData = [
     {
       id: 1,
-      name: "충전기 #1",
+      name: "충전 허브 #1",
       dailyRevenue: 2.5,
       weeklyRevenue: 17.5,
       monthlyRevenue: 75.0,
       status: "active",
+      chargerCount: 8,
     },
     {
       id: 2,
-      name: "충전기 #2",
+      name: "충전 허브 #2",
       dailyRevenue: 3.0,
       weeklyRevenue: 21.0,
       monthlyRevenue: 90.0,
       status: "active",
+      chargerCount: 6,
     },
     {
       id: 3,
-      name: "충전기 #3",
+      name: "충전 허브 #3",
       dailyRevenue: 0,
       weeklyRevenue: 8.4,
       monthlyRevenue: 36.0,
       status: "inactive",
+      chargerCount: 4,
     },
   ];
 
@@ -105,6 +108,10 @@ const Revenue = () => {
             >
               <div className="nft-status available">
                 {item.status === "active" ? "운영중" : "운영중지"}
+              </div>
+              <div className="nft-info">
+                <div className="label">충전기 수</div>
+                <div className="value">{item.chargerCount}대</div>
               </div>
               <div className="nft-info">
                 <div className="label">일일 수익</div>
