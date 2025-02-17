@@ -8,12 +8,25 @@ import {
   Card,
   DatePicker,
   Select,
+  Row,
+  Col,
+  Statistic,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SearchOutlined,
+  ShoppingCartOutlined,
+  ThunderboltOutlined,
+  BarChartOutlined,
+  DollarOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
 import { AuthManager } from "../../utils/auth";
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
+import "./NFTManagement.css";
 
 // TODO: canister IDL 파일 경로 수정 필요
 // import { idlFactory } from "../../declarations/piggycell_backend/piggycell_backend.did.js";
@@ -31,22 +44,41 @@ const NFTManagement = () => {
   // 임시 NFT 데이터
   const nfts = [
     {
-      key: "1",
-      id: "충전 허브 #1",
-      location: "서울시 강남구",
-      status: "임대 가능",
+      id: 1,
+      name: "강남 충전 허브 #1",
+      location: "서울시 강남구 역삼동",
+      price: 100,
+      status: "available",
       chargerCount: 8,
-      owner: "미할당",
+      createdAt: "2024-03-15",
     },
     {
-      key: "2",
-      id: "충전 허브 #2",
-      location: "서울시 서초구",
-      status: "임대중",
+      id: 2,
+      name: "서초 충전 허브 #1",
+      location: "서울시 서초구 서초동",
+      price: 150,
+      status: "available",
       chargerCount: 6,
-      owner: "0x1234...5678",
+      createdAt: "2024-03-15",
+    },
+    {
+      id: 3,
+      name: "송파 충전 허브 #1",
+      location: "서울시 송파구 잠실동",
+      price: 120,
+      status: "sold",
+      chargerCount: 4,
+      createdAt: "2024-03-14",
     },
   ];
+
+  // 전체 통계 계산
+  const totalStats = {
+    totalNFTs: nfts.length,
+    availableNFTs: nfts.filter((nft) => nft.status === "available").length,
+    totalChargers: nfts.reduce((sum, nft) => sum + nft.chargerCount, 0),
+    totalValue: nfts.reduce((sum, nft) => sum + nft.price, 0),
+  };
 
   const columns = [
     {
@@ -140,12 +172,64 @@ const NFTManagement = () => {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">충전 허브 NFT 관리</h1>
+    <div className="nft-management">
+      <div className="page-header">
+        <h1>NFT 관리</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNFT}>
-          충전 허브 추가
+          새 NFT 생성
         </Button>
+      </div>
+
+      {/* 전체 통계 */}
+      <Row gutter={[16, 16]} className="stats-row">
+        <Col xs={12} sm={6} md={6}>
+          <Card className="stat-card">
+            <Statistic
+              title="전체 NFT"
+              value={totalStats.totalNFTs}
+              suffix="개"
+              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card className="stat-card">
+            <Statistic
+              title="판매중인 NFT"
+              value={totalStats.availableNFTs}
+              suffix="개"
+              prefix={<BarChartOutlined style={{ color: "#0284c7" }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card className="stat-card">
+            <Statistic
+              title="총 충전기"
+              value={totalStats.totalChargers}
+              suffix="대"
+              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card className="stat-card">
+            <Statistic
+              title="총 가치"
+              value={totalStats.totalValue}
+              suffix="ICP"
+              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <div className="search-box">
+        <Input
+          placeholder="NFT 검색..."
+          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          size="middle"
+        />
       </div>
 
       <Card>

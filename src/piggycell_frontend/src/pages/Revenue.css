@@ -1,0 +1,186 @@
+.revenue-page {
+  padding: 16px;
+}
+
+.revenue-page h1 {
+  font-size: 20px;
+  margin: 0;
+  margin-bottom: 24px;
+}
+
+.stats-row {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-card .ant-card-body {
+  padding: 16px;
+}
+
+.stat-card .ant-statistic-title {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stat-card .ant-statistic-content {
+  font-size: 20px;
+  color: #333;
+}
+
+.search-box {
+  margin: 24px 0;
+  max-width: 300px;
+}
+
+.search-box .ant-input-affix-wrapper {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: 40px;
+}
+
+.search-box .ant-input {
+  font-size: 14px;
+}
+
+.search-box .ant-input-prefix {
+  margin-right: 8px;
+}
+
+.revenue-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.revenue-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.revenue-card .ant-card-head {
+  padding: 12px 16px;
+  min-height: auto;
+  border-bottom: none;
+}
+
+.revenue-card .ant-card-head-title {
+  font-size: 14px;
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revenue-card .ant-card-body {
+  padding: 12px 16px 16px;
+}
+
+.revenue-card .ant-card-cover {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(56, 189, 248, 0.1);
+}
+
+.revenue-status {
+  font-size: 12px;
+  color: #0284c7;
+  margin-bottom: 8px;
+}
+
+.revenue-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.revenue-info .label {
+  color: #666;
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.revenue-info .value {
+  color: #333;
+  font-weight: 500;
+  text-align: right;
+}
+
+.revenue-card .ant-btn {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 12px;
+  height: 32px;
+  padding: 0 16px;
+}
+
+@media (max-width: 576px) {
+  .revenue-page {
+    padding: 12px;
+  }
+
+  .revenue-page h1 {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .revenue-card .ant-card-head-title {
+    font-size: 13px;
+  }
+
+  .revenue-info {
+    font-size: 11px;
+  }
+
+  .stat-card .ant-statistic-title {
+    font-size: 12px;
+  }
+
+  .stat-card .ant-statistic-content {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .ant-row {
+    margin: -8px !important;
+  }
+
+  .ant-col {
+    padding: 8px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-row {
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    margin: 16px 0;
+  }
+
+  .ant-row {
+    margin: -4px !important;
+  }
+
+  .ant-col {
+    padding: 4px !important;
+  }
+}

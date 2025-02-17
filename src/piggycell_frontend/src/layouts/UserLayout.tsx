@@ -1,50 +1,196 @@
-import { Layout, Menu } from "antd";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Layout, Menu, Button, Drawer } from "antd";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   HomeOutlined,
   ShoppingCartOutlined,
   BankOutlined,
   BarChartOutlined,
+  MenuUnfoldOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+  FundOutlined,
 } from "@ant-design/icons";
+import { AuthManager } from "../utils/auth";
+import "./UserLayout.css";
 
 const { Header, Content, Footer } = Layout;
 
+const MOBILE_BREAKPOINT = 768;
+
 const UserLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth <= MOBILE_BREAKPOINT
+  );
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const menuItems = [
-    { key: "/", label: <Link to="/">홈</Link>, icon: <HomeOutlined /> },
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const authManager = AuthManager.getInstance();
+      await authManager.init();
+      const authenticated = await authManager.isAuthenticated();
+      setIsAuthenticated(authenticated);
+      setIsAdmin(true); // 임시로 관리자 권한 설정
+    };
+    initAuth();
+  }, []);
+
+  const handleLogin = async () => {
+    const authManager = AuthManager.getInstance();
+    await authManager.login();
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = async () => {
+    const authManager = AuthManager.getInstance();
+    await authManager.logout();
+    setIsAuthenticated(false);
+  };
+
+  const userMenuItems = [
+    {
+      key: "/",
+      label: "홈",
+      icon: <HomeOutlined />,
+    },
     {
       key: "/market",
-      label: <Link to="/market">NFT 마켓</Link>,
+      label: "NFT 마켓",
       icon: <ShoppingCartOutlined />,
     },
     {
       key: "/staking",
-      label: <Link to="/staking">스테이킹</Link>,
+      label: "스테이킹",
       icon: <BankOutlined />,
     },
     {
       key: "/revenue",
-      label: <Link to="/revenue">수익 현황</Link>,
+      label: "수익 현황",
       icon: <BarChartOutlined />,
     },
   ];
 
+  const adminMenuItems = [
+    {
+      key: "/admin",
+      label: "관리자",
+      icon: <DashboardOutlined />,
+    },
+    {
+      key: "/admin/nft-management",
+      label: "NFT 관리",
+      icon: <SettingOutlined />,
+    },
+    {
+      key: "/admin/revenue",
+      label: "수익 관리",
+      icon: <FundOutlined />,
+    },
+  ];
+
+  const allMenuItems = [
+    ...userMenuItems,
+    ...(isAuthenticated && isAdmin ? adminMenuItems : []),
+  ];
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    navigate(key);
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  };
+
   return (
     <Layout className="min-h-screen">
-      <Header className="bg-white">
-        <div className="flex items-center justify-between">
-          <div className="text-2xl font-bold">PiggyCell</div>
-          <Menu
-            mode="horizontal"
-            selectedKeys={[location.pathname]}
-            items={menuItems}
-            className="flex-1 justify-end"
-          />
+      <Header className="header-custom">
+        <div className="header-content">
+          {isMobile ? (
+            <>
+              <Button
+                type="text"
+                icon={<MenuUnfoldOutlined className="text-xl" />}
+                onClick={() => setMobileMenuOpen(true)}
+                className="mobile-menu-button"
+              />
+              <Link to="/" className="logo-link">
+                PiggyCell
+              </Link>
+              <div className="auth-button">
+                {isAuthenticated ? (
+                  <Button onClick={handleLogout}>로그아웃</Button>
+                ) : (
+                  <Button type="primary" onClick={handleLogin}>
+                    로그인
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <Link to="/" className="logo-link">
+                PiggyCell
+              </Link>
+              <div className="menu-container">
+                <Menu
+                  mode="horizontal"
+                  selectedKeys={[location.pathname]}
+                  items={allMenuItems}
+                  onClick={handleMenuClick}
+                  className="desktop-menu"
+                />
+              </div>
+              <div className="auth-button">
+                {isAuthenticated ? (
+                  <Button onClick={handleLogout}>로그아웃</Button>
+                ) : (
+                  <Button type="primary" onClick={handleLogin}>
+                    로그인
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </Header>
-      <Content className="p-6">
+
+      {isMobile && (
+        <Drawer
+          title={<div className="text-xl font-bold">PiggyCell 메뉴</div>}
+          placement="left"
+          onClose={() => setMobileMenuOpen(false)}
+          open={mobileMenuOpen}
+          width={280}
+          bodyStyle={{ padding: 0 }}
+          headerStyle={{
+            borderBottom: "1px solid #f0f0f0",
+            padding: "16px 24px",
+          }}
+          maskStyle={{ backgroundColor: "rgba(0, 0, 0, 0.45)" }}
+        >
+          <Menu
+            mode="vertical"
+            selectedKeys={[location.pathname]}
+            items={allMenuItems}
+            onClick={handleMenuClick}
+            className="mobile-menu"
+          />
+        </Drawer>
+      )}
+
+      <Content className="content-custom">
         <div className="bg-white p-6 rounded-lg min-h-[80vh]">
           <Outlet />
         </div>

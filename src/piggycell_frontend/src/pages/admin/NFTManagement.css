@@ -1,0 +1,114 @@
+.nft-management {
+  padding: 16px;
+}
+
+.nft-management h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.stats-row {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-card .ant-card-body {
+  padding: 16px;
+}
+
+.stat-card .ant-statistic-title {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stat-card .ant-statistic-content {
+  font-size: 20px;
+  color: #333;
+}
+
+.search-box {
+  margin: 24px 0;
+  max-width: 300px;
+}
+
+.search-box .ant-input-affix-wrapper {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: 40px;
+}
+
+.search-box .ant-input {
+  font-size: 14px;
+}
+
+.search-box .ant-input-prefix {
+  margin-right: 8px;
+}
+
+@media (max-width: 576px) {
+  .nft-management {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .nft-management h1 {
+    font-size: 18px;
+  }
+
+  .stat-card .ant-statistic-title {
+    font-size: 12px;
+  }
+
+  .stat-card .ant-statistic-content {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .ant-row {
+    margin: -8px !important;
+  }
+
+  .ant-col {
+    padding: 8px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-row {
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    margin: 16px 0;
+  }
+
+  .ant-row {
+    margin: -4px !important;
+  }
+
+  .ant-col {
+    padding: 4px !important;
+  }
+}
