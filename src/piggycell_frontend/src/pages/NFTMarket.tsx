@@ -46,6 +46,7 @@ const NFTMarket = () => {
   const [hasMore, setHasMore] = useState(true);
   const [nextStart, setNextStart] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [buyingNFT, setBuyingNFT] = useState<bigint | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
   const lastNFTElementRef = useCallback(
     (node: HTMLDivElement) => {
@@ -226,43 +227,40 @@ const NFTMarket = () => {
     fetchInitialNFTs();
   }, []);
 
+  const getErrorMessage = (error: any) => {
+    if (typeof error === "object" && error !== null) {
+      if ("NotOwner" in error) return "판매자가 아닙니다.";
+      if ("AlreadyListed" in error) return "이미 판매 중인 NFT입니다.";
+      if ("NotListed" in error) return "판매 중이 아닌 NFT입니다.";
+      if ("InvalidPrice" in error) return "유효하지 않은 가격입니다.";
+      if ("InsufficientBalance" in error) return "잔액이 부족합니다.";
+      if ("TransferError" in error) return "NFT 전송 중 오류가 발생했습니다.";
+    }
+    return "알 수 없는 오류가 발생했습니다.";
+  };
+
   const handleBuyNFT = async (nftId: bigint) => {
     try {
-      const authManager = AuthManager.getInstance();
-      const identity = await authManager.getIdentity();
-
-      if (!identity) {
-        throw new Error("인증되지 않은 사용자입니다.");
-      }
-
-      const agent = new HttpAgent({ identity });
-
-      if (process.env.NODE_ENV !== "production") {
-        await agent.fetchRootKey();
-      }
-
-      const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
-      if (!canisterId) {
-        throw new Error("Canister ID를 찾을 수 없습니다.");
-      }
-
-      const actor = Actor.createActor<_SERVICE>(idlFactory, {
-        agent,
-        canisterId,
-      });
+      setBuyingNFT(nftId);
+      const actor = await createActor();
 
       const result = await actor.buyNFT(nftId);
 
       if ("ok" in result) {
         message.success("NFT 구매가 완료되었습니다.");
-        // 목록 새로고침
-        window.location.reload();
+        setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
+        setTotalStats((prev) => ({
+          ...prev,
+          availableNFTs: prev.availableNFTs - 1,
+        }));
       } else {
-        message.error(`NFT 구매 실패: ${result.err}`);
+        message.error(`NFT 구매 실패: ${getErrorMessage(result.err)}`);
       }
     } catch (error) {
       console.error("NFT 구매 실패:", error);
       message.error("NFT 구매 중 오류가 발생했습니다.");
+    } finally {
+      setBuyingNFT(null);
     }
   };
 
@@ -311,7 +309,7 @@ const NFTMarket = () => {
             <Statistic
               title="충전 허브 총 가치"
               value={totalStats.totalValue}
-              suffix="ICP"
+              suffix="PGC"
               prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
               loading={loading}
             />
@@ -355,7 +353,7 @@ const NFTMarket = () => {
                   <p className="flex items-center mb-2 text-gray-600">
                     <DollarOutlined className="mr-3 text-sky-600" />
                     <span className="mr-2 font-medium">가격:</span>{" "}
-                    {nft.price.toString()} ICP
+                    {nft.price.toString()} PGC
                   </p>
                   <p className="flex items-center text-gray-600">
                     <ThunderboltOutlined className="mr-3 text-sky-600" />
@@ -366,11 +364,16 @@ const NFTMarket = () => {
                 <Button
                   type="primary"
                   onClick={() => handleBuyNFT(nft.id)}
+                  loading={buyingNFT === nft.id}
                   className={nft.status === "sold" ? "sold-button" : ""}
-                  disabled={nft.status === "sold"}
+                  disabled={nft.status === "sold" || buyingNFT === nft.id}
                   block
                 >
-                  {nft.status === "sold" ? "판매 완료" : "구매하기"}
+                  {nft.status === "sold"
+                    ? "판매 완료"
+                    : buyingNFT === nft.id
+                    ? "구매 처리 중..."
+                    : "구매하기"}
                 </Button>
               </Card>
             </Col>

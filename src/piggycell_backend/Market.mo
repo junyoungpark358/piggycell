@@ -35,7 +35,7 @@ module {
         nextStart: ?Nat;
     };
 
-    public class MarketManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister) {
+    public class MarketManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal) {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         private let listingsByTime = Buffer.Buffer<(Int, Nat)>(0); // (timestamp, tokenId) 쌍을 저장하는 버퍼
@@ -74,7 +74,7 @@ module {
                         let (_, tid) = listingsByTime.get(i);
                         if (tid == tokenId) {
                             let _ = listingsByTime.remove(i);
-                            break l
+                            break l;
                         };
                         i += 1;
                     };
@@ -88,7 +88,6 @@ module {
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             switch (listings.get(tokenId)) {
                 case (?listing) {
-                    // NFT를 구매자에게 전송
                     let nftTransferArgs: ChargerHubNFT.TransferArgs = {
                         token_ids = [tokenId];
                         from_subaccount = null;
@@ -100,9 +99,20 @@ module {
                         created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
                     };
 
-                    switch(nft.icrc7_transfer(caller, nftTransferArgs)) {
+                    // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
+                    switch(nft.icrc7_transfer(marketCanister, nftTransferArgs)) {
                         case (#ok()) {
                             listings.delete(tokenId);
+                            // listingsByTime에서도 제거
+                            var i = 0;
+                            label l while (i < listingsByTime.size()) {
+                                let (_, tid) = listingsByTime.get(i);
+                                if (tid == tokenId) {
+                                    let _ = listingsByTime.remove(i);
+                                    break l;
+                                };
+                                i += 1;
+                            };
                             #ok(listing)
                         };
                         case (#err(_)) {

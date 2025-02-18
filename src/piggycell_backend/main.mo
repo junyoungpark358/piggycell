@@ -19,10 +19,10 @@ import Market "./Market";
 import Token "./Token";
 
 actor Main {
-    private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe"));
+    private let nft = ChargerHubNFT.NFTCanister(Principal.fromActor(Main));
     private let adminManager = Admin.AdminManager();
     private let token = Token.Token();
-    private let marketManager = Market.MarketManager(token, nft);
+    private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
 
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {

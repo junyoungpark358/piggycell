@@ -156,10 +156,7 @@ module {
         };
 
         public func mint(caller: Principal, args: MintArgs) : Result.Result<Nat, Text> {
-            if (caller != owner) {
-                return #err("Unauthorized: Only owner can mint");
-            };
-
+            // 민팅은 관리자만 가능 (관리자 체크는 main.mo에서 수행)
             switch (tokens.get(args.token_id)) {
                 case (?_) { return #err("Token ID already exists") };
                 case null {
@@ -175,7 +172,8 @@ module {
             for (token_id in args.token_ids.vals()) {
                 switch (tokens.get(token_id)) {
                     case (?current_owner) {
-                        if (current_owner.owner != caller) {
+                        // 마켓 캐니스터(owner)이거나 토큰 소유자만 전송 가능
+                        if (current_owner.owner != caller and caller != owner) {
                             return #err("Unauthorized: Not token owner");
                         };
                     };
@@ -230,10 +228,7 @@ module {
 
         // NFT 소유자 직접 변경 (관리자만 가능)
         public func updateOwner(caller: Principal, token_id: Nat, new_owner: Principal) : Result.Result<(), Text> {
-            if (caller != owner) {
-                return #err("Unauthorized: Only owner can update owner");
-            };
-
+            // 관리자 체크는 main.mo에서 수행하므로 여기서는 체크하지 않음
             switch (tokens.get(token_id)) {
                 case (?current_owner) {
                     tokens.put(token_id, { owner = new_owner; subaccount = null });
