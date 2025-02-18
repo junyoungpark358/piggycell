@@ -133,12 +133,20 @@ const UserLayout = () => {
             <>
               <Button
                 type="text"
-                icon={<MenuUnfoldOutlined className="text-xl" />}
+                icon={
+                  <MenuUnfoldOutlined
+                    style={{ fontSize: "24px", color: "#000000" }}
+                  />
+                }
                 onClick={() => setMobileMenuOpen(true)}
                 className="mobile-menu-button"
               />
               <Link to="/" className="logo-link">
-                PiggyCell
+                <img
+                  src="/piggycell_logo.png"
+                  alt="PiggyCell Logo"
+                  className="logo-image"
+                />
               </Link>
               <div className="auth-button">
                 {isAuthenticated ? (
@@ -153,7 +161,11 @@ const UserLayout = () => {
           ) : (
             <>
               <Link to="/" className="logo-link">
-                PiggyCell
+                <img
+                  src="/piggycell_logo.png"
+                  alt="PiggyCell Logo"
+                  className="logo-image"
+                />
               </Link>
               <div className="menu-container">
                 <Menu

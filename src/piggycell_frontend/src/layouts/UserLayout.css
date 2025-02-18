@@ -17,14 +17,15 @@
 }
 
 .menu-container {
-  display: flex;
-  align-items: center;
-  gap: 0;
+  display: flex !important;
+  align-items: center !important;
+  height: 56px !important;
+  flex: 1 !important;
 }
 
 .mobile-menu-button {
   padding: 0 8px !important;
-  font-size: 20px !important;
+  font-size: 24px !important;
   height: 40px !important;
   display: flex !important;
   align-items: center !important;
@@ -32,32 +33,59 @@
   border: none !important;
   background: transparent !important;
   margin-right: 8px !important;
+  color: rgba(0, 0, 0, 0.95) !important;
+}
+
+.mobile-menu-button .anticon {
+  font-size: 24px !important;
 }
 
 .mobile-menu-button:hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #1890ff !important;
 }
 
 .logo-link {
-  font-size: 18px !important;
-  font-weight: bold !important;
-  color: rgba(0, 0, 0, 0.88) !important;
-  text-decoration: none !important;
-  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 56px !important;
   padding-right: 32px !important;
+  text-decoration: none !important;
+  padding-top: 6px !important;
+}
+
+.logo-image {
+  height: 26px !important;
+  width: auto !important;
+  object-fit: contain !important;
 }
 
 .desktop-menu {
   border: none !important;
   background: transparent !important;
   line-height: 56px !important;
-  flex: 1 !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .desktop-menu .ant-menu-item {
   padding: 0 16px !important;
   margin: 0 2px !important;
   font-size: 14px !important;
+  height: 56px !important;
+  line-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.desktop-menu .ant-menu-item .anticon {
+  margin-right: 0 !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .desktop-menu .ant-menu-item:hover {
@@ -82,6 +110,16 @@
   line-height: 48px !important;
   margin: 0 !important;
   padding: 0 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.mobile-menu .ant-menu-item .anticon {
+  margin-right: 0 !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .mobile-menu .ant-menu-item:hover {
@@ -194,5 +232,15 @@
       rgba(56, 189, 248, 0.8),
       rgba(148, 163, 184, 0.2)
     );
+  }
+
+  .logo-image {
+    height: 24px !important;
+  }
+
+  .logo-link {
+    height: 56px !important;
+    padding-right: 16px !important;
+    padding-top: 6px !important;
   }
 }

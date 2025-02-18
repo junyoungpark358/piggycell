@@ -12,9 +12,6 @@ const Home = () => {
     <div className="home-page">
       <div className="page-header">
         <h1 className="text-5xl font-extrabold mb-6 text-sky-600">PiggyCell</h1>
-        <p className="text-xl text-gray-600 mb-8">
-          휴대폰 충전기 허브 NFT 투자 플랫폼
-        </p>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
