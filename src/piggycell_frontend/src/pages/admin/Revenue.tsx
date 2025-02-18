@@ -1,22 +1,10 @@
-import {
-  Table,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  DatePicker,
-  Button,
-  Input,
-} from "antd";
+import { Table, Card, Row, Col, Statistic, Input } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
-  DownloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
-
-const { RangePicker } = DatePicker;
 
 const AdminRevenue = () => {
   // 임시 수익 데이터
@@ -75,10 +63,6 @@ const AdminRevenue = () => {
     <div className="revenue-management">
       <div className="page-header">
         <h1 className="text-4xl font-bold mb-6">수익 관리</h1>
-        <div className="flex items-center gap-4">
-          <RangePicker className="w-64" />
-          <Button icon={<DownloadOutlined />}>보고서 다운로드</Button>
-        </div>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
