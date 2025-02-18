@@ -78,8 +78,8 @@ const Home = () => {
             }
           }
 
-          // 스테이킹 상태 확인 (임시로 랜덤하게 설정)
-          const isStaked = Math.random() < 0.5;
+          // 스테이킹 상태 확인 (현재는 모두 false로 설정)
+          const isStaked = false;
 
           const nftData: NFTData = {
             id: tokenId,
@@ -111,7 +111,7 @@ const Home = () => {
   const items = [
     {
       key: "owned",
-      label: "보유 중인 NFT",
+      label: `보유 중인 NFT (${ownedNFTs.length})`,
       children: (
         <Row gutter={[16, 16]}>
           {ownedNFTs.length > 0 ? (
@@ -150,7 +150,7 @@ const Home = () => {
     },
     {
       key: "staked",
-      label: "스테이킹 중인 NFT",
+      label: `스테이킹 중인 NFT (${stakedNFTs.length})`,
       children: (
         <Row gutter={[16, 16]}>
           {stakedNFTs.length > 0 ? (
