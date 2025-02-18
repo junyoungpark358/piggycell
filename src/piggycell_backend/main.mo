@@ -17,12 +17,14 @@ import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
 import Market "./Market";
 import Token "./Token";
+import Staking "./Staking";
 
 actor Main {
     private let nft = ChargerHubNFT.NFTCanister(Principal.fromActor(Main));
     private let adminManager = Admin.AdminManager();
     private let token = Token.Token();
     private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
+    private let stakingManager = Staking.StakingManager(token, nft);
 
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
@@ -224,5 +226,34 @@ actor Main {
             return #err("관리자만 토큰을 소각할 수 있습니다.");
         };
         token.burn(from, amount)
+    };
+
+    // 스테이킹 관련 인터페이스
+    public shared({ caller }) func stakeNFT(tokenId: Nat) : async Result.Result<(), Staking.StakingError> {
+        stakingManager.stakeNFT(caller, tokenId)
+    };
+
+    public shared({ caller }) func unstakeNFT(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
+        stakingManager.unstakeNFT(caller, tokenId)
+    };
+
+    public shared({ caller }) func claimStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
+        stakingManager.claimReward(caller, tokenId)
+    };
+
+    public query func getStakingInfo(tokenId: Nat) : async ?Staking.StakingInfo {
+        stakingManager.getStakingInfo(tokenId)
+    };
+
+    public query func getStakedNFTs(owner: Principal) : async [Nat] {
+        stakingManager.getStakedNFTs(owner)
+    };
+
+    public query func isNFTStaked(tokenId: Nat) : async Bool {
+        stakingManager.isStaked(tokenId)
+    };
+
+    public query func getEstimatedStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
+        stakingManager.getEstimatedReward(tokenId)
     };
 };
