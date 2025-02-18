@@ -10,6 +10,9 @@ import {
   DashboardOutlined,
   SettingOutlined,
   FundOutlined,
+  CrownOutlined,
+  AppstoreOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { AuthManager } from "../utils/auth";
 import "./UserLayout.css";
@@ -86,24 +89,33 @@ const UserLayout = () => {
   const adminMenuItems = [
     {
       key: "/admin",
+      icon: <CrownOutlined />,
       label: "관리자",
-      icon: <DashboardOutlined />,
     },
     {
       key: "/admin/nft-management",
+      icon: <AppstoreOutlined />,
       label: "NFT 관리",
-      icon: <SettingOutlined />,
     },
     {
       key: "/admin/revenue",
+      icon: <DollarOutlined />,
       label: "수익 관리",
-      icon: <FundOutlined />,
     },
   ];
 
   const allMenuItems = [
     ...userMenuItems,
-    ...(isAuthenticated && isAdmin ? adminMenuItems : []),
+    ...(isAuthenticated && isAdmin
+      ? [
+          {
+            type: "divider",
+            key: "admin-divider",
+            className: "admin-menu-divider",
+          },
+          ...adminMenuItems,
+        ]
+      : []),
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -147,10 +159,22 @@ const UserLayout = () => {
                 <Menu
                   mode="horizontal"
                   selectedKeys={[location.pathname]}
-                  items={allMenuItems}
+                  items={userMenuItems}
                   onClick={handleMenuClick}
                   className="desktop-menu"
                 />
+                {isAuthenticated && isAdmin && (
+                  <>
+                    <div className="admin-menu-divider" />
+                    <Menu
+                      mode="horizontal"
+                      selectedKeys={[location.pathname]}
+                      items={adminMenuItems}
+                      onClick={handleMenuClick}
+                      className="desktop-menu"
+                    />
+                  </>
+                )}
               </div>
               <div className="auth-button">
                 {isAuthenticated ? (
@@ -183,10 +207,22 @@ const UserLayout = () => {
           <Menu
             mode="vertical"
             selectedKeys={[location.pathname]}
-            items={allMenuItems}
+            items={userMenuItems}
             onClick={handleMenuClick}
             className="mobile-menu"
           />
+          {isAuthenticated && isAdmin && (
+            <>
+              <div className="admin-menu-divider" />
+              <Menu
+                mode="vertical"
+                selectedKeys={[location.pathname]}
+                items={adminMenuItems}
+                onClick={handleMenuClick}
+                className="mobile-menu"
+              />
+            </>
+          )}
         </Drawer>
       )}
 

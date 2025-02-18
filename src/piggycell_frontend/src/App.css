@@ -19,13 +19,15 @@ body {
 .ant-layout-header {
   height: 64px;
   line-height: 64px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(148, 163, 184, 0.08);
   position: fixed;
   width: 100%;
   top: 0;
   z-index: 1000;
   padding: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .ant-layout-header nav {
@@ -48,34 +50,91 @@ body {
   border-bottom: none !important;
   line-height: 64px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 !important;
+}
+
+/* 관리자 메뉴 구분선 */
+.admin-menu-divider {
+  width: 2px;
+  height: 32px;
+  background: linear-gradient(
+    to bottom,
+    rgba(148, 163, 184, 0.2),
+    rgba(56, 189, 248, 0.8),
+    rgba(148, 163, 184, 0.2)
+  );
+  margin: 0 8px !important;
+  align-self: center;
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.2);
+}
+
+/* 관리자 메뉴 아이템 스타일 */
+.ant-menu-item.admin-menu-item {
+  background: rgba(239, 246, 255, 0.6) !important;
+  border: 1px solid rgba(56, 189, 248, 0.1) !important;
+}
+
+.ant-menu-item.admin-menu-item:hover {
+  background: rgba(239, 246, 255, 0.9) !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+.ant-menu-item.admin-menu-item.ant-menu-item-selected {
+  background: rgba(239, 246, 255, 0.95) !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.12) !important;
+}
+
+.ant-menu-item.admin-menu-item .anticon {
+  color: #0284c7 !important;
+  opacity: 0.8;
 }
 
 .ant-menu-item {
-  color: #475569 !important;
-  padding: 0 24px !important;
-  margin: 0 !important;
+  color: #64748b !important;
+  padding: 0 20px !important;
+  margin: 0 4px !important;
   transition: all 0.3s ease !important;
-  border-radius: 0 !important;
+  border-radius: 8px !important;
   border-bottom: none !important;
+  position: relative;
+  overflow: hidden;
+  height: 40px !important;
+  line-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
 }
 
-.ant-menu-item:first-child {
-  margin-left: 0 !important;
-  padding-left: 24px !important;
+.ant-menu-item .anticon {
+  margin-right: -4px !important;
+  font-size: 16px;
+  transition: transform 0.3s ease;
 }
 
-.logo-menu-item {
-  font-size: 1.5rem !important;
-  font-weight: 700 !important;
-  color: #0284c7 !important;
+.ant-menu-item:hover .anticon {
+  transform: scale(1.1);
 }
 
-.logo-menu-item:hover {
-  color: #0ea5e9 !important;
-}
-
-.logo-menu-item.ant-menu-item-selected {
-  color: #0284c7 !important;
+.ant-menu-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.08),
+    rgba(14, 165, 233, 0.04)
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
 }
 
 .ant-menu-item:hover {
@@ -83,19 +142,112 @@ body {
   background: transparent !important;
 }
 
+.ant-menu-item:hover::before {
+  opacity: 1;
+}
+
 .ant-menu-item-selected {
   color: #0284c7 !important;
+  font-weight: 600 !important;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.12),
+    rgba(14, 165, 233, 0.08)
+  ) !important;
+  box-shadow: 0 2px 4px rgba(56, 189, 248, 0.1);
+}
+
+.ant-menu-item-selected::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9) !important;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(56, 189, 248, 0.3);
+}
+
+.logo-menu-item {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  margin-right: 12px !important;
+  padding: 0 24px !important;
+}
+
+.logo-menu-item:hover {
+  opacity: 0.9;
+  transform: translateY(0) !important;
+}
+
+.logo-menu-item.ant-menu-item-selected {
   background: transparent !important;
-  font-weight: 600;
+  box-shadow: none !important;
+}
+
+.logo-menu-item.ant-menu-item-selected::after {
+  display: none !important;
 }
 
 .ant-menu-item::after {
   display: none !important;
 }
 
-.ant-menu-item .anticon {
-  margin-right: 8px;
-  font-size: 16px;
+@media (max-width: 768px) {
+  .ant-menu {
+    width: 100%;
+    padding: 12px !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ant-menu-item {
+    margin: 4px 0 !important;
+    padding: 0 16px !important;
+    height: 48px !important;
+    line-height: 48px !important;
+    width: 100%;
+    justify-content: flex-start !important;
+  }
+
+  .ant-menu-item:first-child {
+    margin-top: 0 !important;
+  }
+
+  .ant-menu-item:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .ant-menu-item-selected::after {
+    bottom: 6px;
+  }
+
+  .admin-menu-divider {
+    width: 100%;
+    height: 2px;
+    margin: 12px 0 !important;
+    background: linear-gradient(
+      to right,
+      rgba(148, 163, 184, 0.2),
+      rgba(56, 189, 248, 0.8),
+      rgba(148, 163, 184, 0.2)
+    );
+    border-radius: 1px;
+    box-shadow: 0 0 4px rgba(56, 189, 248, 0.2);
+  }
+
+  .ant-menu-item.admin-menu-item {
+    background: rgba(239, 246, 255, 0.8) !important;
+  }
 }
 
 .ant-layout-content {
@@ -460,17 +612,29 @@ h6 {
 
   .ant-menu {
     width: 100%;
-    padding-left: 16px !important;
+    padding: 8px !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
 
   .ant-menu-item {
+    margin: 4px 0 !important;
     padding: 0 16px !important;
-    margin: 0 !important;
+    height: 48px !important;
+    line-height: 48px !important;
   }
 
   .ant-menu-item:first-child {
-    padding-left: 16px !important;
-    margin-left: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  .ant-menu-item:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  .ant-menu-item-selected::after {
+    bottom: 6px;
   }
 
   .ant-layout-header nav {
@@ -563,4 +727,10 @@ h6 {
   .stats-row .ant-statistic-content-suffix {
     font-size: 0.875rem !important;
   }
+}
+
+.menu-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
