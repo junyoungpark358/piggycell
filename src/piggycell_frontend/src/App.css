@@ -124,42 +124,159 @@ body {
   border-top: 1px solid rgba(148, 163, 184, 0.2);
 }
 
+/* 기본 카드 스타일 통합 */
 .ant-card {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(148, 163, 184, 0.2) !important;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
+  position: relative;
+  overflow: hidden;
+  transition: none !important;
+}
+
+.ant-card:hover {
+  transform: none !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
+}
+
+.ant-card::before {
+  display: none !important;
+}
+
+.ant-card::after {
+  display: none !important;
 }
 
 .ant-card-head {
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: #1e293b !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
-  padding: 16px;
+  background: transparent !important;
+  border-bottom: none !important;
+  padding: 16px !important;
+  margin: 0 !important;
+}
+
+.ant-card-head-title {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
 }
 
 .ant-card-body {
-  color: #1e293b;
+  position: relative;
+  z-index: 1;
+  padding: 16px !important;
 }
 
-.ant-statistic-title {
-  color: #475569 !important;
-  font-size: 1rem !important;
+/* 카드 커버 이미지 영역 */
+.ant-card-cover {
+  background: rgba(56, 189, 248, 0.03) !important;
+  padding: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ant-card-cover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg,
+    rgba(56, 189, 248, 0.1),
+    rgba(14, 165, 233, 0.05)
+  );
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.ant-card:hover .ant-card-cover::after {
+  transform: translateY(0);
+}
+
+/* 정보 표시 스타일 */
+.info-label {
+  color: #475569;
+  margin-bottom: 0.4rem;
   font-weight: 500;
+  font-size: 1.1rem;
 }
 
-.ant-statistic-content {
-  color: #1e293b !important;
-  font-size: 1.5rem !important;
-}
-
-.ant-statistic-content-prefix {
-  margin-right: 8px;
-  color: #0284c7 !important;
-}
-
-.ant-statistic-content-value {
+.info-value {
+  color: #0f172a;
+  font-size: 1.25rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.2rem;
+}
+
+/* 상태 표시 배지 */
+.status-badge {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.status-badge.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  box-shadow: rgba(34, 197, 94, 0.15) 0px 4px 12px,
+    rgba(34, 197, 94, 0.1) 0px 1px 4px;
+}
+
+.status-badge.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  box-shadow: rgba(239, 68, 68, 0.15) 0px 4px 12px,
+    rgba(239, 68, 68, 0.1) 0px 1px 4px;
+}
+
+/* 버튼 스타일 */
+.primary-gradient {
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
+.primary-gradient:hover {
+  opacity: 0.9;
+}
+
+.primary-gradient.disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+/* 다크 모드 */
+.dark .ant-card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 24px,
+    rgba(56, 189, 248, 0.15) 0px 2px 6px !important;
+}
+
+.dark .ant-card-head-title {
+  color: #f8fafc !important;
+}
+
+.dark .ant-statistic-title {
+  color: #94a3b8 !important;
+}
+
+.dark .ant-statistic-content,
+.dark .info-value {
+  color: #f1f5f9 !important;
+}
+
+.dark .info-label {
+  color: #94a3b8 !important;
 }
 
 h1,
@@ -180,135 +297,167 @@ h6 {
   background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
 }
 
-.ant-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+/* 페이지 공통 스타일 */
+.home-page,
+.nft-market,
+.staking-page,
+.revenue-page,
+.revenue-management,
+.nft-management,
+.admin-dashboard {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* NFT 마켓 페이지 스타일 */
-.nft-market {
-  padding: 20px;
-}
-
-.nft-market h1 {
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
-  color: #1e293b !important;
+.page-header {
   text-align: center;
+  margin-bottom: 3rem;
 }
 
-.nft-market .search-box {
-  margin-bottom: 2rem;
-  max-width: 400px;
+.page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #0284c7 !important;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
 }
 
-.nft-market .ant-input-search {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-}
-
-.nft-market .ant-input {
-  background: transparent;
-  color: #1e293b;
-}
-
-.nft-market .ant-input::placeholder {
+.page-header p {
+  font-size: 1.2rem;
   color: #64748b;
-}
-
-.nft-card {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border: 1px solid rgba(56, 189, 248, 0.3) !important;
-  border-radius: 12px !important;
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.nft-card:hover {
-  border-color: rgba(56, 189, 248, 0.5) !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-  transform: translateY(-4px);
-}
-
-.nft-card .ant-card-head {
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2) !important;
-  padding: 16px;
-}
-
-.nft-card .ant-card-head-title {
-  color: #1e293b !important;
-  font-size: 1.25rem !important;
-  font-weight: 600;
-}
-
-.nft-card .ant-card-body {
-  padding: 20px;
-  color: #1e293b;
-}
-
-.nft-info {
-  margin-bottom: 1rem;
-  color: #475569;
-}
-
-.nft-info .label {
-  color: #64748b;
-  margin-bottom: 0.25rem;
-  font-weight: 500;
-}
-
-.nft-info .value {
-  color: #1e293b;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.nft-card .ant-btn {
-  background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%);
-  border: none;
-  color: #fff;
-  font-weight: 500;
-  height: 40px;
-  width: 100%;
   margin-top: 1rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
 }
 
-.nft-card .ant-btn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.stats-row {
+  margin-bottom: 3rem !important;
 }
 
-.nft-card .ant-btn.disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
+.stats-row .ant-card {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
+  border-left: 3px solid #38bdf8 !important;
+  padding: 0 !important;
+  position: relative;
+  overflow: hidden;
+  transition: none !important;
 }
 
-.nft-status {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
+.stats-row .ant-card::before,
+.stats-row .ant-card::after {
+  display: none !important;
 }
 
-.nft-status.available {
-  background: rgba(34, 197, 94, 0.1);
-  color: #16a34a;
-  border: 1px solid rgba(34, 197, 94, 0.2);
+.stats-row .ant-card:hover {
+  transform: none !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
 }
 
-.nft-status.sold {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+.stats-row .ant-card .ant-card-body {
+  padding: 1.25rem !important;
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.03) 0%,
+    rgba(56, 189, 248, 0) 100%
+  ) !important;
+}
+
+.stats-row .ant-statistic-title {
+  color: #64748b !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.5rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-row .ant-statistic-content {
+  color: #0f172a !important;
+  font-size: 1.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.5px;
+  line-height: 1.2 !important;
+}
+
+.stats-row .ant-statistic-content-suffix {
+  color: #64748b !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  margin-left: 4px;
+}
+
+.stats-row .anticon {
+  font-size: 1.25rem !important;
+  margin-right: 0.5rem !important;
+  color: #38bdf8 !important;
+  opacity: 0.9;
+}
+
+/* 검색창 공통 스타일 */
+.search-box {
+  margin: 1.5rem 0;
+  max-width: 300px;
+}
+
+.search-box .ant-input-affix-wrapper {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: 40px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.search-box .ant-input {
+  font-size: 14px;
+  background: transparent;
+}
+
+.search-box .ant-input-prefix {
+  margin-right: 8px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .home-page,
+  .nft-market,
+  .staking-page,
+  .revenue-page,
+  .revenue-management,
+  .nft-management,
+  .admin-dashboard {
+    padding: 16px;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .page-header p {
+    font-size: 1rem;
+  }
+
+  .stats-row {
+    margin-bottom: 2rem !important;
+  }
+
+  .stats-row .ant-card .ant-card-body {
+    padding: 1rem !important;
+  }
+
+  .stats-row .ant-statistic-content {
+    font-size: 1.5rem !important;
+  }
+
+  .stats-row .ant-statistic-content-suffix {
+    font-size: 0.875rem !important;
+  }
 }
 
 /* Custom scrollbar */
@@ -327,4 +476,73 @@ h6 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.7);
+}
+
+.stats-row {
+  margin-bottom: 2rem !important;
+}
+
+.ant-card .ant-table-wrapper {
+  margin-top: 0.5rem;
+}
+
+/* 테이블을 포함하는 카드의 상단 여백 */
+.stats-row + .ant-card,
+.search-box + .ant-card,
+.page-header + .ant-card {
+  margin-top: 2rem;
+}
+
+/* 테이블 카드의 하단 여백 */
+.ant-card .ant-table-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+/* 테이블 카드 스타일 */
+.ant-card.table-card,
+.ant-card-contain-table {
+  margin-top: 0.75rem !important;
+  background: #ffffff !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 3px !important;
+  padding: 0 !important;
+}
+
+.ant-card.table-card:hover,
+.ant-card-contain-table:hover {
+  transform: none !important;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 3px !important;
+}
+
+.ant-card.table-card::before,
+.ant-card-contain-table::before {
+  display: none;
+}
+
+.ant-card.table-card .ant-card-body,
+.ant-card-contain-table .ant-card-body {
+  padding: 1rem !important;
+}
+
+/* 통계 카드와 테이블 카드 사이 간격 */
+.stats-row {
+  margin-bottom: 3rem !important;
+}
+
+/* 통계 카드 그리드 간격 조정 */
+.stats-row .ant-col {
+  padding: 8px !important;
+}
+
+@media (max-width: 768px) {
+  .stats-row .ant-card .ant-card-body {
+    padding: 1rem !important;
+  }
+
+  .stats-row .ant-statistic-content {
+    font-size: 1.5rem !important;
+  }
+
+  .stats-row .ant-statistic-content-suffix {
+    font-size: 0.875rem !important;
+  }
 }

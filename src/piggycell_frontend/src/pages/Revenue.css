@@ -1,26 +1,27 @@
 .revenue-page {
-  padding: 16px;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.revenue-page h1 {
-  font-size: 20px;
-  margin: 0;
-  margin-bottom: 24px;
+.page-header {
+  text-align: center;
+  margin-bottom: 3rem;
 }
 
 .stats-row {
-  margin-bottom: 24px;
+  margin-bottom: 3rem;
 }
 
 .stat-card {
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: none !important;
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .stat-card .ant-card-body {
@@ -60,12 +61,12 @@
 .revenue-card {
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: none !important;
 }
 
 .revenue-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .revenue-card .ant-card-head {
@@ -130,14 +131,43 @@
   padding: 0 16px;
 }
 
-@media (max-width: 576px) {
+.revenue-card .ant-btn:hover {
+  opacity: 0.9;
+  color: white !important;
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
+}
+
+.table-card {
+  box-shadow: rgba(0, 0, 0, 0.04) 0px 2px 4px;
+  border-radius: 12px;
+}
+
+.table-card .ant-table-thead > tr > th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.table-card .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.success-rate {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
   .revenue-page {
-    padding: 12px;
+    padding: 16px;
   }
 
-  .revenue-page h1 {
-    font-size: 18px;
-    margin-bottom: 16px;
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .stats-row {
+    margin-bottom: 2rem;
   }
 
   .revenue-card .ant-card-head-title {
@@ -164,23 +194,5 @@
 
   .ant-col {
     padding: 8px !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-row {
-    margin-bottom: 16px;
-  }
-
-  .search-box {
-    margin: 16px 0;
-  }
-
-  .ant-row {
-    margin: -4px !important;
-  }
-
-  .ant-col {
-    padding: 4px !important;
   }
 }

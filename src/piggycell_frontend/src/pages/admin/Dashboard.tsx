@@ -1,10 +1,12 @@
-import { Card, Row, Col, Statistic, Table } from "antd";
+import { Card, Row, Col, Statistic, Table, Input } from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
   UserOutlined,
   LineChartOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import "./Dashboard.css";
 
 const AdminDashboard = () => {
   // 임시 최근 거래 데이터
@@ -57,51 +59,63 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">관리자 대시보드</h1>
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col span={6}>
+    <div className="admin-dashboard">
+      <div className="page-header">
+        <h1 className="text-4xl font-bold mb-6">관리자 대시보드</h1>
+      </div>
+
+      <Row gutter={[16, 16]} className="stats-row">
+        <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
               title="총 NFT 발행량"
               value={10}
-              prefix={<ShoppingCartOutlined />}
+              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
               suffix="개"
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
               title="스테이킹된 NFT"
               value={8}
-              prefix={<BankOutlined />}
+              prefix={<BankOutlined style={{ color: "#0284c7" }} />}
               suffix="개"
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
               title="활성 사용자"
               value={25}
-              prefix={<UserOutlined />}
+              prefix={<UserOutlined style={{ color: "#0284c7" }} />}
               suffix="명"
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
               title="총 거래액"
               value={1250.5}
-              prefix={<LineChartOutlined />}
+              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
               suffix="ICP"
             />
           </Card>
         </Col>
       </Row>
-      <Card title="최근 거래 내역" className="mb-6">
+
+      <div className="search-box">
+        <Input
+          placeholder="거래 내역 검색..."
+          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          size="middle"
+        />
+      </div>
+
+      <Card className="table-card">
         <Table columns={columns} dataSource={recentTransactions} />
       </Card>
     </div>

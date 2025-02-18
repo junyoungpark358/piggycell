@@ -101,6 +101,18 @@ const NFTManagement = () => {
       title: "상태",
       dataIndex: "status",
       key: "status",
+      render: (status: string) => {
+        switch (status) {
+          case "available":
+            return "판매중";
+          case "sold":
+            return "판매완료";
+          case "created":
+            return "생성완료";
+          default:
+            return status;
+        }
+      },
     },
     {
       title: "임대자",
@@ -174,7 +186,7 @@ const NFTManagement = () => {
   return (
     <div className="nft-management">
       <div className="page-header">
-        <h1>NFT 관리</h1>
+        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">NFT 관리</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNFT}>
           새 NFT 생성
         </Button>
@@ -183,9 +195,9 @@ const NFTManagement = () => {
       {/* 전체 통계 */}
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card className="stat-card">
+          <Card>
             <Statistic
-              title="전체 NFT"
+              title="전체 충전 허브"
               value={totalStats.totalNFTs}
               suffix="개"
               prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
@@ -193,9 +205,9 @@ const NFTManagement = () => {
           </Card>
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card className="stat-card">
+          <Card>
             <Statistic
-              title="판매중인 NFT"
+              title="판매중인 충전 허브"
               value={totalStats.availableNFTs}
               suffix="개"
               prefix={<BarChartOutlined style={{ color: "#0284c7" }} />}
@@ -203,9 +215,9 @@ const NFTManagement = () => {
           </Card>
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card className="stat-card">
+          <Card>
             <Statistic
-              title="총 충전기"
+              title="총 설치 충전기"
               value={totalStats.totalChargers}
               suffix="대"
               prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
@@ -213,9 +225,9 @@ const NFTManagement = () => {
           </Card>
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card className="stat-card">
+          <Card>
             <Statistic
-              title="총 가치"
+              title="충전 허브 총 가치"
               value={totalStats.totalValue}
               suffix="ICP"
               prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
@@ -226,13 +238,13 @@ const NFTManagement = () => {
 
       <div className="search-box">
         <Input
-          placeholder="NFT 검색..."
+          placeholder="충전 허브 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
           size="middle"
         />
       </div>
 
-      <Card>
+      <Card className="table-card">
         <Table columns={columns} dataSource={nfts} />
       </Card>
 
@@ -263,9 +275,9 @@ const NFTManagement = () => {
             rules={[{ required: true, message: "상태를 선택해주세요" }]}
           >
             <Select>
-              <Select.Option value="available">임대 가능</Select.Option>
-              <Select.Option value="rented">임대중</Select.Option>
-              <Select.Option value="maintenance">유지보수 중</Select.Option>
+              <Select.Option value="available">판매중</Select.Option>
+              <Select.Option value="sold">판매완료</Select.Option>
+              <Select.Option value="created">생성완료</Select.Option>
             </Select>
           </Form.Item>
         </Form>

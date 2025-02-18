@@ -2,8 +2,8 @@ import { Card, Row, Col, Button, Input, Statistic } from "antd";
 import {
   SearchOutlined,
   DollarOutlined,
-  BarChartOutlined,
-  ClockCircleOutlined,
+  LineChartOutlined,
+  RiseOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
@@ -13,194 +13,220 @@ const Revenue = () => {
   const revenueData = [
     {
       id: 1,
-      name: "강남 충전 허브 #1",
-      dailyRevenue: 25.5,
-      monthlyRevenue: 765,
-      totalRevenue: 2550,
-      usageCount: 450,
-      status: "active",
-      chargerCount: 8,
-      utilization: 85,
+      nftId: "강남 충전 허브 #1",
+      dailyRevenue: 250,
+      monthlyRevenue: 7500,
+      totalRevenue: 45000,
+      successRate: 98.5,
     },
     {
       id: 2,
-      name: "서초 충전 허브 #1",
-      dailyRevenue: 18.2,
-      monthlyRevenue: 546,
-      totalRevenue: 1820,
-      usageCount: 320,
-      status: "active",
-      chargerCount: 6,
-      utilization: 78,
+      nftId: "서초 충전 허브 #1",
+      dailyRevenue: 320,
+      monthlyRevenue: 9600,
+      totalRevenue: 57600,
+      successRate: 97.8,
     },
     {
       id: 3,
-      name: "송파 충전 허브 #1",
-      dailyRevenue: 32.8,
-      monthlyRevenue: 984,
-      totalRevenue: 3280,
-      usageCount: 580,
-      status: "active",
-      chargerCount: 10,
-      utilization: 92,
+      nftId: "송파 충전 허브 #1",
+      dailyRevenue: 180,
+      monthlyRevenue: 5400,
+      totalRevenue: 32400,
+      successRate: 99.1,
     },
     {
       id: 4,
-      name: "강남 충전 허브 #2",
-      dailyRevenue: 15.5,
-      monthlyRevenue: 465,
-      totalRevenue: 1550,
-      usageCount: 280,
-      status: "maintenance",
-      chargerCount: 6,
-      utilization: 0,
+      nftId: "강남 충전 허브 #2",
+      dailyRevenue: 420,
+      monthlyRevenue: 12600,
+      totalRevenue: 75600,
+      successRate: 98.9,
     },
     {
       id: 5,
-      name: "성동 충전 허브 #1",
-      dailyRevenue: 28.4,
-      monthlyRevenue: 852,
-      totalRevenue: 2840,
-      usageCount: 510,
-      status: "active",
-      chargerCount: 8,
-      utilization: 88,
+      nftId: "성동 충전 허브 #1",
+      dailyRevenue: 150,
+      monthlyRevenue: 4500,
+      totalRevenue: 27000,
+      successRate: 97.5,
     },
     {
       id: 6,
-      name: "마포 충전 허브 #1",
-      dailyRevenue: 22.6,
-      monthlyRevenue: 678,
-      totalRevenue: 2260,
-      usageCount: 420,
-      status: "active",
-      chargerCount: 7,
-      utilization: 82,
+      nftId: "마포 충전 허브 #1",
+      dailyRevenue: 280,
+      monthlyRevenue: 8400,
+      totalRevenue: 50400,
+      successRate: 98.2,
     },
     {
       id: 7,
-      name: "영등포 충전 허브 #1",
-      dailyRevenue: 20.8,
-      monthlyRevenue: 624,
-      totalRevenue: 2080,
-      usageCount: 380,
-      status: "active",
-      chargerCount: 6,
-      utilization: 75,
+      nftId: "영등포 충전 허브 #1",
+      dailyRevenue: 350,
+      monthlyRevenue: 10500,
+      totalRevenue: 63000,
+      successRate: 99.3,
     },
     {
       id: 8,
-      name: "강서 충전 허브 #1",
-      dailyRevenue: 16.2,
-      monthlyRevenue: 486,
-      totalRevenue: 1620,
-      usageCount: 290,
-      status: "maintenance",
-      chargerCount: 5,
-      utilization: 0,
+      nftId: "강서 충전 허브 #1",
+      dailyRevenue: 200,
+      monthlyRevenue: 6000,
+      totalRevenue: 36000,
+      successRate: 98.7,
     },
     {
       id: 9,
-      name: "용산 충전 허브 #1",
-      dailyRevenue: 24.5,
-      monthlyRevenue: 735,
-      totalRevenue: 2450,
-      usageCount: 440,
-      status: "active",
-      chargerCount: 7,
-      utilization: 86,
+      nftId: "용산 충전 허브 #1",
+      dailyRevenue: 290,
+      monthlyRevenue: 8700,
+      totalRevenue: 52200,
+      successRate: 98.4,
     },
     {
       id: 10,
-      name: "서초 충전 허브 #2",
-      dailyRevenue: 30.2,
-      monthlyRevenue: 906,
-      totalRevenue: 3020,
-      usageCount: 540,
-      status: "active",
-      chargerCount: 9,
-      utilization: 90,
+      nftId: "서초 충전 허브 #2",
+      dailyRevenue: 380,
+      monthlyRevenue: 11400,
+      totalRevenue: 68400,
+      successRate: 99.0,
     },
     {
       id: 11,
-      name: "강동 충전 허브 #1",
-      dailyRevenue: 17.8,
-      monthlyRevenue: 534,
-      totalRevenue: 1780,
-      usageCount: 320,
-      status: "active",
-      chargerCount: 5,
-      utilization: 80,
+      nftId: "강동 충전 허브 #1",
+      dailyRevenue: 170,
+      monthlyRevenue: 5100,
+      totalRevenue: 30600,
+      successRate: 97.9,
     },
     {
       id: 12,
-      name: "송파 충전 허브 #2",
-      dailyRevenue: 26.4,
-      monthlyRevenue: 792,
-      totalRevenue: 2640,
-      usageCount: 470,
-      status: "active",
-      chargerCount: 8,
-      utilization: 84,
+      nftId: "송파 충전 허브 #2",
+      dailyRevenue: 310,
+      monthlyRevenue: 9300,
+      totalRevenue: 55800,
+      successRate: 98.6,
+    },
+    {
+      id: 13,
+      nftId: "중구 충전 허브 #1",
+      dailyRevenue: 450,
+      monthlyRevenue: 13500,
+      totalRevenue: 81000,
+      successRate: 99.4,
+    },
+    {
+      id: 14,
+      nftId: "종로 충전 허브 #1",
+      dailyRevenue: 340,
+      monthlyRevenue: 10200,
+      totalRevenue: 61200,
+      successRate: 98.8,
+    },
+    {
+      id: 15,
+      nftId: "광진 충전 허브 #1",
+      dailyRevenue: 260,
+      monthlyRevenue: 7800,
+      totalRevenue: 46800,
+      successRate: 98.3,
+    },
+    {
+      id: 16,
+      nftId: "동대문 충전 허브 #1",
+      dailyRevenue: 230,
+      monthlyRevenue: 6900,
+      totalRevenue: 41400,
+      successRate: 98.1,
+    },
+    {
+      id: 17,
+      nftId: "성북 충전 허브 #1",
+      dailyRevenue: 190,
+      monthlyRevenue: 5700,
+      totalRevenue: 34200,
+      successRate: 97.7,
+    },
+    {
+      id: 18,
+      nftId: "노원 충전 허브 #1",
+      dailyRevenue: 210,
+      monthlyRevenue: 6300,
+      totalRevenue: 37800,
+      successRate: 98.0,
+    },
+    {
+      id: 19,
+      nftId: "은평 충전 허브 #1",
+      dailyRevenue: 160,
+      monthlyRevenue: 4800,
+      totalRevenue: 28800,
+      successRate: 97.6,
+    },
+    {
+      id: 20,
+      nftId: "강남 충전 허브 #3",
+      dailyRevenue: 500,
+      monthlyRevenue: 15000,
+      totalRevenue: 90000,
+      successRate: 99.5,
     },
   ];
 
   // 전체 통계 계산
   const totalStats = {
-    dailyRevenue: revenueData.reduce((sum, item) => sum + item.dailyRevenue, 0),
+    totalRevenue: revenueData.reduce((sum, item) => sum + item.totalRevenue, 0),
     monthlyRevenue: revenueData.reduce(
       (sum, item) => sum + item.monthlyRevenue,
       0
     ),
-    totalRevenue: revenueData.reduce((sum, item) => sum + item.totalRevenue, 0),
-    totalUsage: revenueData.reduce((sum, item) => sum + item.usageCount, 0),
-    activeHubs: revenueData.filter((item) => item.status === "active").length,
-    totalChargers: revenueData.reduce(
-      (sum, item) => sum + item.chargerCount,
-      0
-    ),
-    averageUtilization: Math.round(
-      revenueData.reduce((sum, item) => sum + item.utilization, 0) /
-        revenueData.length
-    ),
+    dailyRevenue: revenueData.reduce((sum, item) => sum + item.dailyRevenue, 0),
+    averageRate: "+11%",
   };
 
   return (
     <div className="revenue-page">
-      <h1>수익 현황</h1>
+      <div className="page-header">
+        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">수익 관리</h1>
+      </div>
 
-      {/* 전체 통계 */}
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
+            <Statistic
+              title="총 누적 수익"
+              value={totalStats.totalRevenue}
+              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
+              suffix="ICP"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card>
+            <Statistic
+              title="이번 달 수익"
+              value={totalStats.monthlyRevenue}
+              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
+              suffix="ICP"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
               title="일일 수익"
               value={totalStats.dailyRevenue}
-              precision={1}
+              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
               suffix="ICP"
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="월간 수익"
-              value={totalStats.monthlyRevenue}
-              precision={1}
-              suffix="ICP"
-              prefix={<BarChartOutlined style={{ color: "#0284c7" }} />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
-            <Statistic
-              title="총 수익"
-              value={totalStats.totalRevenue}
-              precision={1}
-              suffix="ICP"
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
+              title="평균 수익률"
+              value={totalStats.averageRate}
+              prefix={<RiseOutlined style={{ color: "#0284c7" }} />}
             />
           </Card>
         </Col>
@@ -208,75 +234,45 @@ const Revenue = () => {
 
       <div className="search-box">
         <Input
-          placeholder="충전 허브 검색..."
+          placeholder="수익 내역 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
           size="middle"
         />
       </div>
 
-      <Row gutter={[12, 12]}>
-        {revenueData.map((hub) => (
-          <Col key={hub.id} xs={24} sm={12} md={8} lg={6} xl={6}>
+      <Row gutter={[16, 16]}>
+        {revenueData.map((revenue) => (
+          <Col key={revenue.id} xs={24} sm={12} md={8} lg={6}>
             <Card
+              title={revenue.nftId}
               className="revenue-card"
-              title={hub.name}
               cover={
-                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center">
+                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center p-8">
                   <DollarOutlined
                     style={{ fontSize: "40px", color: "#0284c7" }}
                   />
                 </div>
               }
             >
-              <div className="revenue-status">
-                {hub.status === "active" ? "운영중" : "점검중"}
+              <div>
+                <div className="info-label">일일 수익</div>
+                <div className="info-value">{revenue.dailyRevenue} ICP</div>
               </div>
-              <div className="revenue-info">
-                <div className="label">일일 수익</div>
-                <div className="value">
-                  {hub.dailyRevenue.toLocaleString()} ICP
+              <div>
+                <div className="info-label">월간 수익</div>
+                <div className="info-value">{revenue.monthlyRevenue} ICP</div>
+              </div>
+              <div>
+                <div className="info-label">총 수익</div>
+                <div className="info-value">{revenue.totalRevenue} ICP</div>
+              </div>
+              <div>
+                <div className="info-label">수익률</div>
+                <div className="info-value success-rate">
+                  {revenue.successRate}%
                 </div>
               </div>
-              <div className="revenue-info">
-                <div className="label">월간 수익</div>
-                <div className="value">
-                  {hub.monthlyRevenue.toLocaleString()} ICP
-                </div>
-              </div>
-              <div className="revenue-info">
-                <div className="label">총 수익</div>
-                <div className="value">
-                  {hub.totalRevenue.toLocaleString()} ICP
-                </div>
-              </div>
-              <div className="revenue-info">
-                <div className="label">충전기 수</div>
-                <div className="value">{hub.chargerCount}대</div>
-              </div>
-              <div className="revenue-info">
-                <div className="label">
-                  <ClockCircleOutlined
-                    style={{
-                      color: "#0284c7",
-                      marginRight: "4px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  가동률
-                </div>
-                <div className="value">{hub.utilization}%</div>
-              </div>
-              <div className="revenue-info">
-                <div className="label">총 사용 횟수</div>
-                <div className="value">{hub.usageCount.toLocaleString()}회</div>
-              </div>
-              <Button
-                type={hub.status === "active" ? "primary" : "default"}
-                disabled={hub.status === "maintenance"}
-                size="middle"
-              >
-                {hub.status === "active" ? "상세 보기" : "점검중"}
-              </Button>
+              <Button className="primary-gradient">상세 내역 보기</Button>
             </Card>
           </Col>
         ))}

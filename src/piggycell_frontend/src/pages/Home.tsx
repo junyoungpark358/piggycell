@@ -1,96 +1,100 @@
-import { Card, Row, Col, Statistic } from "antd";
+import { Card, Row, Col, Button, Statistic } from "antd";
 import {
-  WalletOutlined,
+  ThunderboltOutlined,
+  ShoppingCartOutlined,
+  UserOutlined,
   BankOutlined,
-  LineChartOutlined,
 } from "@ant-design/icons";
+import "./Home.css";
 
 const Home = () => {
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold mb-4">
-          PiggyCell에 오신 것을 환영합니다
-        </h1>
-        <p className="text-gray-600">
-          충전 허브 NFT를 통해 안정적인 수익을 창출하세요
+    <div className="home-page">
+      <div className="page-header">
+        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">PiggyCell</h1>
+        <p className="text-xl text-gray-600 mb-8">
+          전기차 충전소 NFT 투자 플랫폼
         </p>
       </div>
 
-      <Row gutter={[24, 24]}>
-        <Col xs={24} md={8}>
-          <Card hoverable className="h-full">
+      <Row gutter={[16, 16]} className="stats-row">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="보유 중인 NFT"
-              value={0}
-              prefix={<WalletOutlined className="text-[#38bdf8]" />}
+              title="전체 충전소"
+              value={25}
+              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
               suffix="개"
             />
           </Card>
         </Col>
-        <Col xs={24} md={8}>
-          <Card hoverable className="h-full">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="스테이킹 중인 NFT"
-              value={0}
-              prefix={<BankOutlined className="text-[#0ea5e9]" />}
+              title="발행된 NFT"
+              value={100}
+              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
               suffix="개"
             />
           </Card>
         </Col>
-        <Col xs={24} md={8}>
-          <Card hoverable className="h-full">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="총 누적 수익"
-              value={0}
-              prefix={<LineChartOutlined className="text-[#0284c7]" />}
-              suffix="ICP"
+              title="활성 투자자"
+              value={50}
+              prefix={<UserOutlined style={{ color: "#0284c7" }} />}
+              suffix="명"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card>
+            <Statistic
+              title="스테이킹 참여"
+              value={30}
+              prefix={<BankOutlined style={{ color: "#0284c7" }} />}
+              suffix="명"
             />
           </Card>
         </Col>
       </Row>
 
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-6 text-center">시작하기</h2>
-        <Row gutter={[24, 24]}>
-          <Col xs={24} md={8}>
-            <Card
-              hoverable
-              title="1. NFT 구매하기"
-              className="h-full text-center"
-              styles={{ header: { borderBottom: 0 } }}
-            >
-              <p className="text-gray-600">
-                마켓에서 원하는 충전 허브 NFT를 구매하세요.
-              </p>
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card
-              hoverable
-              title="2. 스테이킹하기"
-              className="h-full text-center"
-              styles={{ header: { borderBottom: 0 } }}
-            >
-              <p className="text-gray-600">
-                구매한 NFT를 스테이킹하여 수익을 창출하세요.
-              </p>
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card
-              hoverable
-              title="3. 수익 확인하기"
-              className="h-full text-center"
-              styles={{ header: { borderBottom: 0 } }}
-            >
-              <p className="text-gray-600">
-                스테이킹한 NFT의 수익을 실시간으로 확인하세요.
-              </p>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+      <Row gutter={[16, 16]} className="feature-row">
+        <Col xs={24} sm={12} md={8}>
+          <Card className="feature-card">
+            <h3 className="text-xl font-bold mb-4">NFT 마켓</h3>
+            <p className="text-gray-600 mb-4">
+              충전소 NFT를 구매하고 수익을 창출하세요
+            </p>
+            <Button type="primary" size="large">
+              마켓 둘러보기
+            </Button>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card className="feature-card">
+            <h3 className="text-xl font-bold mb-4">스테이킹</h3>
+            <p className="text-gray-600 mb-4">
+              NFT를 스테이킹하고 추가 수익을 얻으세요
+            </p>
+            <Button type="primary" size="large">
+              스테이킹 참여하기
+            </Button>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Card className="feature-card">
+            <h3 className="text-xl font-bold mb-4">수익 관리</h3>
+            <p className="text-gray-600 mb-4">
+              투자 수익을 실시간으로 확인하세요
+            </p>
+            <Button type="primary" size="large">
+              수익 확인하기
+            </Button>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

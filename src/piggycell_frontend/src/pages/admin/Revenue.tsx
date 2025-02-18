@@ -1,9 +1,20 @@
-import { Table, Card, Row, Col, Statistic, DatePicker, Button } from "antd";
+import {
+  Table,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  DatePicker,
+  Button,
+  Input,
+} from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
   DownloadOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import "./Revenue.css";
 
 const { RangePicker } = DatePicker;
 
@@ -61,46 +72,58 @@ const AdminRevenue = () => {
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">수익 관리</h1>
-      <div className="flex justify-between items-center mb-6">
-        <RangePicker className="w-64" />
-        <Button icon={<DownloadOutlined />}>보고서 다운로드</Button>
+    <div className="revenue-management">
+      <div className="page-header">
+        <h1 className="text-4xl font-bold mb-6">수익 관리</h1>
+        <div className="flex items-center gap-4">
+          <RangePicker className="w-64" />
+          <Button icon={<DownloadOutlined />}>보고서 다운로드</Button>
+        </div>
       </div>
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col span={8}>
+
+      <Row gutter={[16, 16]} className="stats-row">
+        <Col xs={12} sm={8} md={8}>
           <Card>
             <Statistic
               title="이번 달 총 수익"
               value={271.3}
-              prefix={<LineChartOutlined />}
+              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
               suffix="ICP"
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} sm={8} md={8}>
           <Card>
             <Statistic
               title="전월 대비"
               value={12.5}
-              prefix={<RiseOutlined />}
+              prefix={<RiseOutlined style={{ color: "#0284c7" }} />}
               suffix="%"
               valueStyle={{ color: "#3f8600" }}
             />
           </Card>
         </Col>
-        <Col span={8}>
+        <Col xs={12} sm={8} md={8}>
           <Card>
             <Statistic
               title="스테이킹 보상 지급액"
               value={22.7}
-              prefix={<LineChartOutlined />}
+              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
               suffix="ICP"
             />
           </Card>
         </Col>
       </Row>
-      <Card title="일별 수익 현황">
+
+      <div className="search-box">
+        <Input
+          placeholder="수익 내역 검색..."
+          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          size="middle"
+        />
+      </div>
+
+      <Card className="table-card">
         <Table columns={columns} dataSource={revenueData} />
       </Card>
     </div>

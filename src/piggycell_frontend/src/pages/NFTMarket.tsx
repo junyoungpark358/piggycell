@@ -108,6 +108,70 @@ const NFTMarket = () => {
       status: "available",
       chargerCount: 7,
     },
+    {
+      id: 13,
+      name: "중구 충전 허브 #1",
+      location: "서울시 중구 명동",
+      price: 200,
+      status: "available",
+      chargerCount: 12,
+    },
+    {
+      id: 14,
+      name: "종로 충전 허브 #1",
+      location: "서울시 종로구 인사동",
+      price: 175,
+      status: "sold",
+      chargerCount: 8,
+    },
+    {
+      id: 15,
+      name: "광진 충전 허브 #1",
+      location: "서울시 광진구 구의동",
+      price: 115,
+      status: "available",
+      chargerCount: 6,
+    },
+    {
+      id: 16,
+      name: "동대문 충전 허브 #1",
+      location: "서울시 동대문구 청량리동",
+      price: 125,
+      status: "available",
+      chargerCount: 7,
+    },
+    {
+      id: 17,
+      name: "성북 충전 허브 #1",
+      location: "서울시 성북구 길음동",
+      price: 95,
+      status: "sold",
+      chargerCount: 5,
+    },
+    {
+      id: 18,
+      name: "노원 충전 허브 #1",
+      location: "서울시 노원구 상계동",
+      price: 105,
+      status: "available",
+      chargerCount: 6,
+    },
+    {
+      id: 19,
+      name: "은평 충전 허브 #1",
+      location: "서울시 은평구 불광동",
+      price: 88,
+      status: "available",
+      chargerCount: 4,
+    },
+    {
+      id: 20,
+      name: "강남 충전 허브 #3",
+      location: "서울시 강남구 청담동",
+      price: 220,
+      status: "available",
+      chargerCount: 15,
+    },
   ];
 
   // 전체 통계 계산
@@ -115,41 +179,53 @@ const NFTMarket = () => {
     totalNFTs: nfts.length,
     availableNFTs: nfts.filter((nft) => nft.status === "available").length,
     totalChargers: nfts.reduce((sum, nft) => sum + nft.chargerCount, 0),
+    totalValue: nfts.reduce((sum, nft) => sum + nft.price, 0),
   };
 
   return (
     <div className="nft-market">
-      <h1>NFT 마켓</h1>
+      <div className="page-header">
+        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">NFT 마켓</h1>
+      </div>
 
-      {/* 전체 통계 */}
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="전체 NFT"
+              title="전체 충전 허브"
               value={totalStats.totalNFTs}
               suffix="개"
               prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="판매중인 NFT"
+              title="판매중인 충전 허브"
               value={totalStats.availableNFTs}
               suffix="개"
               prefix={<BarChartOutlined style={{ color: "#0284c7" }} />}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={8} md={8}>
-          <Card className="stat-card">
+        <Col xs={12} sm={6} md={6}>
+          <Card>
             <Statistic
-              title="총 충전기"
+              title="총 설치 충전기"
               value={totalStats.totalChargers}
               suffix="대"
               prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <Card>
+            <Statistic
+              title="충전 허브 총 가치"
+              value={totalStats.totalValue}
+              suffix="ICP"
+              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
             />
           </Card>
         </Col>
@@ -162,48 +238,50 @@ const NFTMarket = () => {
           size="middle"
         />
       </div>
-      <Row gutter={[12, 12]}>
+
+      <Row gutter={[16, 16]}>
         {nfts.map((nft) => (
-          <Col key={nft.id} xs={24} sm={12} md={8} lg={6} xl={6}>
+          <Col key={nft.id} xs={24} sm={12} md={8} lg={6}>
             <Card
-              className="nft-card"
               title={nft.name}
+              className="nft-card"
               cover={
-                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center">
-                  <ShoppingCartOutlined
+                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center p-8">
+                  <ThunderboltOutlined
                     style={{ fontSize: "40px", color: "#0284c7" }}
                   />
                 </div>
               }
             >
-              <div className="nft-status">
+              <div
+                className={`status-badge ${
+                  nft.status === "available" ? "success" : "error"
+                }`}
+              >
                 {nft.status === "available" ? "판매중" : "판매완료"}
               </div>
-              <div className="nft-info location">
-                <div className="label">위치</div>
-                <div className="value">
+              <div>
+                <div className="info-label">위치</div>
+                <div className="info-value">
                   <EnvironmentOutlined
-                    style={{
-                      color: "#0284c7",
-                      marginRight: "4px",
-                      fontSize: "12px",
-                    }}
+                    style={{ color: "#0284c7", marginRight: "4px" }}
                   />
                   {nft.location}
                 </div>
               </div>
-              <div className="nft-info">
-                <div className="label">충전기</div>
-                <div className="value">{nft.chargerCount}대</div>
+              <div>
+                <div className="info-label">충전기</div>
+                <div className="info-value">{nft.chargerCount}대</div>
               </div>
-              <div className="nft-info">
-                <div className="label">가격</div>
-                <div className="value">{nft.price} ICP</div>
+              <div>
+                <div className="info-label">가격</div>
+                <div className="info-value">{nft.price} ICP</div>
               </div>
               <Button
-                type={nft.status === "available" ? "primary" : "default"}
-                disabled={nft.status === "sold"}
-                size="middle"
+                className={`primary-gradient ${
+                  nft.status !== "available" ? "disabled" : ""
+                }`}
+                disabled={nft.status !== "available"}
               >
                 {nft.status === "available" ? "구매하기" : "판매완료"}
               </Button>

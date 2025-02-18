@@ -1,0 +1,60 @@
+.admin-dashboard {
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #0284c7;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.stats-row {
+  margin-bottom: 24px;
+}
+
+.search-box {
+  margin: 24px 0;
+  max-width: 300px;
+}
+
+.search-box .ant-input-affix-wrapper {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: 40px;
+}
+
+.search-box .ant-input {
+  font-size: 14px;
+}
+
+.search-box .ant-input-prefix {
+  margin-right: 8px;
+}
+
+@media (max-width: 576px) {
+  .admin-dashboard {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .stats-row {
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    margin: 16px 0;
+  }
+}
