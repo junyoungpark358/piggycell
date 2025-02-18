@@ -106,7 +106,7 @@
   height: 100%;
   display: block !important;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: hidden !important;
   transition: none !important;
 }
 
@@ -130,7 +130,11 @@
 }
 
 .nft-card .ant-card-body {
-  padding: 12px 16px 16px;
+  padding: 12px 16px 16px !important;
+}
+
+.nft-card .mb-4 {
+  margin-bottom: 16px !important;
 }
 
 .nft-card .ant-card-cover {
@@ -192,6 +196,47 @@
 .primary-gradient.disabled {
   background: #e2e8f0;
   color: #94a3b8;
+}
+
+.nft-card .text-gray-600 {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.nft-card .text-gray-600:last-child {
+  margin-bottom: 0 !important;
+}
+
+.nft-card .text-gray-600 .anticon {
+  margin-right: 0.375rem !important;
+  font-size: 1.1rem !important;
+  color: #0284c7 !important;
+}
+
+.nft-card .text-gray-600 .font-medium {
+  margin-right: 0.125rem !important;
+  color: #64748b !important;
+}
+
+.nft-card .ant-btn {
+  width: 100% !important;
+  font-size: 12px;
+  height: 32px;
+  padding: 0 16px;
+}
+
+.nft-card .ant-btn.sold-button {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+}
+
+.nft-card .ant-btn.sold-button:hover {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
 }
 
 @media (max-width: 768px) {

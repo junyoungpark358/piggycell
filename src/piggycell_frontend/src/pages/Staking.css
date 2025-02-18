@@ -175,6 +175,35 @@
   color: #94a3b8;
 }
 
+.staking-card .text-gray-600 {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.staking-card .text-gray-600:last-child {
+  margin-bottom: 0 !important;
+}
+
+.staking-card .text-gray-600 .anticon {
+  margin-right: 0.375rem !important;
+  font-size: 1.1rem !important;
+  color: #0284c7 !important;
+}
+
+.staking-card .text-gray-600 .font-medium {
+  margin-right: 0.125rem !important;
+  color: #64748b !important;
+}
+
+.staking-card .ant-btn {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 12px;
+  height: 32px;
+  padding: 0 16px;
+}
+
 @media (max-width: 768px) {
   .staking-card .ant-card-head-title {
     font-size: 13px;

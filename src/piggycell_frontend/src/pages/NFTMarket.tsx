@@ -242,48 +242,30 @@ const NFTMarket = () => {
       <Row gutter={[16, 16]}>
         {nfts.map((nft) => (
           <Col key={nft.id} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              title={nft.name}
-              className="nft-card"
-              cover={
-                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center p-8">
-                  <ThunderboltOutlined
-                    style={{ fontSize: "40px", color: "#0284c7" }}
-                  />
-                </div>
-              }
-            >
-              <div
-                className={`status-badge ${
-                  nft.status === "available" ? "success" : "error"
-                }`}
-              >
-                {nft.status === "available" ? "판매중" : "판매완료"}
-              </div>
-              <div>
-                <div className="info-label">위치</div>
-                <div className="info-value">
-                  <EnvironmentOutlined
-                    style={{ color: "#0284c7", marginRight: "4px" }}
-                  />
-                  {nft.location}
-                </div>
-              </div>
-              <div>
-                <div className="info-label">충전기</div>
-                <div className="info-value">{nft.chargerCount}대</div>
-              </div>
-              <div>
-                <div className="info-label">가격</div>
-                <div className="info-value">{nft.price} ICP</div>
+            <Card title={nft.name} className="nft-card">
+              <div className="mb-4">
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <EnvironmentOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">위치:</span> {nft.location}
+                </p>
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <DollarOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">가격:</span> {nft.price}{" "}
+                  ICP
+                </p>
+                <p className="text-gray-600 flex items-center">
+                  <ThunderboltOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">충전기:</span>{" "}
+                  {nft.chargerCount}대
+                </p>
               </div>
               <Button
-                className={`primary-gradient ${
-                  nft.status !== "available" ? "disabled" : ""
-                }`}
-                disabled={nft.status !== "available"}
+                type={nft.status === "sold" ? "default" : "primary"}
+                className={nft.status === "sold" ? "sold-button" : ""}
+                disabled={nft.status === "sold"}
+                block
               >
-                {nft.status === "available" ? "구매하기" : "판매완료"}
+                {nft.status === "sold" ? "판매 완료" : "구매하기"}
               </Button>
             </Card>
           </Col>

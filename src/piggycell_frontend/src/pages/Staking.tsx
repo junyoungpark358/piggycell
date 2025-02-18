@@ -243,36 +243,32 @@ const Staking = () => {
       <Row gutter={[16, 16]}>
         {stakingData.map((staking) => (
           <Col key={staking.id} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              title={staking.nftId}
-              className="staking-card"
-              cover={
-                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center p-8">
-                  <BankOutlined
-                    style={{ fontSize: "40px", color: "#0284c7" }}
-                  />
-                </div>
-              }
-            >
-              <div>
-                <div className="info-label">스테이킹 금액</div>
-                <div className="info-value">{staking.stakedAmount} ICP</div>
-              </div>
-              <div>
-                <div className="info-label">보상률</div>
-                <div className="info-value">{staking.rewardRate}%</div>
-              </div>
-              <div>
-                <div className="info-label">획득한 보상</div>
-                <div className="info-value">
+            <Card title={staking.nftId} className="staking-card">
+              <div className="mb-4">
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <BankOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">스테이킹 금액:</span>{" "}
+                  {staking.stakedAmount} ICP
+                </p>
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <LineChartOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">보상률:</span>{" "}
+                  {staking.rewardRate}%
+                </p>
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <DollarOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">누적 보상:</span>{" "}
                   {staking.accumulatedRewards} ICP
-                </div>
+                </p>
+                <p className="text-gray-600 flex items-center">
+                  <ThunderboltOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">스테이킹 기간:</span>{" "}
+                  {staking.stakingPeriod}
+                </p>
               </div>
-              <div>
-                <div className="info-label">스테이킹 기간</div>
-                <div className="info-value">{staking.stakingPeriod}</div>
-              </div>
-              <Button className="primary-gradient">보상 수령하기</Button>
+              <Button type="primary" block>
+                보상 수령하기
+              </Button>
             </Card>
           </Col>
         ))}

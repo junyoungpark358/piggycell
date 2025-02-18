@@ -5,6 +5,8 @@ import {
   LineChartOutlined,
   RiseOutlined,
   ThunderboltOutlined,
+  BankOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 
@@ -243,36 +245,32 @@ const Revenue = () => {
       <Row gutter={[16, 16]}>
         {revenueData.map((revenue) => (
           <Col key={revenue.id} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              title={revenue.nftId}
-              className="revenue-card"
-              cover={
-                <div className="bg-[rgba(56,189,248,0.1)] flex items-center justify-center p-8">
-                  <DollarOutlined
-                    style={{ fontSize: "40px", color: "#0284c7" }}
-                  />
-                </div>
-              }
-            >
-              <div>
-                <div className="info-label">일일 수익</div>
-                <div className="info-value">{revenue.dailyRevenue} ICP</div>
-              </div>
-              <div>
-                <div className="info-label">월간 수익</div>
-                <div className="info-value">{revenue.monthlyRevenue} ICP</div>
-              </div>
-              <div>
-                <div className="info-label">총 수익</div>
-                <div className="info-value">{revenue.totalRevenue} ICP</div>
-              </div>
-              <div>
-                <div className="info-label">수익률</div>
-                <div className="info-value success-rate">
+            <Card title={revenue.nftId} className="revenue-card">
+              <div className="mb-4">
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <DollarOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">일일 수익:</span>{" "}
+                  {revenue.dailyRevenue} ICP
+                </p>
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <LineChartOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">월간 수익:</span>{" "}
+                  {revenue.monthlyRevenue} ICP
+                </p>
+                <p className="text-gray-600 mb-2 flex items-center">
+                  <BankOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">총 수익:</span>{" "}
+                  {revenue.totalRevenue} ICP
+                </p>
+                <p className="text-gray-600 flex items-center">
+                  <CheckCircleOutlined className="mr-3 text-sky-600" />
+                  <span className="font-medium mr-2">성공률:</span>{" "}
                   {revenue.successRate}%
-                </div>
+                </p>
               </div>
-              <Button className="primary-gradient">상세 내역 보기</Button>
+              <Button type="primary" block>
+                상세 내역 보기
+              </Button>
             </Card>
           </Col>
         ))}
