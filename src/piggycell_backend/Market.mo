@@ -88,49 +88,22 @@ module {
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             switch (listings.get(tokenId)) {
                 case (?listing) {
-                    // 구매자의 PGC 토큰 잔액 확인
-                    let buyer: Token.Account = {
-                        owner = caller;
-                        subaccount = null;
-                    };
-                    let seller: Token.Account = {
-                        owner = listing.seller;
-                        subaccount = null;
-                    };
-
-                    // PGC 토큰 전송
-                    let transferArgs: Token.TransferArgs = {
+                    // NFT를 구매자에게 전송
+                    let nftTransferArgs: ChargerHubNFT.TransferArgs = {
+                        token_ids = [tokenId];
                         from_subaccount = null;
-                        to = seller;
-                        amount = listing.price;
-                        fee = ?token.icrc1_fee();
+                        to = {
+                            owner = caller;
+                            subaccount = null;
+                        };
                         memo = null;
-                        created_at_time = null;
+                        created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
                     };
 
-                    switch(token.icrc1_transfer(caller, transferArgs)) {
+                    switch(nft.icrc7_transfer(caller, nftTransferArgs)) {
                         case (#ok()) {
-                            // NFT를 구매자에게 전송
-                            let nftTransferArgs: ChargerHubNFT.TransferArgs = {
-                                token_ids = [tokenId];
-                                from_subaccount = null;
-                                to = {
-                                    owner = caller;
-                                    subaccount = null;
-                                };
-                                memo = null;
-                                created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
-                            };
-
-                            switch(nft.icrc7_transfer(caller, nftTransferArgs)) {
-                                case (#ok()) {
-                                    listings.delete(tokenId);
-                                    #ok(listing)
-                                };
-                                case (#err(_)) {
-                                    #err(#TransferError)
-                                };
-                            }
+                            listings.delete(tokenId);
+                            #ok(listing)
                         };
                         case (#err(_)) {
                             #err(#TransferError)
