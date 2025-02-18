@@ -249,7 +249,7 @@ const Home = () => {
                   </div>
                   <Button
                     type="primary"
-                    onClick={() => navigate("/staking")}
+                    onClick={() => navigate(`/staking?highlight=${nft.id}`)}
                     block
                   >
                     스테이킹 관리
