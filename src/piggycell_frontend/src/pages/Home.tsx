@@ -5,9 +5,12 @@ import {
   UserOutlined,
   BankOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="home-page">
       <div className="page-header">
@@ -64,7 +67,11 @@ const Home = () => {
             <p className="text-gray-600 mb-4">
               충전소 NFT를 구매하고 수익을 창출하세요
             </p>
-            <Button type="primary" size="large">
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => navigate("/market")}
+            >
               마켓 둘러보기
             </Button>
           </Card>
@@ -75,7 +82,11 @@ const Home = () => {
             <p className="text-gray-600 mb-4">
               NFT를 스테이킹하고 추가 수익을 얻으세요
             </p>
-            <Button type="primary" size="large">
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => navigate("/staking")}
+            >
               스테이킹 참여하기
             </Button>
           </Card>
@@ -86,7 +97,11 @@ const Home = () => {
             <p className="text-gray-600 mb-4">
               투자 수익을 실시간으로 확인하세요
             </p>
-            <Button type="primary" size="large">
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => navigate("/revenue")}
+            >
               수익 확인하기
             </Button>
           </Card>
