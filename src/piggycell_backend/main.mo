@@ -15,11 +15,13 @@ import TrieMap "mo:base/TrieMap";
 import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
 import Market "./Market";
+import Token "./Token";
 
 actor Main {
     private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("2vxsx-fae"));  // dfx identity get-principal 으로 얻은 값으로 변경 필요
     private let adminManager = Admin.AdminManager();
-    private let marketManager = Market.MarketManager();
+    private let token = Token.Token();
+    private let marketManager = Market.MarketManager(token);
 
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
@@ -143,5 +145,49 @@ actor Main {
 
     public query func getTotalListings() : async Nat {
         marketManager.getTotalListings()
+    };
+
+    // PGC 토큰 관련 인터페이스
+    public query func icrc1_name() : async Text {
+        token.icrc1_name()
+    };
+
+    public query func icrc1_symbol() : async Text {
+        token.icrc1_symbol()
+    };
+
+    public query func icrc1_decimals() : async Nat8 {
+        token.icrc1_decimals()
+    };
+
+    public query func icrc1_fee() : async Nat {
+        token.icrc1_fee()
+    };
+
+    public query func icrc1_total_supply() : async Nat {
+        token.icrc1_total_supply()
+    };
+
+    public query func icrc1_balance_of(account : Token.Account) : async Nat {
+        token.icrc1_balance_of(account)
+    };
+
+    public shared({ caller }) func icrc1_transfer(args : Token.TransferArgs) : async Result.Result<(), Token.TransferError> {
+        token.icrc1_transfer(caller, args)
+    };
+
+    // 관리자용 토큰 발행/소각 기능
+    public shared({ caller }) func mint_tokens(to : Token.Account, amount : Nat) : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            return #err("관리자만 토큰을 발행할 수 있습니다.");
+        };
+        token.mint(to, amount)
+    };
+
+    public shared({ caller }) func burn_tokens(from : Token.Account, amount : Nat) : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            return #err("관리자만 토큰을 소각할 수 있습니다.");
+        };
+        token.burn(from, amount)
     };
 };

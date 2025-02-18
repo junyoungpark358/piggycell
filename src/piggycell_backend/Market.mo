@@ -6,6 +6,7 @@ import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 import Buffer "mo:base/Buffer";
 import Hash "mo:base/Hash";
+import Token "./Token";
 
 module {
     // 리스팅 정보 타입
@@ -22,6 +23,7 @@ module {
         #NotListed;
         #InvalidPrice;
         #InsufficientBalance;
+        #TransferError;
     };
 
     public type PageResult = {
@@ -30,7 +32,7 @@ module {
         nextStart: ?Nat;
     };
 
-    public class MarketManager() {
+    public class MarketManager(token: Token.Token) {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         
@@ -71,9 +73,35 @@ module {
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             switch (listings.get(tokenId)) {
                 case (?listing) {
-                    // 여기에 토큰 전송 로직 추가 필요
-                    listings.delete(tokenId);
-                    #ok(listing)
+                    // 구매자의 PGC 토큰 잔액 확인
+                    let buyer: Token.Account = {
+                        owner = caller;
+                        subaccount = null;
+                    };
+                    let seller: Token.Account = {
+                        owner = listing.seller;
+                        subaccount = null;
+                    };
+
+                    // 토큰 전송
+                    let transferArgs: Token.TransferArgs = {
+                        from_subaccount = null;
+                        to = seller;
+                        amount = listing.price;
+                        fee = ?token.icrc1_fee();
+                        memo = null;
+                        created_at_time = null;
+                    };
+
+                    switch(token.icrc1_transfer(caller, transferArgs)) {
+                        case (#ok()) {
+                            listings.delete(tokenId);
+                            #ok(listing)
+                        };
+                        case (#err(_)) {
+                            #err(#TransferError)
+                        };
+                    }
                 };
                 case null { #err(#NotListed) };
             }
