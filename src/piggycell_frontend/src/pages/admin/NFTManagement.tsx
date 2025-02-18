@@ -132,6 +132,7 @@ const NFTManagement = () => {
   ];
 
   const handleAddNFT = () => {
+    form.resetFields();
     setIsModalVisible(true);
   };
 
@@ -181,6 +182,11 @@ const NFTManagement = () => {
       console.error("Failed to mint NFT:", error);
       // TODO: 에러 처리
     }
+  };
+
+  const handleModalCancel = () => {
+    form.resetFields();
+    setIsModalVisible(false);
   };
 
   return (
@@ -252,7 +258,7 @@ const NFTManagement = () => {
         title="충전 허브 NFT 추가"
         open={isModalVisible}
         onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={handleModalCancel}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -270,15 +276,44 @@ const NFTManagement = () => {
             <Input type="number" placeholder="예: 8" />
           </Form.Item>
           <Form.Item
-            name="status"
-            label="상태"
-            rules={[{ required: true, message: "상태를 선택해주세요" }]}
+            name="transferType"
+            label="NFT 발행 방식"
+            rules={[{ required: true, message: "발행 방식을 선택해주세요" }]}
           >
             <Select>
-              <Select.Option value="available">판매중</Select.Option>
-              <Select.Option value="sold">판매완료</Select.Option>
-              <Select.Option value="created">생성완료</Select.Option>
+              <Select.Option value="market">NFT 마켓 등록</Select.Option>
+              <Select.Option value="address">지갑 주소로 전송</Select.Option>
             </Select>
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) =>
+              prevValues.transferType !== currentValues.transferType
+            }
+          >
+            {({ getFieldValue }) =>
+              getFieldValue("transferType") === "market" ? (
+                <Form.Item
+                  name="price"
+                  label="판매 가격 (PGC)"
+                  rules={[
+                    { required: true, message: "판매 가격을 입력해주세요" },
+                  ]}
+                >
+                  <Input type="number" placeholder="예: 1000" />
+                </Form.Item>
+              ) : getFieldValue("transferType") === "address" ? (
+                <Form.Item
+                  name="transferAddress"
+                  label="지갑 주소"
+                  rules={[
+                    { required: true, message: "지갑 주소를 입력해주세요" },
+                  ]}
+                >
+                  <Input placeholder="NFT를 전송할 지갑 주소를 입력하세요" />
+                </Form.Item>
+              ) : null
+            }
           </Form.Item>
         </Form>
       </Modal>
