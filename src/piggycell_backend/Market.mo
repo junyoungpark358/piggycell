@@ -38,6 +38,7 @@ module {
     public class MarketManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister) {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
+        private let listingsByTime = Buffer.Buffer<(Int, Nat)>(0); // (timestamp, tokenId) 쌍을 저장하는 버퍼
         
         // NFT 리스팅
         public func listNFT(caller: Principal, tokenId: Nat, price: Nat) : Result.Result<(), ListingError> {
@@ -52,6 +53,7 @@ module {
                         listedAt = Time.now();
                     };
                     listings.put(tokenId, listing);
+                    listingsByTime.add((listing.listedAt, tokenId));
                     if (tokenId > lastTokenId) { lastTokenId := tokenId };
                     #ok(())
                 };
@@ -66,6 +68,16 @@ module {
                         return #err(#NotOwner);
                     };
                     listings.delete(tokenId);
+                    // listingsByTime에서도 제거
+                    var i = 0;
+                    label l while (i < listingsByTime.size()) {
+                        let (_, tid) = listingsByTime.get(i);
+                        if (tid == tokenId) {
+                            let _ = listingsByTime.remove(i);
+                            break l
+                        };
+                        i += 1;
+                    };
                     #ok(())
                 };
                 case null { #err(#NotListed) };
@@ -199,32 +211,34 @@ module {
             listings.size()
         };
 
-        // 페이지네이션을 지원하는 리스팅 조회
+        // 페이지네이션을 지원하는 리스팅 조회 (최적화된 버전)
         public func getListings(start: ?Nat, limit: Nat) : PageResult {
             let buffer = Buffer.Buffer<Listing>(0);
             var count = 0;
             var nextStartValue: ?Nat = null;
             
-            // start가 없으면 가장 최근 리스팅부터 시작
-            let startValue = switch (start) {
+            let startIndex = switch (start) {
                 case (?s) { s };
-                case null { lastTokenId + 1 };
+                case null { listingsByTime.size() };
             };
 
-            // tokenId를 역순으로 순회하면서 limit 만큼만 수집
-            var currentId = startValue;
-            while (currentId > 0 and count < limit) {
-                currentId -= 1;
-                switch (listings.get(currentId)) {
-                    case (?listing) {
-                        buffer.add(listing);
-                        count += 1;
-                        if (count == limit) {
-                            // 다음 페이지 시작점 설정
-                            nextStartValue := ?currentId;
+            let endIndex = if (startIndex < limit) { 0 } else { startIndex - limit };
+            
+            var i = startIndex;
+            while (i > endIndex and i > 0) {
+                i -= 1;
+                if (i < listingsByTime.size()) {
+                    let (_, tokenId) = listingsByTime.get(i);
+                    switch (listings.get(tokenId)) {
+                        case (?listing) {
+                            buffer.add(listing);
+                            count += 1;
+                            if (count == limit) {
+                                nextStartValue := ?i;
+                            };
                         };
+                        case null { };
                     };
-                    case null { };
                 };
             };
 
