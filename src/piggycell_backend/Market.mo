@@ -6,7 +6,10 @@ import Nat "mo:base/Nat";
 import Text "mo:base/Text";
 import Buffer "mo:base/Buffer";
 import Hash "mo:base/Hash";
+import Nat64 "mo:base/Nat64";
+import Int "mo:base/Int";
 import Token "./Token";
+import ChargerHubNFT "./ChargerHubNFT";
 
 module {
     // 리스팅 정보 타입
@@ -32,7 +35,7 @@ module {
         nextStart: ?Nat;
     };
 
-    public class MarketManager(token: Token.Token) {
+    public class MarketManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister) {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         
@@ -83,7 +86,7 @@ module {
                         subaccount = null;
                     };
 
-                    // 토큰 전송
+                    // PGC 토큰 전송
                     let transferArgs: Token.TransferArgs = {
                         from_subaccount = null;
                         to = seller;
@@ -95,8 +98,27 @@ module {
 
                     switch(token.icrc1_transfer(caller, transferArgs)) {
                         case (#ok()) {
-                            listings.delete(tokenId);
-                            #ok(listing)
+                            // NFT를 구매자에게 전송
+                            let nftTransferArgs: ChargerHubNFT.TransferArgs = {
+                                token_ids = [tokenId];
+                                from_subaccount = null;
+                                to = {
+                                    owner = caller;
+                                    subaccount = null;
+                                };
+                                memo = null;
+                                created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
+                            };
+
+                            switch(nft.icrc7_transfer(caller, nftTransferArgs)) {
+                                case (#ok()) {
+                                    listings.delete(tokenId);
+                                    #ok(listing)
+                                };
+                                case (#err(_)) {
+                                    #err(#TransferError)
+                                };
+                            }
                         };
                         case (#err(_)) {
                             #err(#TransferError)

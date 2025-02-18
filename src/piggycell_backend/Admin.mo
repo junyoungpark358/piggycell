@@ -12,7 +12,7 @@ module {
 
     public class AdminManager() {
         private let admins = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
-        private var superAdmin : Principal = Principal.fromText("2vxsx-fae"); // 초기 슈퍼 관리자 설정
+        private var superAdmin : Principal = Principal.fromText("7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe");
 
         // 슈퍼 관리자 확인
         public func isSuperAdmin(caller: Principal) : Bool {

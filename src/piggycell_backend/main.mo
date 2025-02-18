@@ -6,6 +6,7 @@ import Hash "mo:base/Hash";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
+import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
@@ -18,10 +19,10 @@ import Market "./Market";
 import Token "./Token";
 
 actor Main {
-    private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("2vxsx-fae"));  // dfx identity get-principal 으로 얻은 값으로 변경 필요
+    private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe"));
     private let adminManager = Admin.AdminManager();
     private let token = Token.Token();
-    private let marketManager = Market.MarketManager(token);
+    private let marketManager = Market.MarketManager(token, nft);
 
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
@@ -88,11 +89,45 @@ actor Main {
     };
 
     // 관리자 기능
-    public shared({ caller }) func mint(args: ChargerHubNFT.MintArgs) : async Result.Result<Nat, Text> {
+    public shared({ caller }) func mint(args: ChargerHubNFT.MintArgs, transferType: Text, price: ?Nat) : async Result.Result<Nat, Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 NFT를 발행할 수 있습니다.");
         };
-        nft.mint(caller, args)
+
+        switch(nft.mint(caller, args)) {
+            case (#ok(token_id)) {
+                // NFT 마켓 등록인 경우
+                if (transferType == "market") {
+                    switch(price) {
+                        case (?listing_price) {
+                            // NFT 소유자를 마켓으로 직접 변경
+                            switch(nft.updateOwner(caller, token_id, Principal.fromActor(Main))) {
+                                case (#ok()) {
+                                    // 마켓에 리스팅
+                                    switch(marketManager.listNFT(caller, token_id, listing_price)) {
+                                        case (#ok()) { #ok(token_id) };
+                                        case (#err(error)) { 
+                                            #err("마켓 리스팅 실패: " # debug_show(error))
+                                        };
+                                    };
+                                };
+                                case (#err(error)) {
+                                    #err("NFT 소유자 변경 실패: " # error)
+                                };
+                            };
+                        };
+                        case (null) {
+                            #err("마켓 등록을 위한 가격이 지정되지 않았습니다.")
+                        };
+                    };
+                } else {
+                    #ok(token_id)
+                };
+            };
+            case (#err(error)) {
+                #err(error)
+            };
+        }
     };
 
     public shared({ caller }) func updateMetadata(token_id: Nat, new_metadata: [(Text, ChargerHubNFT.Metadata)]) : async Result.Result<(), Text> {

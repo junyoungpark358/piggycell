@@ -11,6 +11,7 @@ import {
   Row,
   Col,
   Statistic,
+  message,
 } from "antd";
 import {
   PlusOutlined,
@@ -26,16 +27,16 @@ import { useState } from "react";
 import { AuthManager } from "../../utils/auth";
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
+import { idlFactory } from "../../../../declarations/piggycell_backend";
+import type {
+  _SERVICE,
+  Metadata,
+  MintArgs,
+} from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTManagement.css";
 
 // TODO: canister IDL 파일 경로 수정 필요
 // import { idlFactory } from "../../declarations/piggycell_backend/piggycell_backend.did.js";
-
-// 임시 타입 정의
-type MintResult = {
-  ok?: number;
-  err?: string;
-};
 
 const NFTManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -145,8 +146,10 @@ const NFTManagement = () => {
       const identity = await authManager.getIdentity();
 
       if (!identity) {
-        throw new Error("Not authenticated");
+        throw new Error("인증되지 않은 사용자입니다.");
       }
+
+      console.log("Current Principal ID:", identity.getPrincipal().toString());
 
       // Agent 생성
       const agent = new HttpAgent({ identity });
@@ -159,28 +162,54 @@ const NFTManagement = () => {
       // TODO: Canister ID 환경변수 설정 필요
       const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
       if (!canisterId) {
-        throw new Error("Canister ID not found");
+        throw new Error("Canister ID를 찾을 수 없습니다.");
       }
 
+      // Actor 생성
+      const actor = Actor.createActor<_SERVICE>(idlFactory, {
+        agent,
+        canisterId,
+      });
+
       // NFT 메타데이터 생성
-      const metadata = [
+      const metadata: Array<[string, Metadata]> = [
         ["location", { Text: values.location }],
-        ["chargerCount", { Nat: Number(values.chargerCount) }],
-        ["status", { Text: values.status }],
+        ["chargerCount", { Nat: BigInt(values.chargerCount) }],
       ];
 
-      // NFT 민팅
-      const mintArgs = {
-        to: { owner: identity.getPrincipal(), subaccount: null },
-        token_id: Date.now(), // 임시 토큰 ID 생성 방식
+      // NFT 민팅 인자 생성
+      const mintArgs: MintArgs = {
+        to: {
+          owner: Principal.fromText(
+            values.transferType === "address"
+              ? values.transferAddress
+              : canisterId
+          ),
+          subaccount: [],
+        },
+        token_id: BigInt(Date.now()),
         metadata: metadata,
       };
+
+      // NFT 민팅 및 마켓 등록
+      const result = await actor.mint(
+        mintArgs,
+        values.transferType === "market" ? "market" : "direct",
+        values.transferType === "market" ? [BigInt(values.price)] : []
+      );
+
+      if ("ok" in result) {
+        message.success("NFT가 성공적으로 생성되었습니다.");
+        // TODO: NFT 목록 새로고침
+      } else {
+        message.error(`NFT 생성 실패: ${result.err}`);
+      }
 
       setIsModalVisible(false);
       form.resetFields();
     } catch (error) {
-      console.error("Failed to mint NFT:", error);
-      // TODO: 에러 처리
+      console.error("NFT 생성 실패:", error);
+      message.error("NFT 생성 중 오류가 발생했습니다.");
     }
   };
 
@@ -192,7 +221,7 @@ const NFTManagement = () => {
   return (
     <div className="nft-management">
       <div className="page-header">
-        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">NFT 관리</h1>
+        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 관리</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNFT}>
           새 NFT 생성
         </Button>
