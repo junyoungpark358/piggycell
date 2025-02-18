@@ -48,12 +48,11 @@ body {
   border-bottom: none !important;
   line-height: 64px;
   font-weight: 500;
-  margin-left: -24px;
 }
 
 .ant-menu-item {
   color: #475569 !important;
-  padding: 0 20px !important;
+  padding: 0 24px !important;
   margin: 0 !important;
   transition: all 0.3s ease !important;
   border-radius: 0 !important;
@@ -61,7 +60,7 @@ body {
 }
 
 .ant-menu-item:first-child {
-  margin-left: 24px !important;
+  margin-left: 0 !important;
   padding-left: 24px !important;
 }
 
@@ -457,6 +456,25 @@ h6 {
 
   .stats-row .ant-statistic-content-suffix {
     font-size: 0.875rem !important;
+  }
+
+  .ant-menu {
+    width: 100%;
+    padding-left: 16px !important;
+  }
+
+  .ant-menu-item {
+    padding: 0 16px !important;
+    margin: 0 !important;
+  }
+
+  .ant-menu-item:first-child {
+    padding-left: 16px !important;
+    margin-left: 0 !important;
+  }
+
+  .ant-layout-header nav {
+    padding: 0 16px;
   }
 }
 
