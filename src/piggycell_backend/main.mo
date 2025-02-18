@@ -98,11 +98,11 @@ actor Main {
         nft.updateMetadata(caller, token_id, new_metadata)
     };
 
-    public shared({ caller }) func updateChargerHubStatus(token_id: Nat, status: Text) : async Result.Result<(), Text> {
+    public shared({ caller }) func updateChargerHubMetadata(token_id: Nat, location: Text, chargerCount: Nat) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
-            return #err("관리자만 충전 허브 상태를 수정할 수 있습니다.");
+            return #err("관리자만 충전 허브 메타데이터를 수정할 수 있습니다.");
         };
-        nft.updateChargerHubStatus(caller, token_id, status)
+        nft.updateChargerHubMetadata(caller, token_id, location, chargerCount)
     };
 
     // 전송 기능

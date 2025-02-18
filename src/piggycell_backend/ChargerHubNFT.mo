@@ -33,7 +33,6 @@ module {
     public type ChargerHubMetadata = {
         location: Text;
         chargerCount: Nat;
-        status: Text;
     };
 
     // 전송 관련 타입
@@ -156,22 +155,17 @@ module {
             };
         };
 
-        public func updateChargerHubStatus(caller: Principal, token_id: Nat, status: Text) : Result.Result<(), Text> {
+        public func updateChargerHubMetadata(caller: Principal, token_id: Nat, location: Text, chargerCount: Nat) : Result.Result<(), Text> {
             if (caller != owner) {
-                return #err("Unauthorized: Only owner can update status");
+                return #err("Unauthorized: Only owner can update metadata");
             };
 
             switch (metadata.get(token_id)) {
-                case (?current_metadata) {
-                    let updated_metadata = Array.map<(Text, Metadata), (Text, Metadata)>(
-                        current_metadata,
-                        func((key, value)) : (Text, Metadata) {
-                            if (key == "status") {
-                                return (key, #Text(status));
-                            };
-                            (key, value)
-                        }
-                    );
+                case (?_) {
+                    let updated_metadata = [
+                        ("location", #Text(location)),
+                        ("chargerCount", #Nat(chargerCount))
+                    ];
                     metadata.put(token_id, updated_metadata);
                     #ok()
                 };
