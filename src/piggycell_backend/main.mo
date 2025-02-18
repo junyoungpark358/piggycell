@@ -14,10 +14,12 @@ import Time "mo:base/Time";
 import TrieMap "mo:base/TrieMap";
 import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
+import Market "./Market";
 
 actor Main {
     private let nft = ChargerHubNFT.NFTCanister(Principal.fromText("2vxsx-fae"));  // dfx identity get-principal 으로 얻은 값으로 변경 필요
     private let adminManager = Admin.AdminManager();
+    private let marketManager = Market.MarketManager();
 
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
@@ -108,5 +110,38 @@ actor Main {
     // 전송 기능
     public shared({ caller }) func icrc7_transfer(args: ChargerHubNFT.TransferArgs) : async Result.Result<(), Text> {
         nft.icrc7_transfer(caller, args)
+    };
+
+    // 마켓 관련 인터페이스
+    public shared({ caller }) func listNFT(tokenId: Nat, price: Nat) : async Result.Result<(), Market.ListingError> {
+        marketManager.listNFT(caller, tokenId, price)
+    };
+
+    public shared({ caller }) func delistNFT(tokenId: Nat) : async Result.Result<(), Market.ListingError> {
+        marketManager.delistNFT(caller, tokenId)
+    };
+
+    public shared({ caller }) func buyNFT(tokenId: Nat) : async Result.Result<Market.Listing, Market.ListingError> {
+        marketManager.buyNFT(caller, tokenId)
+    };
+
+    public query func getListing(tokenId: Nat) : async ?Market.Listing {
+        marketManager.getListing(tokenId)
+    };
+
+    public query func getListings(start: ?Nat, limit: Nat) : async Market.PageResult {
+        marketManager.getListings(start, limit)
+    };
+
+    public query func getListingsBySeller(seller: Principal, start: ?Nat, limit: Nat) : async Market.PageResult {
+        marketManager.getListingsBySeller(seller, start, limit)
+    };
+
+    public query func isListed(tokenId: Nat) : async Bool {
+        marketManager.isListed(tokenId)
+    };
+
+    public query func getTotalListings() : async Nat {
+        marketManager.getTotalListings()
     };
 };
