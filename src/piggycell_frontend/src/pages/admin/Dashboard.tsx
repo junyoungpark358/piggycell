@@ -1,10 +1,21 @@
-import { Card, Row, Col, Statistic, Table, Input, message } from "antd";
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Table,
+  Input,
+  message,
+  Tooltip,
+  Button,
+} from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
   UserOutlined,
   LineChartOutlined,
   SearchOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import "./Dashboard.css";
 import { useEffect, useState } from "react";
@@ -12,14 +23,52 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { AuthManager } from "../../utils/auth";
 import { idlFactory } from "../../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
+import { Principal } from "@dfinity/principal";
 
-interface Transaction {
-  type: string;
-  nftId: string | null;
-  user: string;
-  amount: number;
-  date: string;
+// ICRC-3 트랜잭션 관련 타입 정의
+interface ICRC3Account {
+  owner: Principal;
+  subaccount: [] | [Uint8Array];
 }
+
+interface ICRC3Transaction {
+  kind: string;
+  timestamp: bigint;
+  from: [] | [ICRC3Account];
+  to: [] | [ICRC3Account];
+  token_ids: bigint[];
+  memo: [] | [Uint8Array];
+}
+
+// ICRC-3 필터 타입 정의
+interface TransactionFilter {
+  date_range:
+    | []
+    | [
+        {
+          start: bigint;
+          end: bigint;
+        }
+      ];
+  account: [] | [ICRC3Account];
+  type: [] | [string[]];
+}
+
+interface GetTransactionsArgs {
+  start: [] | [bigint];
+  length: [] | [bigint];
+  account: [] | [ICRC3Account];
+}
+
+type TransactionDisplay = {
+  key: string;
+  type: string;
+  nftId: string;
+  from: string;
+  to: string;
+  isFromMarket: boolean;
+  date: string;
+};
 
 const PAGE_SIZE = 10;
 
@@ -30,12 +79,16 @@ const AdminDashboard = () => {
     activeUsers: 0,
     totalVolume: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
-    []
-  );
+  const [transactions, setTransactions] = useState<TransactionDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [filter, setFilter] = useState<TransactionFilter>({
+    date_range: [],
+    account: [],
+    type: [],
+  });
+  const [searchText, setSearchText] = useState("");
 
   const createActor = async () => {
     const authManager = AuthManager.getInstance();
@@ -61,23 +114,159 @@ const AdminDashboard = () => {
     });
   };
 
+  // 타임스탬프를 한국 시간 문자열로 변환하는 함수
+  const formatTimestamp = (timestamp: bigint): string => {
+    // 나노초를 밀리초로 변환 (1 밀리초 = 1,000,000 나노초)
+    const milliseconds = Number(timestamp) / 1_000_000;
+    const date = new Date(milliseconds);
+    return new Intl.DateTimeFormat("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Seoul",
+    }).format(date);
+  };
+
+  // Principal을 문자열로 변환하고 축약하는 함수
+  const formatPrincipal = (principal: Principal | undefined): string => {
+    if (!principal) return "-";
+    const text = principal.toString();
+    return text.length > 10 ? `${text.slice(0, 5)}...${text.slice(-5)}` : text;
+  };
+
+  // 주소 축약 함수 추가
+  const shortenAddress = (address: string) => {
+    if (address === "-") return "-";
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
+
+  // 클립보드 복사 함수 추가
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        message.success("주소가 복사되었습니다.");
+      },
+      (err) => {
+        message.error("주소 복사에 실패했습니다.");
+        console.error("복사 실패:", err);
+      }
+    );
+  };
+
+  // 주소 렌더링 컴포넌트 수정
+  const renderAddress = (text: string, label: string) => {
+    if (text === "-") return "-";
+    return (
+      <div className="address-display">
+        <Tooltip title={text}>
+          <span>{shortenAddress(text)}</span>
+        </Tooltip>
+        <Tooltip title={`${label} 복사`}>
+          <Button
+            type="link"
+            icon={<CopyOutlined />}
+            onClick={() => copyToClipboard(text)}
+          />
+        </Tooltip>
+      </div>
+    );
+  };
+
   const fetchTransactions = async (page: number) => {
     try {
       const actor = await createActor();
-      const result = await actor.getTransactions(
-        BigInt(page - 1),
-        BigInt(PAGE_SIZE)
+      const start = (page - 1) * PAGE_SIZE;
+
+      const result = await actor.icrc3_get_transactions({
+        start: [BigInt(start)],
+        length: [BigInt(PAGE_SIZE)],
+        account: filter.account,
+      });
+
+      // BigInt를 문자열로 변환하는 replacer 함수
+      const bigIntReplacer = (key: string, value: any) => {
+        if (typeof value === "bigint") {
+          return value.toString();
+        }
+        return value;
+      };
+
+      console.log(
+        "받은 트랜잭션 데이터:",
+        JSON.stringify(result, bigIntReplacer, 2)
       );
 
-      setRecentTransactions(
-        result.items.map((tx: any) => ({
-          type: tx.txType,
-          nftId: tx.nftId,
-          user: tx.user,
-          amount: Number(tx.amount),
-          date: tx.date,
-        }))
-      );
+      const formattedTransactions = (
+        result.transactions as unknown as ICRC3Transaction[]
+      )
+        .filter((tx) => {
+          if (searchText) {
+            const searchLower = searchText.toLowerCase();
+            return (
+              tx.token_ids.some((id) => id.toString().includes(searchLower)) ||
+              (tx.from?.[0]?.owner
+                ?.toString()
+                .toLowerCase()
+                .includes(searchLower) ??
+                false) ||
+              (tx.to?.[0]?.owner
+                ?.toString()
+                .toLowerCase()
+                .includes(searchLower) ??
+                false)
+            );
+          }
+          return true;
+        })
+        .map((tx) => {
+          console.log("트랜잭션 변환 전:", tx);
+          const typeMap: { [key: string]: string } = {
+            mint: "NFT 발행",
+            transfer: "NFT 전송",
+            stake: "NFT 스테이킹",
+            unstake: "NFT 언스테이킹",
+            reward: "스테이킹 보상",
+          };
+
+          const backendCanisterId =
+            process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
+          let fromAddress = tx.from?.[0]?.owner
+            ? tx.from[0].owner.toString()
+            : "-";
+          let toAddress = tx.to?.[0]?.owner ? tx.to[0].owner.toString() : "-";
+
+          // 거래 유형에 따른 주소 처리
+          if (tx.kind === "stake") {
+            toAddress = backendCanisterId;
+          } else if (tx.kind === "unstake") {
+            // 언스테이킹의 경우 보내는 주소를 백엔드 컨트랙트로 설정
+            const temp = fromAddress;
+            fromAddress = backendCanisterId;
+            toAddress = temp;
+          } else if (tx.kind === "mint") {
+            toAddress = backendCanisterId;
+          } else if (tx.kind === "transfer") {
+            // NFT 구매의 경우 보내는 주소를 백엔드 컨트랙트로 설정
+            fromAddress = backendCanisterId;
+          }
+
+          const formatted = {
+            key: `${tx.timestamp.toString()}`,
+            type: typeMap[tx.kind] || tx.kind,
+            nftId: tx.token_ids.map((id) => `#${id.toString()}`).join(", "),
+            from: fromAddress,
+            to: toAddress,
+            isFromMarket: fromAddress === backendCanisterId,
+            date: formatTimestamp(tx.timestamp),
+          };
+          console.log("트랜잭션 변환 후:", formatted);
+          return formatted;
+        });
+
+      setTransactions(formattedTransactions);
       setTotal(Number(result.total));
     } catch (error) {
       console.error("거래 내역 조회 중 오류 발생:", error);
@@ -133,42 +322,48 @@ const AdminDashboard = () => {
     setCurrentPage(page);
   };
 
+  // 검색 핸들러
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setCurrentPage(1);
+  };
+
+  // 테이블 컬럼 정의
   const columns = [
     {
       title: "거래 유형",
       dataIndex: "type",
       key: "type",
+      align: "center" as const,
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: "NFT ID",
       dataIndex: "nftId",
       key: "nftId",
-      render: (nftId: string | null) => nftId || "-",
+      align: "center" as const,
+      render: (text: string) => <span>{text}</span>,
     },
     {
-      title: "사용자",
-      dataIndex: "user",
-      key: "user",
-      render: (user: string) => `${user.slice(0, 8)}...${user.slice(-8)}`,
+      title: "보내는 주소",
+      dataIndex: "from",
+      key: "from",
+      align: "center" as const,
+      render: (text: string) => renderAddress(text, "보내는 주소"),
     },
     {
-      title: "금액",
-      dataIndex: "amount",
-      key: "amount",
-      render: (amount: number, record: Transaction) => {
-        if (
-          record.type === "NFT 스테이킹" ||
-          record.type === "NFT 언스테이킹"
-        ) {
-          return "-";
-        }
-        return `${amount} PGC`;
-      },
+      title: "받는 주소",
+      dataIndex: "to",
+      key: "to",
+      align: "center" as const,
+      render: (text: string) => renderAddress(text, "받는 주소"),
     },
     {
       title: "날짜",
       dataIndex: "date",
       key: "date",
+      align: "center" as const,
+      render: (text: string) => <span>{text}</span>,
     },
   ];
 
@@ -226,24 +421,26 @@ const AdminDashboard = () => {
       </Row>
 
       <div className="search-box">
-        <Input
-          placeholder="거래 내역 검색..."
-          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          size="middle"
-        />
+        <div className="mb-4">
+          <Input
+            placeholder="NFT ID 또는 주소로 검색"
+            prefix={<SearchOutlined />}
+            onChange={(e) => handleSearch(e.target.value)}
+            style={{ width: 300 }}
+          />
+        </div>
       </div>
 
-      <Card className="table-card">
+      <Card className="transaction-table">
         <Table
           columns={columns}
-          dataSource={recentTransactions}
+          dataSource={transactions}
           loading={loading}
           pagination={{
             current: currentPage,
             pageSize: PAGE_SIZE,
             total: total,
             onChange: handlePageChange,
-            showSizeChanger: false,
           }}
         />
       </Card>

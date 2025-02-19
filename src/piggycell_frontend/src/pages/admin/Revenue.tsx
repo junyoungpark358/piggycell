@@ -37,7 +37,7 @@ const AdminRevenue = () => {
       title: "총 수익",
       dataIndex: "totalRevenue",
       key: "totalRevenue",
-      render: (value: number) => `${value} ICP`,
+      render: (value: number) => `${value} PGC`,
     },
     {
       title: "활성 NFT 수",
@@ -55,7 +55,7 @@ const AdminRevenue = () => {
       title: "스테이킹 보상",
       dataIndex: "stakingRewards",
       key: "stakingRewards",
-      render: (value: number) => `${value} ICP`,
+      render: (value: number) => `${value} PGC`,
     },
   ];
 
@@ -72,7 +72,7 @@ const AdminRevenue = () => {
               title="이번 달 총 수익"
               value={271.3}
               prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
             />
           </Card>
         </Col>
@@ -93,7 +93,7 @@ const AdminRevenue = () => {
               title="스테이킹 보상 지급액"
               value={22.7}
               prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
             />
           </Card>
         </Col>

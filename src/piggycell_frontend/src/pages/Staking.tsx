@@ -1,4 +1,15 @@
-import { Card, Row, Col, Button, Input, Statistic, message, Spin } from "antd";
+import React from "react";
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Input,
+  Statistic,
+  message,
+  Spin,
+  Empty,
+} from "antd";
 import {
   SearchOutlined,
   BankOutlined,
@@ -14,6 +25,7 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./Staking.css";
+import "../styles/components/StatisticCard.css";
 
 interface StakedNFT {
   id: bigint;
@@ -255,64 +267,76 @@ const Staking = () => {
         />
       </div>
 
-      <Row gutter={[16, 16]} className="mt-6">
-        {stakedNFTs.map((nft) => (
-          <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              title={nft.name}
-              className={`staking-card ${
-                highlightedNFT === nft.id.toString() ? "highlight-card" : ""
-              }`}
-            >
-              {highlightedNFT === nft.id.toString() && (
-                <>
-                  <div className="wave-effect" />
-                  <div className="sparkle" />
-                </>
-              )}
-              <div className="mb-4">
-                <p className="flex items-center mb-2 text-gray-600">
-                  <EnvironmentOutlined className="mr-3 text-sky-600" />
-                  <span className="mr-2 font-medium">위치:</span> {nft.location}
-                </p>
-                <p className="flex items-center mb-2 text-gray-600">
-                  <ThunderboltOutlined className="mr-3 text-sky-600" />
-                  <span className="mr-2 font-medium">충전기:</span>{" "}
-                  {nft.chargerCount}대
-                </p>
-                <p className="flex items-center text-gray-600">
-                  <DollarOutlined className="mr-3 text-sky-600" />
-                  <span className="mr-2 font-medium">예상 보상:</span>{" "}
-                  {nft.estimatedReward.toString()} PGC
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  type="primary"
-                  onClick={() => handleClaimReward(nft.id)}
-                  loading={processingNFT === nft.id}
-                  block
-                >
-                  {processingNFT === nft.id
-                    ? "보상 수령 중..."
-                    : "보상 수령하기"}
-                </Button>
-                <Button
-                  type="primary"
-                  danger
-                  onClick={() => handleUnstake(nft.id)}
-                  loading={processingNFT === nft.id}
-                  block
-                >
-                  {processingNFT === nft.id
-                    ? "언스테이킹 처리 중..."
-                    : "언스테이킹하기"}
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      {/* 스테이킹된 NFT 목록 */}
+      {loading ? (
+        <div className="flex items-center justify-center h-screen">
+          <Spin size="large" />
+        </div>
+      ) : stakedNFTs.length === 0 ? (
+        <Col span={24}>
+          <Empty description="스테이킹된 NFT가 없습니다." />
+        </Col>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {stakedNFTs.map((nft) => (
+            <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
+              <Card
+                title={nft.name}
+                className={`staking-card ${
+                  highlightedNFT === nft.id.toString() ? "highlight-card" : ""
+                }`}
+              >
+                {highlightedNFT === nft.id.toString() && (
+                  <>
+                    <div className="wave-effect" />
+                    <div className="sparkle" />
+                  </>
+                )}
+                <div className="mb-4">
+                  <p className="flex items-center mb-2 text-gray-600">
+                    <EnvironmentOutlined className="mr-3 text-sky-600" />
+                    <span className="mr-2 font-medium">위치:</span>{" "}
+                    {nft.location}
+                  </p>
+                  <p className="flex items-center mb-2 text-gray-600">
+                    <ThunderboltOutlined className="mr-3 text-sky-600" />
+                    <span className="mr-2 font-medium">충전기:</span>{" "}
+                    {nft.chargerCount}대
+                  </p>
+                  <p className="flex items-center text-gray-600">
+                    <DollarOutlined className="mr-3 text-sky-600" />
+                    <span className="mr-2 font-medium">예상 보상:</span>{" "}
+                    {nft.estimatedReward.toString()} PGC
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Button
+                    type="primary"
+                    onClick={() => handleClaimReward(nft.id)}
+                    loading={processingNFT === nft.id}
+                    block
+                  >
+                    {processingNFT === nft.id
+                      ? "보상 수령 중..."
+                      : "보상 수령하기"}
+                  </Button>
+                  <Button
+                    type="primary"
+                    danger
+                    onClick={() => handleUnstake(nft.id)}
+                    loading={processingNFT === nft.id}
+                    block
+                  >
+                    {processingNFT === nft.id
+                      ? "언스테이킹 처리 중..."
+                      : "언스테이킹하기"}
+                  </Button>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   );
 };

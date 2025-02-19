@@ -1,4 +1,15 @@
-import { Card, Row, Col, Button, Input, Statistic, message, Spin } from "antd";
+import React from "react";
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Input,
+  Statistic,
+  message,
+  Spin,
+  Empty,
+} from "antd";
 import {
   SearchOutlined,
   EnvironmentOutlined,
@@ -19,6 +30,7 @@ import type {
   Metadata,
 } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTMarket.css";
+import "../styles/components/StatisticCard.css";
 
 interface NFTMetadata {
   location?: string;
@@ -325,13 +337,15 @@ const NFTMarket = () => {
         />
       </div>
 
+      {/* NFT 목록 */}
       {loading ? (
-        <div className="py-8 text-center">
+        <div className="flex items-center justify-center h-screen">
           <Spin size="large" />
-          <p className="mt-4">NFT 데이터를 불러오는 중...</p>
         </div>
       ) : nfts.length === 0 ? (
-        <div className="py-8 text-center">판매 중인 NFT가 없습니다.</div>
+        <Col span={24}>
+          <Empty description="판매 중인 NFT가 없습니다." />
+        </Col>
       ) : (
         <Row gutter={[16, 16]}>
           {nfts.map((nft, index) => (

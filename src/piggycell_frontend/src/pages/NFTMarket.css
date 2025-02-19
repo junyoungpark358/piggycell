@@ -1,3 +1,66 @@
+/* NFT 마켓 페이지 고유 스타일 */
+.nft-market-page {
+  padding: 24px;
+}
+
+.search-section {
+  margin-bottom: 24px;
+}
+
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.nft-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.nft-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nft-image {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+}
+
+.nft-info {
+  padding: 16px;
+}
+
+.nft-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.nft-price {
+  font-size: 16px;
+  color: #0284c7;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .nft-market-page {
+    padding: 16px;
+  }
+
+  .nft-grid {
+    gap: 16px;
+  }
+
+  .nft-card {
+    margin-bottom: 16px;
+  }
+}
+
 .nft-market {
   padding: 24px;
   max-width: 1200px;
@@ -25,12 +88,12 @@
 .stats-row .ant-card {
   background: #ffffff !important;
   border-radius: 12px !important;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
-  border-left: 3px solid #38bdf8 !important;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px !important;
+  border-left: 4px solid #38bdf8 !important;
   padding: 0 !important;
   position: relative;
   overflow: hidden;
-  transition: none !important;
+  transition: all 0.3s ease !important;
 }
 
 .stats-row .ant-card::before,
@@ -39,24 +102,42 @@
 }
 
 .stats-row .ant-card:hover {
-  transform: none !important;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
+  transform: translateY(-2px) !important;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 8px 24px !important;
 }
 
 .stats-row .ant-card .ant-card-body {
-  padding: 1.25rem !important;
+  padding: 1.5rem !important;
   background: linear-gradient(
     90deg,
-    rgba(56, 189, 248, 0.03) 0%,
+    rgba(56, 189, 248, 0.08) 0%,
     rgba(56, 189, 248, 0) 100%
   ) !important;
 }
 
+.stats-row .ant-statistic-content-value {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+  color: #0284c7 !important;
+  letter-spacing: -0.5px;
+  line-height: 1.2 !important;
+  text-shadow: 0px 1px 2px rgba(2, 132, 199, 0.1) !important;
+}
+
+.stats-row .ant-statistic-content-suffix {
+  color: #0284c7 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  margin-left: 6px !important;
+  position: relative;
+  top: -3px;
+}
+
 .stats-row .ant-statistic-title {
   color: #64748b !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.5rem !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  margin-bottom: 10px !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -69,18 +150,12 @@
   line-height: 1.2 !important;
 }
 
-.stats-row .ant-statistic-content-suffix {
-  color: #64748b !important;
-  font-size: 1rem !important;
-  font-weight: 500 !important;
-  margin-left: 4px;
-}
-
 .stats-row .anticon {
-  font-size: 1.25rem !important;
-  margin-right: 0.5rem !important;
-  color: #38bdf8 !important;
+  font-size: 28px !important;
+  margin-right: 10px !important;
+  color: #0284c7 !important;
   opacity: 0.9;
+  filter: drop-shadow(0px 1px 2px rgba(2, 132, 199, 0.2)) !important;
 }
 
 .search-box {
@@ -100,19 +175,6 @@
 
 .search-box .ant-input-prefix {
   margin-right: 8px;
-}
-
-.nft-card {
-  height: 100%;
-  display: block !important;
-  border-radius: 8px;
-  overflow: hidden !important;
-  transition: none !important;
-}
-
-.nft-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
 }
 
 .nft-card .ant-card-head {
@@ -237,40 +299,6 @@
   background: #f1f5f9 !important;
   border-color: #e2e8f0 !important;
   color: #94a3b8 !important;
-}
-
-@media (max-width: 768px) {
-  .nft-market {
-    padding: 16px;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  .stats-row {
-    margin-bottom: 2rem;
-  }
-
-  .info-value {
-    font-size: 1rem;
-  }
-
-  .nft-card .ant-card-head-title {
-    font-size: 13px;
-  }
-
-  .nft-info {
-    font-size: 11px;
-  }
-
-  .stats-row .ant-statistic-title {
-    font-size: 12px;
-  }
-
-  .stats-row .ant-statistic-content {
-    font-size: 18px;
-  }
 }
 
 @media (min-width: 1200px) {

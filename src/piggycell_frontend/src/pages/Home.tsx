@@ -316,7 +316,7 @@ const Home = () => {
               title="예상 월 수익"
               value={1234}
               prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
               loading={loading}
             />
           </Card>

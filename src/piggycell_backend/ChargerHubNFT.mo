@@ -74,11 +74,45 @@ module {
         #Expired: { ledger_time: Nat64 };
     };
 
+    // ICRC-3 배치 전송 관련 타입
+    public type BatchTransferArgs = {
+        transfers: [TransferArgs];
+    };
+
+    public type BatchTransferResult = {
+        #Ok: [Result.Result<(), Text>];
+        #Err: Text;
+    };
+
+    // ICRC-3 트랜잭션 히스토리 관련 타입
+    public type Transaction = {
+        kind: Text;  // "mint", "transfer", "approve" 등
+        timestamp: Nat64;
+        from: ?Account;
+        to: ?Account;
+        token_ids: [Nat];
+        memo: ?Blob;
+    };
+
+    public type GetTransactionsArgs = {
+        start: ?Nat;  // 시작 인덱스
+        length: ?Nat;  // 가져올 트랜잭션 수
+        account: ?Account;  // 특정 계정의 트랜잭션만 조회
+    };
+
+    public type TransactionRange = {
+        transactions: [Transaction];
+        total: Nat;  // 전체 트랜잭션 수
+    };
+
     public class NFTCanister(init_owner: Principal) {
         private var owner: Principal = init_owner;
         private var tokens = TrieMap.TrieMap<Nat, Account>(Nat.equal, Hash.hash);
         private var metadata = TrieMap.TrieMap<Nat, [(Text, Metadata)]>(Nat.equal, Hash.hash);
         private var totalSupply: Nat = 0;
+
+        // 트랜잭션 히스토리 저장
+        private var transactions = Buffer.Buffer<Transaction>(0);
 
         private func accountsEqual(a: Account, b: Account) : Bool {
             a.owner == b.owner and Option.equal(a.subaccount, b.subaccount, Blob.equal)
@@ -109,6 +143,25 @@ module {
 
         // ICRC-2 승인 관리를 위한 상태 추가
         private let approvals = TrieMap.TrieMap<(Nat, Account), Allowance>(tokenApprovalEqual, tokenApprovalHash);
+
+        // 트랜잭션 기록 함수
+        private func recordTransaction(
+            kind: Text,
+            from: ?Account,
+            to: ?Account,
+            token_ids: [Nat],
+            memo: ?Blob
+        ) {
+            let tx: Transaction = {
+                kind;
+                timestamp = Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
+                from;
+                to;
+                token_ids;
+                memo;
+            };
+            transactions.add(tx);
+        };
 
         public func getOwner() : Principal {
             owner
@@ -163,6 +216,16 @@ module {
                     tokens.put(args.token_id, args.to);
                     metadata.put(args.token_id, args.metadata);
                     totalSupply += 1;
+                    
+                    // 트랜잭션 기록 추가
+                    recordTransaction(
+                        "mint",
+                        null,
+                        ?args.to,
+                        [args.token_id],
+                        null
+                    );
+                    
                     #ok(args.token_id)
                 };
             };
@@ -186,6 +249,15 @@ module {
             for (token_id in args.token_ids.vals()) {
                 tokens.put(token_id, args.to);
             };
+
+            // 트랜잭션 기록 추가
+            recordTransaction(
+                "transfer",
+                ?{ owner = caller; subaccount = args.from_subaccount },
+                ?args.to,
+                args.token_ids,
+                args.memo
+            );
 
             #ok()
         };
@@ -341,6 +413,82 @@ module {
                 case(null) {
                     #err("Token not found")
                 };
+            }
+        };
+
+        // ICRC-3 배치 전송 함수
+        public func icrc3_batch_transfer(caller: Principal, args: BatchTransferArgs) : BatchTransferResult {
+            let results = Buffer.Buffer<Result.Result<(), Text>>(args.transfers.size());
+            
+            for (transfer in args.transfers.vals()) {
+                let result = icrc7_transfer(caller, transfer);
+                results.add(result);
+                
+                // 만약 하나라도 실패하면 전체 트랜잭션을 롤백
+                switch (result) {
+                    case (#err(e)) {
+                        return #Err("Batch transfer failed: " # e);
+                    };
+                    case (_) {};
+                };
+            };
+            
+            #Ok(Buffer.toArray(results))
+        };
+
+        // ICRC-3 지원 표준 조회 함수
+        public func icrc3_supported_standards() : [(Text, Text)] {
+            [
+                ("ICRC-7", "https://github.com/dfinity/ICRC/ICRCs/ICRC-7"),
+                ("ICRC-2", "https://github.com/dfinity/ICRC/ICRCs/ICRC-2"),
+                ("ICRC-3", "https://github.com/dfinity/ICRC/ICRCs/ICRC-3")
+            ]
+        };
+
+        // ICRC-3 트랜잭션 조회 함수
+        public func icrc3_get_transactions(args: GetTransactionsArgs) : TransactionRange {
+            let start = Option.get(args.start, 0);
+            let length = Option.get(args.length, 100);
+            
+            let filtered_txs = switch (args.account) {
+                case (?account) {
+                    // 특정 계정의 트랜잭션만 필터링
+                    let temp = Buffer.Buffer<Transaction>(0);
+                    for (tx in transactions.vals()) {
+                        switch (tx.from, tx.to) {
+                            case (?from, _) {
+                                if (accountsEqual(from, account)) {
+                                    temp.add(tx);
+                                };
+                            };
+                            case (_, ?to) {
+                                if (accountsEqual(to, account)) {
+                                    temp.add(tx);
+                                };
+                            };
+                            case (_, _) {};
+                        };
+                    };
+                    temp
+                };
+                case (null) {
+                    transactions
+                };
+            };
+
+            let total = filtered_txs.size();
+            let end = Nat.min(start + length, total);
+            
+            let result = Buffer.Buffer<Transaction>(0);
+            var i = start;
+            while (i < end) {
+                result.add(filtered_txs.get(i));
+                i += 1;
+            };
+
+            {
+                transactions = Buffer.toArray(result);
+                total;
             }
         };
     };

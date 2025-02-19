@@ -199,7 +199,7 @@ const Revenue = () => {
               title="총 누적 수익"
               value={totalStats.totalRevenue}
               prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
             />
           </Card>
         </Col>
@@ -209,7 +209,7 @@ const Revenue = () => {
               title="이번 달 수익"
               value={totalStats.monthlyRevenue}
               prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
             />
           </Card>
         </Col>
@@ -219,7 +219,7 @@ const Revenue = () => {
               title="일일 수익"
               value={totalStats.dailyRevenue}
               prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              suffix="PGC"
             />
           </Card>
         </Col>
@@ -250,17 +250,17 @@ const Revenue = () => {
                 <p className="text-gray-600 mb-2 flex items-center">
                   <DollarOutlined className="mr-3 text-sky-600" />
                   <span className="font-medium mr-2">일일 수익:</span>{" "}
-                  {revenue.dailyRevenue} ICP
+                  {revenue.dailyRevenue} PGC
                 </p>
                 <p className="text-gray-600 mb-2 flex items-center">
                   <LineChartOutlined className="mr-3 text-sky-600" />
                   <span className="font-medium mr-2">월간 수익:</span>{" "}
-                  {revenue.monthlyRevenue} ICP
+                  {revenue.monthlyRevenue} PGC
                 </p>
                 <p className="text-gray-600 mb-2 flex items-center">
                   <BankOutlined className="mr-3 text-sky-600" />
                   <span className="font-medium mr-2">총 수익:</span>{" "}
-                  {revenue.totalRevenue} ICP
+                  {revenue.totalRevenue} PGC
                 </p>
                 <p className="text-gray-600 flex items-center">
                   <CheckCircleOutlined className="mr-3 text-sky-600" />

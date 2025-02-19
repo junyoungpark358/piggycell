@@ -22,12 +22,54 @@
   margin-bottom: 24px;
 }
 
-.ant-statistic-content-value {
-  text-shadow: none !important;
+/* 통계 카드 스타일 */
+.stats-row .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.ant-statistic-content-suffix {
-  text-shadow: none !important;
+.stats-row .ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.stats-row .ant-statistic {
+  text-align: center;
+}
+
+.stats-row .ant-statistic-title {
+  color: #4b5563;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.stats-row .ant-statistic-content {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px;
+}
+
+.stats-row .ant-statistic-content-value {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #0284c7 !important;
+}
+
+.stats-row .ant-statistic-content-suffix {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: #4b5563 !important;
+  margin-left: 4px !important;
+  display: inline-block !important;
+}
+
+.stats-row .anticon {
+  font-size: 20px;
+  color: #0284c7;
+  margin-right: 8px;
 }
 
 .search-box {
@@ -62,7 +104,112 @@
     margin-bottom: 16px;
   }
 
+  .stats-row .ant-statistic-content-value {
+    font-size: 20px !important;
+  }
+
+  .stats-row .ant-statistic-content-suffix {
+    font-size: 14px !important;
+  }
+
   .search-box {
     margin: 16px 0;
   }
+}
+
+/* 테이블 스타일 */
+.transaction-table .ant-table-thead > tr > th {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  padding: 12px 8px !important;
+  background-color: #f8fafc !important;
+}
+
+.transaction-table .ant-table-tbody > tr > td {
+  padding: 12px 8px !important;
+}
+
+.transaction-table .ant-table-tbody > tr:hover > td {
+  background-color: #f1f5f9 !important;
+}
+
+/* 테이블 내 버튼 스타일 */
+.transaction-table .ant-btn-link {
+  padding: 2px !important;
+  height: auto !important;
+  min-width: auto !important;
+}
+
+.transaction-table .ant-btn-link:hover {
+  background-color: #e2e8f0 !important;
+  border-radius: 4px !important;
+}
+
+/* 테이블 내 텍스트 스타일 */
+.transaction-table .ant-table {
+  font-size: 14px !important;
+}
+
+.transaction-table .ant-table-row {
+  line-height: 1.5 !important;
+}
+
+/* 주소 표시 스타일 */
+.address-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.address-display .anticon-copy {
+  color: #0284c7;
+  font-size: 14px;
+}
+
+.address-display .ant-btn-link:hover .anticon-copy {
+  color: #0369a1;
+}
+
+/* 테이블 내 아이콘 크기 조정 */
+.transaction-table .anticon {
+  font-size: 14px;
+}
+
+/* 테이블 내 버튼 스타일 추가 */
+.transaction-table .ant-btn-link {
+  border: none;
+  transition: all 0.2s;
+}
+
+.transaction-table .ant-btn-link:hover {
+  transform: scale(1.1);
+}
+
+/* 테이블 행 간격 조정 */
+.transaction-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.transaction-table .ant-table-tbody > tr:last-child > td {
+  border-bottom: none !important;
+}
+
+/* 테이블 페이지네이션 스타일 */
+.transaction-table .ant-pagination {
+  margin-top: 16px !important;
+  padding: 0 8px !important;
+}
+
+.transaction-table .ant-pagination-item {
+  border-radius: 6px !important;
+}
+
+.transaction-table .ant-pagination-item-active {
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
+
+.transaction-table .ant-pagination-item-active a {
+  color: white !important;
 }

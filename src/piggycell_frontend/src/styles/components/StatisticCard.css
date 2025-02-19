@@ -1,0 +1,129 @@
+/* 통계 카드 공통 스타일 */
+.stats-row .ant-card {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px !important;
+  border-left: 4px solid #38bdf8 !important;
+  padding: 0 !important;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease !important;
+  height: 100% !important;
+}
+
+.stats-row .ant-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 8px 24px !important;
+}
+
+.stats-row .ant-card .ant-card-body {
+  padding: 1rem !important;
+  background: linear-gradient(
+    90deg,
+    rgba(56, 189, 248, 0.08) 0%,
+    rgba(56, 189, 248, 0) 100%
+  ) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.stats-row .ant-statistic {
+  text-align: left !important;
+  word-break: break-word !important;
+}
+
+.stats-row .ant-statistic-content {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+
+.stats-row .ant-statistic-content-value {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #0284c7 !important;
+  letter-spacing: -0.5px;
+  line-height: 1.2 !important;
+  text-shadow: 0px 1px 2px rgba(2, 132, 199, 0.1) !important;
+  word-break: break-all !important;
+}
+
+.stats-row .ant-statistic-content-suffix {
+  color: #0284c7 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  margin-left: 4px !important;
+  position: relative;
+  top: -2px;
+}
+
+.stats-row .ant-statistic-title {
+  color: #64748b !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  line-height: 1.3 !important;
+}
+
+.stats-row .anticon {
+  font-size: 24px !important;
+  margin-right: 8px !important;
+  color: #0284c7 !important;
+  opacity: 0.9;
+  filter: drop-shadow(0px 1px 2px rgba(2, 132, 199, 0.2)) !important;
+  flex-shrink: 0 !important;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .stats-row .ant-card .ant-card-body {
+    padding: 0.75rem !important;
+  }
+
+  .stats-row .ant-statistic-content-value {
+    font-size: 20px !important;
+  }
+
+  .stats-row .ant-statistic-content-suffix {
+    font-size: 14px !important;
+  }
+
+  .stats-row .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .stats-row .anticon {
+    font-size: 20px !important;
+    margin-right: 6px !important;
+  }
+}
+
+@media (max-width: 375px) {
+  .stats-row .ant-card .ant-card-body {
+    padding: 0.5rem !important;
+  }
+
+  .stats-row .ant-statistic-content-value {
+    font-size: 18px !important;
+  }
+
+  .stats-row .ant-statistic-content-suffix {
+    font-size: 12px !important;
+  }
+
+  .stats-row .ant-statistic-title {
+    font-size: 11px !important;
+  }
+
+  .stats-row .anticon {
+    font-size: 18px !important;
+    margin-right: 4px !important;
+  }
+}

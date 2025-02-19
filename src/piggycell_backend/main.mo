@@ -28,6 +28,7 @@ actor Main {
 
     // 거래 내역을 저장하기 위한 타입과 변수
     type TransactionType = {
+        #Mint;
         #NFTSale;
         #Stake;
         #Unstake;
@@ -68,7 +69,12 @@ actor Main {
             timestamp = Time.now();
         };
         transactions.add(tx);
-        activeUsers.put(user, Time.now());
+        
+        // Mint 타입이 아닐 때만 활성 사용자로 기록
+        switch (txType) {
+            case (#Mint) { };  // Mint는 활성 사용자로 기록하지 않음
+            case (_) { activeUsers.put(user, Time.now()) };
+        };
     };
 
     // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자)
@@ -266,6 +272,9 @@ actor Main {
 
         switch(nft.mint(caller, args)) {
             case (#ok(token_id)) {
+                // NFT 발행 거래 내역 추가
+                addTransaction(#Mint, ?token_id, caller, 0);
+
                 // NFT 마켓 등록인 경우
                 if (transferType == "market") {
                     switch(price) {
@@ -451,5 +460,106 @@ actor Main {
 
     public query func getEstimatedStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
         stakingManager.getEstimatedReward(tokenId)
+    };
+
+    // ICRC-3 인터페이스 타입
+    type ICRC3Account = {
+        owner : Principal;
+        subaccount : ?Blob;
+    };
+
+    type ICRC3Transaction = {
+        kind : Text;
+        timestamp : Int;
+        from : ?ICRC3Account;
+        to : ?ICRC3Account;
+        token_ids : [Nat];
+        memo : ?Blob;
+        amount : ?Nat;  // 거래 금액 추가
+    };
+
+    type GetTransactionsRequest = {
+        start : ?Nat;
+        length : ?Nat;
+        account : ?ICRC3Account;
+    };
+
+    type GetTransactionsResponse = {
+        transactions : [ICRC3Transaction];
+        total : Nat;
+    };
+
+    // ICRC-3 인터페이스 구현
+    public query func icrc3_get_transactions(request : GetTransactionsRequest) : async GetTransactionsResponse {
+        let start = Option.get(request.start, 0);
+        let length = Option.get(request.length, 10);
+        let account = request.account;
+
+        let filteredTxs = Buffer.Buffer<ICRC3Transaction>(0);
+        
+        for (tx in transactions.vals()) {
+            let icrc3Tx : ICRC3Transaction = {
+                kind = switch (tx.txType) {
+                    case (#Mint) "mint";
+                    case (#NFTSale) "transfer";
+                    case (#Stake) "stake";
+                    case (#Unstake) "unstake";
+                    case (#StakingReward) "reward";
+                };
+                timestamp = tx.timestamp;
+                from = ?{ owner = tx.user; subaccount = null };
+                to = switch (tx.txType) {
+                    case (#Mint) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
+                    case (#NFTSale) {
+                        // NFT 판매의 경우 구매자가 받는 주소가 됨
+                        ?{ owner = tx.user; subaccount = null }
+                    };
+                    case (#Stake) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
+                    case (#Unstake) { ?{ owner = tx.user; subaccount = null } };
+                    case (#StakingReward) { ?{ owner = tx.user; subaccount = null } };
+                };
+                token_ids = switch (tx.nftId) {
+                    case (null) [];
+                    case (?id) [id];
+                };
+                memo = null;
+                amount = ?tx.amount;  // 거래 금액 포함
+            };
+
+            // 계정 필터링
+            switch (account) {
+                case (null) {
+                    filteredTxs.add(icrc3Tx);
+                };
+                case (?acc) {
+                    if (tx.user == acc.owner) {
+                        filteredTxs.add(icrc3Tx);
+                    };
+                };
+            };
+        };
+
+        let total = filteredTxs.size();
+        let end = Nat.min(start + length, total);
+        let pageItems = Buffer.Buffer<ICRC3Transaction>(0);
+
+        var i = start;
+        while (i < end) {
+            pageItems.add(filteredTxs.get(i));
+            i += 1;
+        };
+
+        {
+            transactions = Buffer.toArray(pageItems);
+            total = total;
+        }
+    };
+
+    public shared({ caller }) func icrc3_batch_transfer(args: ChargerHubNFT.BatchTransferArgs) : async ChargerHubNFT.BatchTransferResult {
+        nft.icrc3_batch_transfer(caller, args)
+    };
+
+    public query func icrc3_supported_standards() : async [(Text, Text)] {
+        nft.icrc3_supported_standards()
     };
 };

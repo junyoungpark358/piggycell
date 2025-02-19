@@ -142,3 +142,53 @@
   margin: 0 !important;
   min-width: 80px;
 }
+
+.table-card {
+  margin-top: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+.table-card .ant-table {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.table-card .ant-table-thead > tr > th {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 16px;
+  background-color: #f8fafc;
+}
+
+.table-card .ant-table-tbody > tr > td {
+  padding: 16px;
+}
+
+.table-card .ant-table-tbody > tr:hover > td {
+  background-color: #f1f5f9;
+}
+
+.address-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.address-display .ant-btn-link {
+  padding: 4px;
+  height: auto;
+  min-width: auto;
+  border: none;
+}
+
+.address-display .anticon-copy {
+  color: #0284c7;
+  font-size: 16px;
+}
+
+.address-display .ant-btn-link:hover .anticon-copy {
+  color: #0369a1;
+  transform: scale(1.1);
+}
