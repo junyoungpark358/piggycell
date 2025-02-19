@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@300;400;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,6 +16,13 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --primary-color: #ff6b6b;
+  --secondary-color: #4ecdc4;
+  --background-color: #f9f9f9;
+  --text-color: #2d3436;
+  --border-radius: 12px;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -23,27 +31,38 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  font-family: "Comic Neue", cursive;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Bangers", cursive;
+  letter-spacing: 1px;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
+  font-family: "Comic Neue", cursive;
+  border-radius: var(--border-radius);
+  border: 3px solid #000;
+  box-shadow: var(--box-shadow);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
 }
 
 button:hover {
-  border-color: #646cff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
 }
 
 button:focus,
@@ -59,4 +78,33 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+input,
+select,
+textarea {
+  font-family: "Comic Neue", cursive;
+  border: 2px solid #000;
+  border-radius: var(--border-radius);
+  background-color: #fff;
+  padding: 8px 12px;
+}
+
+.card {
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary-color);
 }
