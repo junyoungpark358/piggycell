@@ -53,6 +53,14 @@
   color: #333;
 }
 
+.ant-statistic-content-value {
+  text-shadow: none !important;
+}
+
+.ant-statistic-content-suffix {
+  text-shadow: none !important;
+}
+
 .search-box {
   margin: 24px 0;
   max-width: 300px;

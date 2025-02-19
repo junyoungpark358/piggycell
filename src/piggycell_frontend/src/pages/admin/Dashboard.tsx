@@ -155,7 +155,15 @@ const AdminDashboard = () => {
       title: "금액",
       dataIndex: "amount",
       key: "amount",
-      render: (amount: number) => `${amount} ICP`,
+      render: (amount: number, record: Transaction) => {
+        if (
+          record.type === "NFT 스테이킹" ||
+          record.type === "NFT 언스테이킹"
+        ) {
+          return "-";
+        }
+        return `${amount} PGC`;
+      },
     },
     {
       title: "날짜",
@@ -176,7 +184,7 @@ const AdminDashboard = () => {
             <Statistic
               title="총 NFT 발행량"
               value={nftStats.totalSupply}
-              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
+              prefix={<ShoppingCartOutlined />}
               suffix="개"
               loading={loading}
             />
@@ -187,7 +195,7 @@ const AdminDashboard = () => {
             <Statistic
               title="스테이킹된 NFT"
               value={nftStats.stakedCount}
-              prefix={<BankOutlined style={{ color: "#0284c7" }} />}
+              prefix={<BankOutlined />}
               suffix="개"
               loading={loading}
             />
@@ -198,7 +206,7 @@ const AdminDashboard = () => {
             <Statistic
               title="활성 사용자"
               value={nftStats.activeUsers}
-              prefix={<UserOutlined style={{ color: "#0284c7" }} />}
+              prefix={<UserOutlined />}
               suffix="명"
               loading={loading}
             />
@@ -209,8 +217,8 @@ const AdminDashboard = () => {
             <Statistic
               title="총 거래액"
               value={nftStats.totalVolume}
-              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="ICP"
+              prefix={<LineChartOutlined />}
+              suffix="PGC"
               loading={loading}
             />
           </Card>
