@@ -26,6 +26,174 @@ actor Main {
     private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
     private let stakingManager = Staking.StakingManager(token, nft);
 
+    // 거래 내역을 저장하기 위한 타입과 변수
+    type TransactionType = {
+        #NFTSale;
+        #Stake;
+        #Unstake;
+        #StakingReward;
+    };
+
+    type Transaction = {
+        txType: TransactionType;
+        nftId: ?Nat;
+        user: Principal;
+        amount: Nat;
+        timestamp: Int;
+    };
+
+    type TransactionResponse = {
+        txType: Text;
+        nftId: ?Text;
+        user: Text;
+        amount: Nat;
+        date: Text;
+    };
+
+    type TransactionPage = {
+        items: [TransactionResponse];
+        total: Nat;
+    };
+
+    private let transactions = Buffer.Buffer<Transaction>(0);
+    private let activeUsers = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
+
+    // 거래 내역 추가 함수
+    private func addTransaction(txType: TransactionType, nftId: ?Nat, user: Principal, amount: Nat) {
+        let tx = {
+            txType = txType;
+            nftId = nftId;
+            user = user;
+            amount = amount;
+            timestamp = Time.now();
+        };
+        transactions.add(tx);
+        activeUsers.put(user, Time.now());
+    };
+
+    // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자)
+    public query func getActiveUsersCount() : async Nat {
+        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000_000); // 30일을 나노초로 변환
+        var count = 0;
+        for ((_, lastActive) in activeUsers.entries()) {
+            if (lastActive > thirtyDaysAgo) {
+                count += 1;
+            };
+        };
+        count
+    };
+
+    // 총 거래액 조회
+    public query func getTotalVolume() : async Nat {
+        var total = 0;
+        for (tx in transactions.vals()) {
+            switch (tx.txType) {
+                case (#NFTSale) { total += tx.amount };
+                case (_) {};
+            };
+        };
+        total
+    };
+
+    // 거래 내역 조회 (페이지네이션)
+    public query func getTransactions(page: Nat, limit: Nat) : async TransactionPage {
+        let txs = Buffer.toArray(transactions);
+        let total = txs.size();
+
+        // 시작 인덱스 계산 (최신 거래부터 표시)
+        let startIndex = if (total == 0) { 0 } else {
+            let offset = page * limit;
+            if (offset >= total) { 0 } else { total - Nat.min(offset + limit, total) };
+        };
+
+        // 페이지 크기 계산
+        let pageSize = if (total == 0) { 0 } else {
+            let remaining = total - (page * limit);
+            if (remaining == 0) { 0 }
+            else { Nat.min(remaining, limit) };
+        };
+
+        // 거래 내역 추출
+        let pageTransactions = Array.tabulate<Transaction>(
+            pageSize,
+            func(i) = txs[startIndex + i]
+        );
+
+        // 응답 형식으로 변환
+        let items = Array.map<Transaction, TransactionResponse>(
+            pageTransactions,
+            func(tx: Transaction) : TransactionResponse {
+                let txType = switch (tx.txType) {
+                    case (#NFTSale) { "NFT 판매" };
+                    case (#Stake) { "NFT 스테이킹" };
+                    case (#Unstake) { "NFT 언스테이킹" };
+                    case (#StakingReward) { "스테이킹 보상" };
+                };
+
+                {
+                    txType = txType;
+                    nftId = Option.map<Nat, Text>(
+                        tx.nftId,
+                        func(id: Nat) : Text = "충전 허브 #" # Nat.toText(id)
+                    );
+                    user = Principal.toText(tx.user);
+                    amount = tx.amount;
+                    date = formatTimestamp(tx.timestamp);
+                }
+            }
+        );
+
+        {
+            items = items;
+            total = total;
+        }
+    };
+
+    // 타임스탬프를 읽기 쉬운 형식으로 변환
+    private func formatTimestamp(timestamp: Int) : Text {
+        let seconds = timestamp / 1_000_000_000;
+        
+        // 한국 시간으로 변환 (UTC+9)
+        let koreaSeconds = seconds + (9 * 3600);
+        
+        // 1970년 1월 1일부터의 일수
+        let days = koreaSeconds / 86400;
+        
+        // 1970년부터의 연도 계산
+        let year = 1970 + (days / 365);
+        let remainingDays = days % 365;
+        
+        // 월과 일 계산 (간단한 버전)
+        let monthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        var month = 1;
+        var day = Nat64.toNat(Nat64.fromIntWrap(remainingDays));
+        
+        var daysInMonth = monthDays[0];
+        while (day > daysInMonth) {
+            day -= daysInMonth;
+            month += 1;
+            if (month <= 12) {
+                daysInMonth := monthDays[month - 1];
+            };
+        };
+        
+        // 시간 계산
+        let secondsInDay = koreaSeconds % 86400;
+        let hour = secondsInDay / 3600;
+        let minute = (secondsInDay % 3600) / 60;
+        
+        // 문자열 생성
+        let yearStr = Nat.toText(Nat64.toNat(Nat64.fromIntWrap(year)));
+        let monthStr = if (month < 10) "0" # Nat.toText(month) else Nat.toText(month);
+        let dayStr = if (day < 10) "0" # Nat.toText(day) else Nat.toText(day);
+        let hourStr = if (Nat64.toNat(Nat64.fromIntWrap(hour)) < 10) "0" # Nat.toText(Nat64.toNat(Nat64.fromIntWrap(hour))) 
+                     else Nat.toText(Nat64.toNat(Nat64.fromIntWrap(hour)));
+        let minuteStr = if (Nat64.toNat(Nat64.fromIntWrap(minute)) < 10) "0" # Nat.toText(Nat64.toNat(Nat64.fromIntWrap(minute))) 
+                       else Nat.toText(Nat64.toNat(Nat64.fromIntWrap(minute)));
+        
+        yearStr # "-" # monthStr # "-" # dayStr # " " # hourStr # ":" # minuteStr
+    };
+
     // ICRC-7 표준 메소드
     public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Metadata)] {
         nft.icrc7_collection_metadata()
@@ -161,7 +329,14 @@ actor Main {
     };
 
     public shared({ caller }) func buyNFT(tokenId: Nat) : async Result.Result<Market.Listing, Market.ListingError> {
-        marketManager.buyNFT(caller, tokenId)
+        switch(marketManager.buyNFT(caller, tokenId)) {
+            case (#ok(listing)) {
+                // 거래 내역 추가
+                addTransaction(#NFTSale, ?tokenId, caller, listing.price);
+                #ok(listing)
+            };
+            case (#err(error)) { #err(error) };
+        }
     };
 
     public query func getListing(tokenId: Nat) : async ?Market.Listing {
@@ -230,15 +405,36 @@ actor Main {
 
     // 스테이킹 관련 인터페이스
     public shared({ caller }) func stakeNFT(tokenId: Nat) : async Result.Result<(), Staking.StakingError> {
-        stakingManager.stakeNFT(caller, tokenId)
+        switch(stakingManager.stakeNFT(caller, tokenId)) {
+            case (#ok()) {
+                // 스테이킹 거래 내역 추가
+                addTransaction(#Stake, ?tokenId, caller, 0);
+                #ok()
+            };
+            case (#err(error)) { #err(error) };
+        }
     };
 
     public shared({ caller }) func unstakeNFT(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
-        stakingManager.unstakeNFT(caller, tokenId)
+        switch(stakingManager.unstakeNFT(caller, tokenId)) {
+            case (#ok(reward)) {
+                // 언스테이킹 거래 내역 추가
+                addTransaction(#Unstake, ?tokenId, caller, reward);
+                #ok(reward)
+            };
+            case (#err(error)) { #err(error) };
+        }
     };
 
     public shared({ caller }) func claimStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
-        stakingManager.claimReward(caller, tokenId)
+        switch(stakingManager.claimReward(caller, tokenId)) {
+            case (#ok(reward)) {
+                // 스테이킹 보상 수령 거래 내역 추가
+                addTransaction(#StakingReward, ?tokenId, caller, reward);
+                #ok(reward)
+            };
+            case (#err(error)) { #err(error) };
+        }
     };
 
     public query func getStakingInfo(tokenId: Nat) : async ?Staking.StakingInfo {
