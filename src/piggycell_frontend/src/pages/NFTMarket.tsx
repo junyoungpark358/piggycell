@@ -372,9 +372,27 @@ const NFTMarket = () => {
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
           <StatCard
+            title="전체 NFT"
+            value={totalStats.totalNFTs}
+            prefix={<ThunderboltOutlined />}
+            suffix="개"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
             title="판매중인 NFT"
             value={totalStats.availableNFTs}
             prefix={<ShoppingCartOutlined />}
+            suffix="개"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
+            title="판매 완료된 NFT"
+            value={totalStats.soldNFTs}
+            prefix={<CheckCircleOutlined />}
             suffix="개"
             loading={loading}
           />
@@ -385,24 +403,6 @@ const NFTMarket = () => {
             value={totalStats.totalValue}
             prefix={<DollarOutlined />}
             suffix="ICP"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={6}>
-          <StatCard
-            title="총 충전기"
-            value={totalStats.totalNFTs}
-            prefix={<ThunderboltOutlined />}
-            suffix="대"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={6}>
-          <StatCard
-            title="거래 성공률"
-            value={totalStats.soldNFTs}
-            prefix={<CheckCircleOutlined />}
-            suffix="%"
             loading={loading}
           />
         </Col>
