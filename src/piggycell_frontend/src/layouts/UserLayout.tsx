@@ -70,7 +70,7 @@ const UserLayout = () => {
       icon: <HomeOutlined />,
     },
     {
-      key: "/market",
+      key: "/nft-market",
       label: "NFT 마켓",
       icon: <ShoppingCartOutlined />,
     },
@@ -93,7 +93,7 @@ const UserLayout = () => {
       label: "관리자",
     },
     {
-      key: "/admin/nft-management",
+      key: "/admin/nft-market",
       icon: <AppstoreOutlined />,
       label: "NFT 관리",
     },

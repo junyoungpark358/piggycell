@@ -1,4 +1,4 @@
-import { Row, Col, Table, Input, message, Tooltip, Button, Card } from "antd";
+import { Row, Col, Input, message, Tooltip, Button } from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
@@ -15,6 +15,7 @@ import { idlFactory } from "../../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import { Principal } from "@dfinity/principal";
 import { StatCard } from "../../components/StatCard";
+import { StyledTable } from "../../components/common/StyledTable";
 
 // ICRC-3 트랜잭션 관련 타입 정의
 interface ICRC3Account {
@@ -414,23 +415,18 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <Card
-        bordered={false}
-        style={{ padding: "20px" }}
-        className="data-table-card"
-      >
-        <Table
-          columns={columns}
-          dataSource={transactions}
-          loading={loading}
-          pagination={{
-            current: currentPage,
-            pageSize: PAGE_SIZE,
-            total: total,
-            onChange: handlePageChange,
-          }}
-        />
-      </Card>
+      <StyledTable
+        columns={columns}
+        dataSource={transactions}
+        loading={loading}
+        styleVariant="compact"
+        pagination={{
+          current: currentPage,
+          pageSize: PAGE_SIZE,
+          total: total,
+          onChange: handlePageChange,
+        }}
+      />
     </div>
   );
 };

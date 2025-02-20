@@ -40,14 +40,14 @@ const App: React.FC = () => {
       <Routes>
         <Route element={<UserLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/market" element={<NFTMarket />} />
+          <Route path="/nft-market" element={<NFTMarket />} />
           <Route path="/staking" element={<Staking />} />
           <Route path="/revenue" element={<Revenue />} />
           {isAuthenticated && (
             <>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route
-                path="/admin/nft-management"
+                path="/admin/nft-market"
                 element={<AdminNFTManagement />}
               />
               <Route path="/admin/revenue" element={<AdminRevenue />} />

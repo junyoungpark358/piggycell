@@ -36,6 +36,7 @@ import type {
 } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTManagement.css";
 import { StatCard } from "../../components/StatCard";
+import { StyledTable } from "../../components/common/StyledTable";
 
 interface NFTData {
   id: number;
@@ -679,14 +680,14 @@ const NFTManagement = () => {
         />
       </div>
 
-      <Card bordered={false} style={{ padding: "20px" }} className="table-card">
-        <Table
-          columns={columns}
-          dataSource={searchText ? filteredNfts : nfts}
-          loading={loading}
-          rowKey="id"
-        />
-      </Card>
+      <StyledTable
+        columns={columns}
+        dataSource={searchText ? filteredNfts : nfts}
+        loading={loading}
+        rowKey="id"
+        styleVariant="bordered"
+        pagination={{ pageSize: 10 }}
+      />
 
       {/* NFT 생성 모달 */}
       <Modal

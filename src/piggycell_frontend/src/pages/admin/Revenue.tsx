@@ -1,4 +1,4 @@
-import { Table, Row, Col, Input, Card } from "antd";
+import { Row, Col, Input } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
@@ -6,6 +6,7 @@ import {
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../../components/StatCard";
+import { StyledTable } from "../../components/common/StyledTable";
 
 const AdminRevenue = () => {
   // 임시 수익 데이터
@@ -63,7 +64,7 @@ const AdminRevenue = () => {
   return (
     <div className="revenue-management">
       <div className="page-header">
-        <h1 className="text-4xl font-bold mb-6">수익 관리</h1>
+        <h1 className="mb-6 text-4xl font-bold">수익 관리</h1>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
@@ -102,9 +103,12 @@ const AdminRevenue = () => {
         />
       </div>
 
-      <Card bordered={false} style={{ padding: "20px" }} className="table-card">
-        <Table columns={columns} dataSource={revenueData} />
-      </Card>
+      <StyledTable
+        columns={columns}
+        dataSource={revenueData}
+        styleVariant="default"
+        pagination={{ pageSize: 10 }}
+      />
     </div>
   );
 };
