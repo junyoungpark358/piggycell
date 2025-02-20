@@ -16,6 +16,14 @@ import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell
 import "./Home.css";
 import { message } from "antd";
 
+interface MetadataValue {
+  Text?: string;
+  Nat?: bigint;
+}
+
+type MetadataEntry = [string, MetadataValue];
+type Metadata = MetadataEntry[];
+
 interface NFTData {
   id: bigint;
   name: string;
@@ -72,26 +80,27 @@ const Home = () => {
       const actor = await createActor();
 
       // 소유한 NFT 목록 조회
-      const ownedTokens = await actor.icrc7_tokens_of({
-        owner: identity.getPrincipal(),
-        subaccount: [],
-      });
+      const ownedTokens = await actor.icrc7_tokens_of(
+        { owner: identity.getPrincipal(), subaccount: [] },
+        [],
+        []
+      );
 
       // 스테이킹된 NFT 목록 조회
       const stakedTokens = await actor.getStakedNFTs(identity.getPrincipal());
       const stakedTokenSet = new Set(stakedTokens.map((id) => id.toString()));
 
       const nftDataPromises = ownedTokens.map(async (tokenId) => {
-        const metadata = await actor.icrc7_metadata(tokenId);
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
         let location = "위치 정보 없음";
         let chargerCount = 0;
 
         if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0];
+          const metadataEntries = metadata[0] as Metadata;
           for (const [key, value] of metadataEntries) {
-            if (key === "location" && "Text" in value) {
+            if (key === "location" && value.Text) {
               location = value.Text;
-            } else if (key === "chargerCount" && "Nat" in value) {
+            } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
             }
           }

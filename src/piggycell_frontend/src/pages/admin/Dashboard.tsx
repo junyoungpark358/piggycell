@@ -281,7 +281,7 @@ const AdminDashboard = () => {
         const actor = await createActor();
 
         // NFT 총 발행량 조회
-        const totalSupply = await actor.icrc7_supply();
+        const totalSupply = await actor.icrc7_total_supply();
 
         // 스테이킹된 NFT 수 조회
         const authManager = AuthManager.getInstance();

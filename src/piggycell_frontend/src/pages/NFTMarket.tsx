@@ -9,6 +9,7 @@ import {
   message,
   Spin,
   Empty,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
@@ -17,6 +18,7 @@ import {
   DollarOutlined,
   ThunderboltOutlined,
   BarChartOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AuthManager } from "../utils/auth";
@@ -27,10 +29,17 @@ import type {
   _SERVICE,
   Listing,
   PageResult,
-  Metadata,
 } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTMarket.css";
 import "../styles/components/StatisticCard.css";
+
+interface MetadataValue {
+  Text?: string;
+  Nat?: bigint;
+}
+
+type MetadataEntry = [string, MetadataValue];
+type Metadata = MetadataEntry[];
 
 interface NFTMetadata {
   location?: string;
@@ -46,12 +55,26 @@ interface NFTData {
   chargerCount: number;
 }
 
+interface TransactionResponse {
+  txType: string;
+  nftId: string[] | null;
+  user: string;
+  amount: bigint;
+  date: string;
+}
+
+interface TransactionPage {
+  items: TransactionResponse[];
+  total: number;
+}
+
 const NFTMarket = () => {
   const [nfts, setNfts] = useState<NFTData[]>([]);
+  const [soldNfts, setSoldNfts] = useState<NFTData[]>([]);
   const [totalStats, setTotalStats] = useState({
     totalNFTs: 0,
     availableNFTs: 0,
-    totalChargers: 0,
+    soldNFTs: 0,
     totalValue: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -118,17 +141,17 @@ const NFTMarket = () => {
 
       const newNFTDataPromises = result.items.map(async (listing) => {
         const tokenId = listing.tokenId;
-        const metadata = await actor.icrc7_metadata(tokenId);
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
 
         let location = "위치 정보 없음";
         let chargerCount = 0;
 
         if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0];
+          const metadataEntries = metadata[0] as Metadata;
           for (const [key, value] of metadataEntries) {
-            if (key === "location" && "Text" in value) {
+            if (key === "location" && value.Text) {
               location = value.Text;
-            } else if (key === "chargerCount" && "Nat" in value) {
+            } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
             }
           }
@@ -154,7 +177,7 @@ const NFTMarket = () => {
       const stats = {
         totalNFTs: Number(result.total),
         availableNFTs: allNFTs.length,
-        totalChargers: allNFTs.reduce((sum, nft) => sum + nft.chargerCount, 0),
+        soldNFTs: Number(result.total) - allNFTs.length,
         totalValue: allNFTs.reduce((sum, nft) => sum + Number(nft.price), 0),
       };
       setTotalStats(stats);
@@ -166,18 +189,87 @@ const NFTMarket = () => {
     }
   };
 
+  const fetchSoldNFTs = async () => {
+    try {
+      const actor = await createActor();
+      const totalSupply = await actor.icrc7_total_supply();
+
+      // 모든 NFT ID 배열 생성
+      const allNftIds = Array.from({ length: Number(totalSupply) }, (_, i) =>
+        BigInt(i)
+      );
+
+      // 판매중인 NFT ID 목록 가져오기
+      const listings = await actor.getListings([], BigInt(9999));
+      const listedNftIds = new Set(
+        listings.items.map((item) => Number(item.tokenId))
+      );
+
+      // 판매중이 아닌 NFT ID 필터링
+      const soldNftIds = allNftIds.filter(
+        (id) => !listedNftIds.has(Number(id))
+      );
+
+      // 판매 완료된 NFT 정보 조회
+      const soldNFTPromises = soldNftIds.map(async (tokenId) => {
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
+
+        let location = "위치 정보 없음";
+        let chargerCount = 0;
+        let price = BigInt(0);
+
+        if (metadata && metadata.length > 0 && metadata[0]) {
+          const metadataEntries = metadata[0] as Metadata;
+          for (const [key, value] of metadataEntries) {
+            if (key === "location" && value.Text) {
+              location = value.Text;
+            } else if (key === "chargerCount" && value.Nat) {
+              chargerCount = Number(value.Nat);
+            } else if (key === "price" && value.Nat) {
+              price = value.Nat;
+            }
+          }
+        }
+
+        return {
+          id: tokenId,
+          name: `충전 허브 #${tokenId.toString()}`,
+          location,
+          price,
+          status: "sold",
+          chargerCount,
+        };
+      });
+
+      const soldNFTData = await Promise.all(soldNFTPromises);
+      setSoldNfts(soldNFTData);
+    } catch (error) {
+      console.error("판매 완료된 NFT 데이터 로딩 실패:", error);
+      message.error("판매 완료된 NFT 데이터를 불러오는데 실패했습니다.");
+    }
+  };
+
   useEffect(() => {
     const fetchInitialNFTs = async () => {
       try {
+        console.log("초기 NFT 데이터 로딩 시작");
         const actor = await createActor();
+        console.log("Actor 생성 완료");
+
         const result = await actor.getListings([], BigInt(5));
+        console.log("마켓 리스팅 결과:", result);
+
+        // 전체 NFT 수 조회
+        const totalSupply = await actor.icrc7_total_supply();
+        console.log("전체 NFT 발행량:", Number(totalSupply));
 
         if (result.items.length === 0) {
+          console.log("판매 중인 NFT가 없음");
           setNfts([]);
           setTotalStats({
-            totalNFTs: 0,
+            totalNFTs: Number(totalSupply),
             availableNFTs: 0,
-            totalChargers: 0,
+            soldNFTs: Number(totalSupply),
             totalValue: 0,
           });
           setHasMore(false);
@@ -187,22 +279,25 @@ const NFTMarket = () => {
 
         const nftDataPromises = result.items.map(async (listing) => {
           const tokenId = listing.tokenId;
-          const metadata = await actor.icrc7_metadata(tokenId);
+          console.log(`NFT #${tokenId} 메타데이터 조회 시작`);
+          const metadata = await actor.icrc7_token_metadata([tokenId]);
+          console.log(`NFT #${tokenId} 메타데이터:`, metadata);
 
           let location = "위치 정보 없음";
           let chargerCount = 0;
 
           if (metadata && metadata.length > 0 && metadata[0]) {
-            const metadataEntries = metadata[0];
+            const metadataEntries = metadata[0] as Metadata;
             for (const [key, value] of metadataEntries) {
-              if (key === "location" && "Text" in value) {
+              if (key === "location" && value.Text) {
                 location = value.Text;
-              } else if (key === "chargerCount" && "Nat" in value) {
+              } else if (key === "chargerCount" && value.Nat) {
                 chargerCount = Number(value.Nat);
               }
             }
           }
 
+          console.log(`NFT #${tokenId} 파싱 결과:`, { location, chargerCount });
           return {
             id: tokenId,
             name: `충전 허브 #${tokenId.toString()}`,
@@ -214,19 +309,19 @@ const NFTMarket = () => {
         });
 
         const nftData = await Promise.all(nftDataPromises);
+        console.log("모든 NFT 데이터 로딩 완료:", nftData);
+
         setNfts(nftData);
         setNextStart(result.nextStart ? Number(result.nextStart) : null);
         setHasMore(!!result.nextStart);
 
         const stats = {
-          totalNFTs: Number(result.total),
+          totalNFTs: Number(totalSupply),
           availableNFTs: nftData.length,
-          totalChargers: nftData.reduce(
-            (sum, nft) => sum + nft.chargerCount,
-            0
-          ),
+          soldNFTs: Number(totalSupply) - nftData.length,
           totalValue: nftData.reduce((sum, nft) => sum + Number(nft.price), 0),
         };
+        console.log("최종 통계 데이터:", stats);
         setTotalStats(stats);
       } catch (error) {
         console.error("NFT 데이터 로딩 실패:", error);
@@ -237,6 +332,10 @@ const NFTMarket = () => {
     };
 
     fetchInitialNFTs();
+  }, []);
+
+  useEffect(() => {
+    fetchSoldNFTs();
   }, []);
 
   const getErrorMessage = (error: any) => {
@@ -308,10 +407,10 @@ const NFTMarket = () => {
         <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
-              title="총 설치 충전기"
-              value={totalStats.totalChargers}
-              suffix="대"
-              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
+              title="판매 희망가 총액"
+              value={totalStats.totalValue}
+              suffix="PGC"
+              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
               loading={loading}
             />
           </Card>
@@ -319,10 +418,10 @@ const NFTMarket = () => {
         <Col xs={12} sm={6} md={6}>
           <Card>
             <Statistic
-              title="충전 허브 총 가치"
-              value={totalStats.totalValue}
-              suffix="PGC"
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
+              title="판매 완료된 충전 허브"
+              value={totalStats.soldNFTs}
+              suffix="개"
+              prefix={<CheckCircleOutlined style={{ color: "#0284c7" }} />}
               loading={loading}
             />
           </Card>
@@ -337,63 +436,114 @@ const NFTMarket = () => {
         />
       </div>
 
-      {/* NFT 목록 */}
-      {loading ? (
-        <div className="flex items-center justify-center h-screen">
-          <Spin size="large" />
-        </div>
-      ) : nfts.length === 0 ? (
-        <Col span={24}>
-          <Empty description="판매 중인 NFT가 없습니다." />
-        </Col>
-      ) : (
-        <Row gutter={[16, 16]}>
-          {nfts.map((nft, index) => (
-            <Col
-              key={nft.id.toString()}
-              xs={24}
-              sm={12}
-              md={8}
-              lg={6}
-              ref={index === nfts.length - 1 ? lastNFTElementRef : undefined}
-            >
-              <Card title={nft.name} className="nft-card">
-                <div className="mb-4">
-                  <p className="flex items-center mb-2 text-gray-600">
-                    <EnvironmentOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">위치:</span>{" "}
-                    {nft.location}
-                  </p>
-                  <p className="flex items-center mb-2 text-gray-600">
-                    <DollarOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">가격:</span>{" "}
-                    {nft.price.toString()} PGC
-                  </p>
-                  <p className="flex items-center text-gray-600">
-                    <ThunderboltOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">충전기:</span>{" "}
-                    {nft.chargerCount}대
-                  </p>
-                </div>
-                <Button
-                  type="primary"
-                  onClick={() => handleBuyNFT(nft.id)}
-                  loading={buyingNFT === nft.id}
-                  className={nft.status === "sold" ? "sold-button" : ""}
-                  disabled={nft.status === "sold" || buyingNFT === nft.id}
-                  block
-                >
-                  {nft.status === "sold"
-                    ? "판매 완료"
-                    : buyingNFT === nft.id
-                    ? "구매 처리 중..."
-                    : "구매하기"}
-                </Button>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
+      <Tabs
+        defaultActiveKey="available"
+        items={[
+          {
+            key: "available",
+            label: "판매중인 충전 허브",
+            children: loading ? (
+              <div className="flex justify-center items-center h-screen">
+                <Spin size="large" />
+              </div>
+            ) : nfts.length === 0 ? (
+              <Col span={24}>
+                <Empty description="판매 중인 NFT가 없습니다." />
+              </Col>
+            ) : (
+              <Row gutter={[16, 16]}>
+                {nfts.map((nft, index) => (
+                  <Col
+                    key={nft.id.toString()}
+                    xs={24}
+                    sm={12}
+                    md={8}
+                    lg={6}
+                    ref={
+                      index === nfts.length - 1 ? lastNFTElementRef : undefined
+                    }
+                  >
+                    <Card title={nft.name} className="nft-card">
+                      <div className="mb-4">
+                        <p className="flex items-center mb-2 text-gray-600">
+                          <EnvironmentOutlined className="mr-3 text-sky-600" />
+                          <span className="mr-2 font-medium">위치:</span>{" "}
+                          {nft.location}
+                        </p>
+                        <p className="flex items-center mb-2 text-gray-600">
+                          <DollarOutlined className="mr-3 text-sky-600" />
+                          <span className="mr-2 font-medium">가격:</span>{" "}
+                          {nft.price.toString()} PGC
+                        </p>
+                        <p className="flex items-center text-gray-600">
+                          <ThunderboltOutlined className="mr-3 text-sky-600" />
+                          <span className="mr-2 font-medium">충전기:</span>{" "}
+                          {nft.chargerCount}대
+                        </p>
+                      </div>
+                      <Button
+                        type="primary"
+                        onClick={() => handleBuyNFT(nft.id)}
+                        loading={buyingNFT === nft.id}
+                        className={nft.status === "sold" ? "sold-button" : ""}
+                        disabled={nft.status === "sold" || buyingNFT === nft.id}
+                        block
+                      >
+                        {nft.status === "sold"
+                          ? "판매 완료"
+                          : buyingNFT === nft.id
+                          ? "구매 처리 중..."
+                          : "구매하기"}
+                      </Button>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            ),
+          },
+          {
+            key: "sold",
+            label: "판매 완료된 충전 허브",
+            children:
+              soldNfts.length === 0 ? (
+                <Col span={24}>
+                  <Empty description="판매 완료된 NFT가 없습니다." />
+                </Col>
+              ) : (
+                <Row gutter={[16, 16]}>
+                  {soldNfts.map((nft) => (
+                    <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
+                      <Card title={nft.name} className="nft-card">
+                        <div className="mb-4">
+                          <p className="flex items-center mb-2 text-gray-600">
+                            <EnvironmentOutlined className="mr-3 text-sky-600" />
+                            <span className="mr-2 font-medium">위치:</span>{" "}
+                            {nft.location}
+                          </p>
+                          <p className="flex items-center mb-2 text-gray-600">
+                            <DollarOutlined className="mr-3 text-sky-600" />
+                            <span className="mr-2 font-medium">
+                              판매 가격:
+                            </span>{" "}
+                            {nft.price.toString()} PGC
+                          </p>
+                          <p className="flex items-center text-gray-600">
+                            <ThunderboltOutlined className="mr-3 text-sky-600" />
+                            <span className="mr-2 font-medium">충전기:</span>{" "}
+                            {nft.chargerCount}대
+                          </p>
+                        </div>
+                        <Button type="default" disabled block>
+                          판매 완료
+                        </Button>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              ),
+          },
+        ]}
+      />
 
       {loadingMore && (
         <div className="py-4 text-center">

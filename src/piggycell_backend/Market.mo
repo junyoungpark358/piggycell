@@ -88,8 +88,8 @@ module {
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             switch (listings.get(tokenId)) {
                 case (?listing) {
-                    let nftTransferArgs: ChargerHubNFT.TransferArgs = {
-                        token_ids = [tokenId];
+                    let nftTransferArg: ChargerHubNFT.TransferArg = {
+                        token_id = tokenId;
                         from_subaccount = null;
                         to = {
                             owner = caller;
@@ -100,23 +100,27 @@ module {
                     };
 
                     // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
-                    switch(nft.icrc7_transfer(marketCanister, nftTransferArgs)) {
-                        case (#ok()) {
-                            listings.delete(tokenId);
-                            // listingsByTime에서도 제거
-                            var i = 0;
-                            label l while (i < listingsByTime.size()) {
-                                let (_, tid) = listingsByTime.get(i);
-                                if (tid == tokenId) {
-                                    let _ = listingsByTime.remove(i);
-                                    break l;
+                    let transferResult = nft.icrc7_transfer(marketCanister, [nftTransferArg]);
+                    switch(transferResult[0]) {
+                        case (null) { #err(#TransferError) };
+                        case (?result) {
+                            switch(result) {
+                                case (#Ok(_)) {
+                                    listings.delete(tokenId);
+                                    // listingsByTime에서도 제거
+                                    var i = 0;
+                                    label l while (i < listingsByTime.size()) {
+                                        let (_, tid) = listingsByTime.get(i);
+                                        if (tid == tokenId) {
+                                            let _ = listingsByTime.remove(i);
+                                            break l;
+                                        };
+                                        i += 1;
+                                    };
+                                    #ok(listing)
                                 };
-                                i += 1;
-                            };
-                            #ok(listing)
-                        };
-                        case (#err(_)) {
-                            #err(#TransferError)
+                                case (#Err(_)) { #err(#TransferError) };
+                            }
                         };
                     }
                 };

@@ -27,6 +27,14 @@ import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell
 import "./Staking.css";
 import "../styles/components/StatisticCard.css";
 
+interface MetadataValue {
+  Text?: string;
+  Nat?: bigint;
+}
+
+type MetadataEntry = [string, MetadataValue];
+type Metadata = MetadataEntry[];
+
 interface StakedNFT {
   id: bigint;
   name: string;
@@ -89,16 +97,16 @@ const Staking = () => {
 
       const nftDataPromises = stakedTokens.map(async (tokenId) => {
         // NFT 메타데이터 조회
-        const metadata = await actor.icrc7_metadata(tokenId);
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
         let location = "위치 정보 없음";
         let chargerCount = 0;
 
         if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0];
+          const metadataEntries = metadata[0] as Metadata;
           for (const [key, value] of metadataEntries) {
-            if (key === "location" && "Text" in value) {
+            if (key === "location" && value.Text) {
               location = value.Text;
-            } else if (key === "chargerCount" && "Nat" in value) {
+            } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
             }
           }
@@ -214,7 +222,7 @@ const Staking = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex justify-center items-center h-screen">
         <Spin size="large" />
       </div>
     );
@@ -223,7 +231,7 @@ const Staking = () => {
   return (
     <div className="staking-page">
       <div className="page-header">
-        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">스테이킹</h1>
+        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">스테이킹</h1>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
@@ -269,7 +277,7 @@ const Staking = () => {
 
       {/* 스테이킹된 NFT 목록 */}
       {loading ? (
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex justify-center items-center h-screen">
           <Spin size="large" />
         </div>
       ) : stakedNFTs.length === 0 ? (

@@ -39,14 +39,14 @@ module {
         // NFT 스테이킹
         public func stakeNFT(caller: Principal, tokenId: Nat) : Result.Result<(), StakingError> {
             // 토큰 소유자 확인
-            switch(nft.icrc7_owner_of(tokenId)) {
+            let owners = nft.icrc7_owner_of([tokenId]);
+            
+            switch(owners[0]) {
+                case null { return #err(#NotOwner) };
                 case (?currentOwner) {
                     if (currentOwner.owner != caller) {
                         return #err(#NotOwner);
                     };
-                };
-                case null {
-                    return #err(#NotOwner);
                 };
             };
 
