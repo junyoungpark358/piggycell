@@ -25,7 +25,6 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./Staking.css";
-import "../styles/components/StatisticCard.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
 
