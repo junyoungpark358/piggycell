@@ -29,99 +29,7 @@
   margin-bottom: 3rem;
 }
 
-.stats-row .ant-card {
-  background: #ffffff !important;
-  border-radius: 12px !important;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
-  border-left: 3px solid #38bdf8 !important;
-  padding: 0 !important;
-  position: relative;
-  overflow: hidden;
-  transition: none !important;
-}
-
-.stats-row .ant-card::before,
-.stats-row .ant-card::after {
-  display: none !important;
-}
-
-.stats-row .ant-card:hover {
-  transform: none !important;
-  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px !important;
-}
-
-.stats-row .ant-card .ant-card-body {
-  padding: 1.25rem !important;
-  background: linear-gradient(
-    90deg,
-    rgba(56, 189, 248, 0.03) 0%,
-    rgba(56, 189, 248, 0) 100%
-  ) !important;
-}
-
-.stats-row .ant-statistic-title {
-  color: #64748b !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  margin-bottom: 0.5rem !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stats-row .ant-statistic-content {
-  color: #0f172a !important;
-  font-size: 1.75rem !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.5px;
-  line-height: 1.2 !important;
-}
-
-.stats-row .ant-statistic-content-suffix {
-  color: #64748b !important;
-  font-size: 1rem !important;
-  font-weight: 500 !important;
-  margin-left: 4px;
-}
-
-.stats-row .anticon {
-  font-size: 1.25rem !important;
-  margin-right: 0.5rem !important;
-  color: #38bdf8 !important;
-  opacity: 0.9;
-}
-
-.feature-row {
-  margin-bottom: 2rem;
-}
-
-.feature-card {
-  height: 100%;
-  text-align: center;
-  padding: 1.5rem;
-}
-
-.feature-card .ant-card-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-}
-
-.feature-card button {
-  width: 100%;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
-  border: none;
-  height: 48px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: white;
-}
-
-.feature-card button:hover {
-  opacity: 0.9;
-  color: white !important;
-}
-
+/* 반응형 스타일 */
 @media (max-width: 768px) {
   .home-page {
     padding: 16px;
@@ -134,8 +42,14 @@
   .stats-row {
     margin-bottom: 2rem;
   }
+}
 
-  .feature-card {
-    padding: 1rem;
+@media (min-width: 1200px) {
+  .ant-row {
+    margin: -8px !important;
+  }
+
+  .ant-col {
+    padding: 8px !important;
   }
 }

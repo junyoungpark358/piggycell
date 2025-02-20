@@ -1,10 +1,11 @@
-import { Table, Card, Row, Col, Statistic, Input } from "antd";
+import { Table, Row, Col, Input, Card } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
+import { StatCard } from "../../components/StatCard";
 
 const AdminRevenue = () => {
   // 임시 수익 데이터
@@ -67,35 +68,29 @@ const AdminRevenue = () => {
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={8} md={8}>
-          <Card>
-            <Statistic
-              title="이번 달 총 수익"
-              value={271.3}
-              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+          <StatCard
+            title="이번 달 총 수익"
+            value={271.3}
+            prefix={<LineChartOutlined />}
+            suffix="PGC"
+          />
         </Col>
         <Col xs={12} sm={8} md={8}>
-          <Card>
-            <Statistic
-              title="전월 대비"
-              value={12.5}
-              prefix={<RiseOutlined style={{ color: "#0284c7" }} />}
-              suffix="%"
-              valueStyle={{ color: "#3f8600" }}
-            />
-          </Card>
+          <StatCard
+            title="전월 대비"
+            value={12.5}
+            prefix={<RiseOutlined />}
+            suffix="%"
+            valueStyle={{ color: "#3f8600" }}
+          />
         </Col>
         <Col xs={12} sm={8} md={8}>
-          <Card>
-            <Statistic
-              title="스테이킹 보상 지급액"
-              value={22.7}
-              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+          <StatCard
+            title="스테이킹 보상 지급액"
+            value={22.7}
+            prefix={<LineChartOutlined />}
+            suffix="PGC"
+          />
         </Col>
       </Row>
 
@@ -107,7 +102,7 @@ const AdminRevenue = () => {
         />
       </div>
 
-      <Card className="table-card">
+      <Card bordered={false} style={{ padding: "20px" }} className="table-card">
         <Table columns={columns} dataSource={revenueData} />
       </Card>
     </div>

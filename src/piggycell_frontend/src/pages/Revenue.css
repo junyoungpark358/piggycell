@@ -13,32 +13,6 @@
   margin-bottom: 3rem;
 }
 
-.stat-card {
-  border-radius: 8px;
-  overflow: hidden;
-  transition: none !important;
-}
-
-.stat-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.stat-card .ant-card-body {
-  padding: 16px;
-}
-
-.stat-card .ant-statistic-title {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.stat-card .ant-statistic-content {
-  font-size: 20px;
-  color: #333;
-}
-
 .search-box {
   margin: 24px 0;
   max-width: 300px;
@@ -58,126 +32,12 @@
   margin-right: 8px;
 }
 
-.revenue-card {
-  border-radius: 8px;
-  overflow: hidden;
-  transition: none !important;
-}
-
-.revenue-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.revenue-card .ant-card-head {
-  padding: 12px 16px;
-  min-height: auto;
-  border-bottom: none;
-}
-
-.revenue-card .ant-card-head-title {
-  font-size: 14px;
-  padding: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.revenue-card .ant-card-body {
-  padding: 12px 16px 16px;
-}
-
-.revenue-card .ant-card-cover {
-  height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(56, 189, 248, 0.1);
-}
-
-.revenue-status {
-  font-size: 12px;
-  color: #0284c7;
-  margin-bottom: 8px;
-}
-
-.revenue-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.revenue-info .label {
-  color: #666;
-  flex-shrink: 0;
-  margin-right: 8px;
-  display: flex;
-  align-items: center;
-}
-
-.revenue-info .value {
-  color: #333;
-  font-weight: 500;
-  text-align: right;
-}
-
-.revenue-card .ant-btn {
-  width: 100%;
-  margin-top: 12px;
-  font-size: 12px;
-  height: 32px;
-  padding: 0 16px;
-}
-
-.revenue-card .ant-btn:hover {
-  opacity: 0.9;
-  color: white !important;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
-}
-
-.table-card {
-  box-shadow: rgba(0, 0, 0, 0.04) 0px 2px 4px;
-  border-radius: 12px;
-}
-
-.table-card .ant-table-thead > tr > th {
-  background: #f8fafc;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.table-card .ant-table-tbody > tr > td {
-  border-bottom: 1px solid #f1f5f9;
-}
-
 .success-rate {
   color: #16a34a;
   font-weight: 600;
 }
 
-.revenue-card .text-gray-600 {
-  display: flex !important;
-  align-items: center !important;
-  margin-bottom: 0.75rem !important;
-}
-
-.revenue-card .text-gray-600:last-child {
-  margin-bottom: 0 !important;
-}
-
-.revenue-card .text-gray-600 .anticon {
-  margin-right: 0.375rem !important;
-  font-size: 1.1rem !important;
-  color: #0284c7 !important;
-}
-
-.revenue-card .text-gray-600 .font-medium {
-  margin-right: 0.125rem !important;
-  color: #64748b !important;
-}
-
+/* 반응형 스타일 */
 @media (max-width: 768px) {
   .revenue-page {
     padding: 16px;
@@ -189,22 +49,6 @@
 
   .stats-row {
     margin-bottom: 2rem;
-  }
-
-  .revenue-card .ant-card-head-title {
-    font-size: 13px;
-  }
-
-  .revenue-info {
-    font-size: 11px;
-  }
-
-  .stat-card .ant-statistic-title {
-    font-size: 12px;
-  }
-
-  .stat-card .ant-statistic-content {
-    font-size: 18px;
   }
 }
 

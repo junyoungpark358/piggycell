@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Card,
   Row,
   Col,
   Button,
@@ -9,6 +8,7 @@ import {
   message,
   Spin,
   Empty,
+  Card,
 } from "antd";
 import {
   SearchOutlined,
@@ -26,6 +26,8 @@ import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./Staking.css";
 import "../styles/components/StatisticCard.css";
+import { StatCard } from "../components/StatCard";
+import { NFTCard } from "../components/NFTCard";
 
 interface MetadataValue {
   Text?: string;
@@ -235,41 +237,38 @@ const Staking = () => {
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={12} sm={8} md={6}>
-          <Card>
-            <Statistic
-              title="스테이킹된 NFT"
-              value={totalStakedNFTs}
-              prefix={<BankOutlined style={{ color: "#0284c7" }} />}
-              suffix="개"
-            />
-          </Card>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
+            title="스테이킹된 NFT"
+            value={stakedNFTs.length}
+            prefix={<BankOutlined />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
-        <Col xs={12} sm={8} md={6}>
-          <Card>
-            <Statistic
-              title="총 충전기"
-              value={totalChargers}
-              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
-              suffix="대"
-            />
-          </Card>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
+            title="총 충전기"
+            value={totalChargers}
+            prefix={<ThunderboltOutlined />}
+            suffix="대"
+            loading={loading}
+          />
         </Col>
-        <Col xs={24} sm={8} md={12}>
-          <Card>
-            <Statistic
-              title="예상 보상"
-              value={Number(totalEstimatedRewards)}
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
+            title="예상 보상"
+            value={Number(totalEstimatedRewards)}
+            prefix={<DollarOutlined />}
+            suffix="PGC"
+            loading={loading}
+          />
         </Col>
       </Row>
 
       <div className="search-box">
         <Input
-          placeholder="스테이킹 검색..."
+          placeholder="충전 허브 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
           size="middle"
         />
@@ -288,59 +287,15 @@ const Staking = () => {
         <Row gutter={[16, 16]}>
           {stakedNFTs.map((nft) => (
             <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
-              <Card
-                title={nft.name}
-                className={`staking-card ${
-                  highlightedNFT === nft.id.toString() ? "highlight-card" : ""
-                }`}
-              >
-                {highlightedNFT === nft.id.toString() && (
-                  <>
-                    <div className="wave-effect" />
-                    <div className="sparkle" />
-                  </>
-                )}
-                <div className="mb-4">
-                  <p className="flex items-center mb-2 text-gray-600">
-                    <EnvironmentOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">위치:</span>{" "}
-                    {nft.location}
-                  </p>
-                  <p className="flex items-center mb-2 text-gray-600">
-                    <ThunderboltOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">충전기:</span>{" "}
-                    {nft.chargerCount}대
-                  </p>
-                  <p className="flex items-center text-gray-600">
-                    <DollarOutlined className="mr-3 text-sky-600" />
-                    <span className="mr-2 font-medium">예상 보상:</span>{" "}
-                    {nft.estimatedReward.toString()} PGC
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    type="primary"
-                    onClick={() => handleClaimReward(nft.id)}
-                    loading={processingNFT === nft.id}
-                    block
-                  >
-                    {processingNFT === nft.id
-                      ? "보상 수령 중..."
-                      : "보상 수령하기"}
-                  </Button>
-                  <Button
-                    type="primary"
-                    danger
-                    onClick={() => handleUnstake(nft.id)}
-                    loading={processingNFT === nft.id}
-                    block
-                  >
-                    {processingNFT === nft.id
-                      ? "언스테이킹 처리 중..."
-                      : "언스테이킹하기"}
-                  </Button>
-                </div>
-              </Card>
+              <NFTCard
+                name={nft.name}
+                location={nft.location}
+                chargerCount={nft.chargerCount}
+                price={Number(nft.estimatedReward)}
+                status="sold"
+                onBuy={() => handleUnstake(nft.id)}
+                loading={loading}
+              />
             </Col>
           ))}
         </Row>

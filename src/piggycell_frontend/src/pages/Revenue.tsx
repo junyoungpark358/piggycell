@@ -1,4 +1,4 @@
-import { Card, Row, Col, Button, Input, Statistic } from "antd";
+import { Row, Col, Button, Input, Card } from "antd";
 import {
   SearchOutlined,
   DollarOutlined,
@@ -9,6 +9,8 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
+import { StatCard } from "../components/StatCard";
+import { NFTCard } from "../components/NFTCard";
 
 const Revenue = () => {
   // 임시 수익 데이터
@@ -194,43 +196,36 @@ const Revenue = () => {
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="총 누적 수익"
-              value={totalStats.totalRevenue}
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+          <StatCard
+            title="일일 수익"
+            value={totalStats.dailyRevenue}
+            prefix={<DollarOutlined />}
+            suffix="PGC"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="이번 달 수익"
-              value={totalStats.monthlyRevenue}
-              prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+          <StatCard
+            title="월간 수익"
+            value={totalStats.monthlyRevenue}
+            prefix={<LineChartOutlined />}
+            suffix="PGC"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="일일 수익"
-              value={totalStats.dailyRevenue}
-              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-            />
-          </Card>
+          <StatCard
+            title="누적 수익"
+            value={totalStats.totalRevenue}
+            prefix={<RiseOutlined />}
+            suffix="PGC"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="평균 수익률"
-              value={totalStats.averageRate}
-              prefix={<RiseOutlined style={{ color: "#0284c7" }} />}
-            />
-          </Card>
+          <StatCard
+            title="평균 성공률"
+            value={totalStats.averageRate}
+            prefix={<CheckCircleOutlined />}
+            suffix="%"
+          />
         </Col>
       </Row>
 
@@ -245,33 +240,14 @@ const Revenue = () => {
       <Row gutter={[16, 16]}>
         {revenueData.map((revenue) => (
           <Col key={revenue.id} xs={24} sm={12} md={8} lg={6}>
-            <Card title={revenue.nftId} className="revenue-card">
-              <div className="mb-4">
-                <p className="text-gray-600 mb-2 flex items-center">
-                  <DollarOutlined className="mr-3 text-sky-600" />
-                  <span className="font-medium mr-2">일일 수익:</span>{" "}
-                  {revenue.dailyRevenue} PGC
-                </p>
-                <p className="text-gray-600 mb-2 flex items-center">
-                  <LineChartOutlined className="mr-3 text-sky-600" />
-                  <span className="font-medium mr-2">월간 수익:</span>{" "}
-                  {revenue.monthlyRevenue} PGC
-                </p>
-                <p className="text-gray-600 mb-2 flex items-center">
-                  <BankOutlined className="mr-3 text-sky-600" />
-                  <span className="font-medium mr-2">총 수익:</span>{" "}
-                  {revenue.totalRevenue} PGC
-                </p>
-                <p className="text-gray-600 flex items-center">
-                  <CheckCircleOutlined className="mr-3 text-sky-600" />
-                  <span className="font-medium mr-2">성공률:</span>{" "}
-                  {revenue.successRate}%
-                </p>
-              </div>
-              <Button type="primary" block>
-                상세 내역 보기
-              </Button>
-            </Card>
+            <NFTCard
+              name={revenue.nftId}
+              location={`일일 수익: ${revenue.dailyRevenue} PGC`}
+              chargerCount={revenue.monthlyRevenue}
+              price={revenue.totalRevenue}
+              status="available"
+              onBuy={() => {}}
+            />
           </Col>
         ))}
       </Row>

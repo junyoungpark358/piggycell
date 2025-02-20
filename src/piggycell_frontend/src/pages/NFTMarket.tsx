@@ -1,23 +1,10 @@
 import React from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Button,
-  Input,
-  Statistic,
-  message,
-  Spin,
-  Empty,
-  Tabs,
-} from "antd";
+import { Row, Col, Button, Input, message, Spin, Empty, Tabs } from "antd";
 import {
   SearchOutlined,
-  EnvironmentOutlined,
   ShoppingCartOutlined,
   DollarOutlined,
   ThunderboltOutlined,
-  BarChartOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -31,7 +18,8 @@ import type {
   PageResult,
 } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTMarket.css";
-import "../styles/components/StatisticCard.css";
+import { NFTCard } from "../components/NFTCard";
+import { StatCard } from "../components/StatCard";
 
 interface MetadataValue {
   Text?: string;
@@ -376,63 +364,55 @@ const NFTMarket = () => {
   };
 
   return (
-    <div className="nft-market">
+    <div className="nft-market-page">
       <div className="page-header">
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 마켓</h1>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="전체 충전 허브"
-              value={totalStats.totalNFTs}
-              suffix="개"
-              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="판매중인 NFT"
+            value={totalStats.availableNFTs}
+            prefix={<ShoppingCartOutlined />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="판매중인 충전 허브"
-              value={totalStats.availableNFTs}
-              suffix="개"
-              prefix={<BarChartOutlined style={{ color: "#0284c7" }} />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 거래량"
+            value={totalStats.totalValue}
+            prefix={<DollarOutlined />}
+            suffix="ICP"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="판매 희망가 총액"
-              value={totalStats.totalValue}
-              suffix="PGC"
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 충전기"
+            value={totalStats.totalNFTs}
+            prefix={<ThunderboltOutlined />}
+            suffix="대"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="판매 완료된 충전 허브"
-              value={totalStats.soldNFTs}
-              suffix="개"
-              prefix={<CheckCircleOutlined style={{ color: "#0284c7" }} />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="거래 성공률"
+            value={totalStats.soldNFTs}
+            prefix={<CheckCircleOutlined />}
+            suffix="%"
+            loading={loading}
+          />
         </Col>
       </Row>
 
-      <div className="search-box">
+      <div className="search-section">
         <Input
           placeholder="충전 허브 검색..."
-          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          size="middle"
+          prefix={<SearchOutlined />}
+          className="search-box"
         />
       </div>
 
@@ -441,61 +421,20 @@ const NFTMarket = () => {
         items={[
           {
             key: "available",
-            label: "판매중인 충전 허브",
-            children: loading ? (
-              <div className="flex justify-center items-center h-screen">
-                <Spin size="large" />
-              </div>
-            ) : nfts.length === 0 ? (
-              <Col span={24}>
-                <Empty description="판매 중인 NFT가 없습니다." />
-              </Col>
-            ) : (
-              <Row gutter={[16, 16]}>
+            label: "판매 중인 NFT",
+            children: (
+              <Row gutter={[24, 24]} className="nft-grid">
                 {nfts.map((nft, index) => (
-                  <Col
-                    key={nft.id.toString()}
-                    xs={24}
-                    sm={12}
-                    md={8}
-                    lg={6}
-                    ref={
-                      index === nfts.length - 1 ? lastNFTElementRef : undefined
-                    }
-                  >
-                    <Card title={nft.name} className="nft-card">
-                      <div className="mb-4">
-                        <p className="flex items-center mb-2 text-gray-600">
-                          <EnvironmentOutlined className="mr-3 text-sky-600" />
-                          <span className="mr-2 font-medium">위치:</span>{" "}
-                          {nft.location}
-                        </p>
-                        <p className="flex items-center mb-2 text-gray-600">
-                          <DollarOutlined className="mr-3 text-sky-600" />
-                          <span className="mr-2 font-medium">가격:</span>{" "}
-                          {nft.price.toString()} PGC
-                        </p>
-                        <p className="flex items-center text-gray-600">
-                          <ThunderboltOutlined className="mr-3 text-sky-600" />
-                          <span className="mr-2 font-medium">충전기:</span>{" "}
-                          {nft.chargerCount}대
-                        </p>
-                      </div>
-                      <Button
-                        type="primary"
-                        onClick={() => handleBuyNFT(nft.id)}
-                        loading={buyingNFT === nft.id}
-                        className={nft.status === "sold" ? "sold-button" : ""}
-                        disabled={nft.status === "sold" || buyingNFT === nft.id}
-                        block
-                      >
-                        {nft.status === "sold"
-                          ? "판매 완료"
-                          : buyingNFT === nft.id
-                          ? "구매 처리 중..."
-                          : "구매하기"}
-                      </Button>
-                    </Card>
+                  <Col xs={24} sm={12} md={8} lg={6} key={nft.id.toString()}>
+                    <NFTCard
+                      name={nft.name}
+                      location={nft.location}
+                      chargerCount={nft.chargerCount}
+                      price={Number(nft.price)}
+                      status="available"
+                      onBuy={() => handleBuyNFT(nft.id)}
+                      loading={buyingNFT === nft.id}
+                    />
                   </Col>
                 ))}
               </Row>
@@ -503,52 +442,29 @@ const NFTMarket = () => {
           },
           {
             key: "sold",
-            label: "판매 완료된 충전 허브",
-            children:
-              soldNfts.length === 0 ? (
-                <Col span={24}>
-                  <Empty description="판매 완료된 NFT가 없습니다." />
-                </Col>
-              ) : (
-                <Row gutter={[16, 16]}>
-                  {soldNfts.map((nft) => (
-                    <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
-                      <Card title={nft.name} className="nft-card">
-                        <div className="mb-4">
-                          <p className="flex items-center mb-2 text-gray-600">
-                            <EnvironmentOutlined className="mr-3 text-sky-600" />
-                            <span className="mr-2 font-medium">위치:</span>{" "}
-                            {nft.location}
-                          </p>
-                          <p className="flex items-center mb-2 text-gray-600">
-                            <DollarOutlined className="mr-3 text-sky-600" />
-                            <span className="mr-2 font-medium">
-                              판매 가격:
-                            </span>{" "}
-                            {nft.price.toString()} PGC
-                          </p>
-                          <p className="flex items-center text-gray-600">
-                            <ThunderboltOutlined className="mr-3 text-sky-600" />
-                            <span className="mr-2 font-medium">충전기:</span>{" "}
-                            {nft.chargerCount}대
-                          </p>
-                        </div>
-                        <Button type="default" disabled block>
-                          판매 완료
-                        </Button>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-              ),
+            label: "판매 완료된 NFT",
+            children: (
+              <Row gutter={[24, 24]} className="nft-grid">
+                {soldNfts.map((nft) => (
+                  <Col xs={24} sm={12} md={8} lg={6} key={nft.id.toString()}>
+                    <NFTCard
+                      name={nft.name}
+                      location={nft.location}
+                      chargerCount={nft.chargerCount}
+                      price={Number(nft.price)}
+                      status="sold"
+                    />
+                  </Col>
+                ))}
+              </Row>
+            ),
           },
         ]}
       />
 
       {loadingMore && (
-        <div className="py-4 text-center">
-          <Spin size="small" />
-          <p className="mt-2">추가 NFT를 불러오는 중...</p>
+        <div className="text-center my-5">
+          <Spin />
         </div>
       )}
     </div>

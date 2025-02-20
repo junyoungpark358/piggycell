@@ -1,14 +1,4 @@
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Table,
-  Input,
-  message,
-  Tooltip,
-  Button,
-} from "antd";
+import { Row, Col, Table, Input, message, Tooltip, Button, Card } from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
@@ -24,6 +14,7 @@ import { AuthManager } from "../../utils/auth";
 import { idlFactory } from "../../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import { Principal } from "@dfinity/principal";
+import { StatCard } from "../../components/StatCard";
 
 // ICRC-3 트랜잭션 관련 타입 정의
 interface ICRC3Account {
@@ -375,48 +366,40 @@ const AdminDashboard = () => {
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="총 NFT 발행량"
-              value={nftStats.totalSupply}
-              prefix={<ShoppingCartOutlined />}
-              suffix="개"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 NFT"
+            value={nftStats.totalSupply}
+            prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="스테이킹된 NFT"
-              value={nftStats.stakedCount}
-              prefix={<BankOutlined />}
-              suffix="개"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="스테이킹된 NFT"
+            value={nftStats.stakedCount}
+            prefix={<BankOutlined style={{ color: "#0284c7" }} />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="활성 사용자"
-              value={nftStats.activeUsers}
-              prefix={<UserOutlined />}
-              suffix="명"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="활성 사용자"
+            value={nftStats.activeUsers}
+            prefix={<UserOutlined style={{ color: "#0284c7" }} />}
+            suffix="명"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="총 거래액"
-              value={nftStats.totalVolume}
-              prefix={<LineChartOutlined />}
-              suffix="PGC"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 거래량"
+            value={nftStats.totalVolume}
+            prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
+            suffix="PGC"
+            loading={loading}
+          />
         </Col>
       </Row>
 
@@ -431,7 +414,11 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <Card className="transaction-table">
+      <Card
+        bordered={false}
+        style={{ padding: "20px" }}
+        className="data-table-card"
+      >
         <Table
           columns={columns}
           dataSource={transactions}

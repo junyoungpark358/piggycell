@@ -5,13 +5,18 @@
 
 .search-section {
   margin-bottom: 24px;
+  text-align: left;
+  width: 100%;
+}
+
+.search-section .ant-input-affix-wrapper {
+  max-width: 500px;
+  width: 100%;
 }
 
 .nft-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-  margin-top: 24px;
+  width: 100%;
+  margin: 24px 0;
 }
 
 .nft-card {
@@ -82,7 +87,7 @@
 }
 
 .stats-row {
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .stats-row .ant-card {
@@ -134,28 +139,27 @@
 }
 
 .stats-row .ant-statistic-title {
-  color: #64748b !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  margin-bottom: 10px !important;
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stats-row .ant-statistic-content {
-  color: #0f172a !important;
-  font-size: 1.75rem !important;
-  font-weight: 600 !important;
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 600;
   letter-spacing: -0.5px;
-  line-height: 1.2 !important;
+  line-height: 1.2;
 }
 
 .stats-row .anticon {
-  font-size: 28px !important;
-  margin-right: 10px !important;
-  color: #0284c7 !important;
+  font-size: 28px;
+  margin-right: 10px;
+  color: #0284c7;
   opacity: 0.9;
-  filter: drop-shadow(0px 1px 2px rgba(2, 132, 199, 0.2)) !important;
 }
 
 .search-box {
@@ -303,10 +307,141 @@
 
 @media (min-width: 1200px) {
   .ant-row {
-    margin: -8px !important;
+    margin: -12px !important;
   }
 
   .ant-col {
-    padding: 8px !important;
+    padding: 12px !important;
+  }
+}
+
+.custom-card {
+  background: #ffffff;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.custom-card:hover {
+  transform: translateY(-2px);
+}
+
+/* NFT 카드 내부 스타일 */
+.nft-card-content h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.nft-card-content p {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  color: #64748b;
+}
+
+.nft-card-content p:last-child {
+  margin-bottom: 1rem;
+}
+
+.nft-card-content .anticon {
+  margin-right: 0.5rem;
+  color: #0284c7;
+}
+
+.sold-button {
+  background: #e2e8f0 !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  height: 40px !important;
+  font-weight: 600 !important;
+  margin-top: 0.5rem !important;
+  width: 100% !important;
+}
+
+.sold-button:hover {
+  background: #e2e8f0 !important;
+  border: none !important;
+  color: #94a3b8 !important;
+}
+
+/* 주소 표시 스타일 */
+.address-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 페이지 레이아웃 */
+.nft-market-page {
+  padding: 24px;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+/* 검색 섹션 */
+.search-section {
+  margin: 1.5rem 0;
+}
+
+.search-box {
+  max-width: 300px;
+}
+
+.search-box .ant-input-affix-wrapper {
+  border-radius: 8px;
+  padding: 8px 12px;
+  height: 40px;
+}
+
+.search-box .ant-input {
+  font-size: 14px;
+}
+
+.search-box .ant-input-prefix {
+  margin-right: 8px;
+}
+
+/* 버튼 스타일 */
+.primary-gradient {
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.primary-gradient:hover {
+  opacity: 0.9;
+  color: white !important;
+  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
+}
+
+.sold-button {
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .nft-market-page {
+    padding: 16px;
+  }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .nft-market-page {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
   }
 }

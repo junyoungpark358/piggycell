@@ -1,4 +1,4 @@
-import { Card, Row, Col, Button, Statistic, Tabs, Empty } from "antd";
+import { Row, Col, Button, Tabs, Empty } from "antd";
 import {
   ThunderboltOutlined,
   ShoppingCartOutlined,
@@ -15,6 +15,8 @@ import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./Home.css";
 import { message } from "antd";
+import { NFTCard } from "../components/NFTCard";
+import { StatCard } from "../components/StatCard";
 
 interface MetadataValue {
   Text?: string;
@@ -192,90 +194,6 @@ const Home = () => {
     fetchNFTs();
   }, []);
 
-  const items = [
-    {
-      key: "owned",
-      label: `보유 중인 NFT (${ownedNFTs.length})`,
-      children: (
-        <Row gutter={[16, 16]}>
-          {ownedNFTs.length > 0 ? (
-            ownedNFTs.map((nft) => (
-              <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
-                <Card title={nft.name} className="nft-card">
-                  <div className="mb-4">
-                    <p className="flex items-center mb-2 text-gray-600">
-                      <EnvironmentOutlined className="mr-3 text-sky-600" />
-                      <span className="mr-2 font-medium">위치:</span>{" "}
-                      {nft.location}
-                    </p>
-                    <p className="flex items-center text-gray-600">
-                      <ThunderboltOutlined className="mr-3 text-sky-600" />
-                      <span className="mr-2 font-medium">충전기:</span>{" "}
-                      {nft.chargerCount}대
-                    </p>
-                  </div>
-                  <Button
-                    type="primary"
-                    onClick={() => handleStake(nft.id)}
-                    loading={stakingInProgress === nft.id}
-                    block
-                  >
-                    {stakingInProgress === nft.id
-                      ? "스테이킹 처리 중..."
-                      : "스테이킹하기"}
-                  </Button>
-                </Card>
-              </Col>
-            ))
-          ) : (
-            <Col span={24}>
-              <Empty description="보유 중인 NFT가 없습니다." />
-            </Col>
-          )}
-        </Row>
-      ),
-    },
-    {
-      key: "staked",
-      label: `스테이킹 중인 NFT (${stakedNFTs.length})`,
-      children: (
-        <Row gutter={[16, 16]}>
-          {stakedNFTs.length > 0 ? (
-            stakedNFTs.map((nft) => (
-              <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
-                <Card title={nft.name} className="nft-card">
-                  <div className="mb-4">
-                    <p className="flex items-center mb-2 text-gray-600">
-                      <EnvironmentOutlined className="mr-3 text-sky-600" />
-                      <span className="mr-2 font-medium">위치:</span>{" "}
-                      {nft.location}
-                    </p>
-                    <p className="flex items-center text-gray-600">
-                      <ThunderboltOutlined className="mr-3 text-sky-600" />
-                      <span className="mr-2 font-medium">충전기:</span>{" "}
-                      {nft.chargerCount}대
-                    </p>
-                  </div>
-                  <Button
-                    type="primary"
-                    onClick={() => navigate(`/staking?highlight=${nft.id}`)}
-                    block
-                  >
-                    스테이킹 관리
-                  </Button>
-                </Card>
-              </Col>
-            ))
-          ) : (
-            <Col span={24}>
-              <Empty description="스테이킹 중인 NFT가 없습니다." />
-            </Col>
-          )}
-        </Row>
-      ),
-    },
-  ];
-
   return (
     <div className="home-page">
       <div className="page-header">
@@ -284,55 +202,104 @@ const Home = () => {
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="보유 중인 NFT"
-              value={ownedNFTs.length}
-              prefix={<ShoppingCartOutlined style={{ color: "#0284c7" }} />}
-              suffix="개"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="보유 중인 NFT"
+            value={ownedNFTs.length}
+            prefix={<ShoppingCartOutlined />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="스테이킹 중인 NFT"
-              value={stakedNFTs.length}
-              prefix={<BankOutlined style={{ color: "#0284c7" }} />}
-              suffix="개"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="스테이킹 중인 NFT"
+            value={stakedNFTs.length}
+            prefix={<BankOutlined />}
+            suffix="개"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="총 충전기"
-              value={[...ownedNFTs, ...stakedNFTs].reduce(
-                (sum, nft) => sum + nft.chargerCount,
-                0
-              )}
-              prefix={<ThunderboltOutlined style={{ color: "#0284c7" }} />}
-              suffix="대"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 충전기"
+            value={[...ownedNFTs, ...stakedNFTs].reduce(
+              (sum, nft) => sum + nft.chargerCount,
+              0
+            )}
+            prefix={<ThunderboltOutlined />}
+            suffix="대"
+            loading={loading}
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="예상 월 수익"
-              value={1234}
-              prefix={<DollarOutlined style={{ color: "#0284c7" }} />}
-              suffix="PGC"
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="예상 월 수익"
+            value={1234}
+            prefix={<DollarOutlined />}
+            suffix="PGC"
+            loading={loading}
+          />
         </Col>
       </Row>
 
-      <Tabs items={items} />
+      <Tabs
+        items={[
+          {
+            key: "owned",
+            label: `보유 중인 NFT (${ownedNFTs.length})`,
+            children: (
+              <Row gutter={[16, 16]}>
+                {ownedNFTs.length > 0 ? (
+                  ownedNFTs.map((nft) => (
+                    <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
+                      <NFTCard
+                        name={nft.name}
+                        location={nft.location}
+                        chargerCount={nft.chargerCount}
+                        price={Number(nft.price)}
+                        status="available"
+                        onBuy={() => handleStake(nft.id)}
+                        loading={stakingInProgress === nft.id}
+                      />
+                    </Col>
+                  ))
+                ) : (
+                  <Col span={24}>
+                    <Empty description="보유 중인 NFT가 없습니다." />
+                  </Col>
+                )}
+              </Row>
+            ),
+          },
+          {
+            key: "staked",
+            label: `스테이킹 중인 NFT (${stakedNFTs.length})`,
+            children: (
+              <Row gutter={[16, 16]}>
+                {stakedNFTs.length > 0 ? (
+                  stakedNFTs.map((nft) => (
+                    <Col key={nft.id.toString()} xs={24} sm={12} md={8} lg={6}>
+                      <NFTCard
+                        name={nft.name}
+                        location={nft.location}
+                        chargerCount={nft.chargerCount}
+                        price={Number(nft.price)}
+                        status="sold"
+                        onBuy={() => handleUnstake(nft.id)}
+                        loading={stakingInProgress === nft.id}
+                      />
+                    </Col>
+                  ))
+                ) : (
+                  <Col span={24}>
+                    <Empty description="스테이킹 중인 NFT가 없습니다." />
+                  </Col>
+                )}
+              </Row>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 };

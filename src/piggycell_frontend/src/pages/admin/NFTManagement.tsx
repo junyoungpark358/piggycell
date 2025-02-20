@@ -5,13 +5,12 @@ import {
   Form,
   Input,
   Space,
-  Card,
   Select,
   Row,
   Col,
-  Statistic,
   message,
   Tooltip,
+  Card,
 } from "antd";
 import {
   PlusOutlined,
@@ -36,6 +35,7 @@ import type {
   Value,
 } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTManagement.css";
+import { StatCard } from "../../components/StatCard";
 
 interface NFTData {
   id: number;
@@ -637,48 +637,36 @@ const NFTManagement = () => {
       {/* 전체 통계 */}
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="전체 충전 허브"
-              value={totalStats.totalNFTs}
-              suffix="개"
-              prefix={<ShoppingCartOutlined />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 NFT"
+            value={totalStats.totalNFTs}
+            prefix={<ShoppingCartOutlined />}
+            suffix="개"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="판매중인 충전 허브"
-              value={totalStats.availableNFTs}
-              suffix="개"
-              prefix={<BarChartOutlined />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="판매중인 NFT"
+            value={totalStats.availableNFTs}
+            prefix={<BarChartOutlined />}
+            suffix="개"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="전체 충전기"
-              value={totalStats.totalChargers}
-              suffix="대"
-              prefix={<DollarOutlined />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 충전기"
+            value={totalStats.totalChargers}
+            prefix={<BarChartOutlined />}
+            suffix="대"
+          />
         </Col>
         <Col xs={12} sm={6} md={6}>
-          <Card>
-            <Statistic
-              title="총 거래액"
-              value={totalStats.totalValue}
-              suffix="PGC"
-              prefix={<DollarOutlined />}
-              loading={loading}
-            />
-          </Card>
+          <StatCard
+            title="총 거래량"
+            value={totalStats.totalValue}
+            prefix={<DollarOutlined />}
+            suffix="PGC"
+          />
         </Col>
       </Row>
 
@@ -691,8 +679,7 @@ const NFTManagement = () => {
         />
       </div>
 
-      {/* NFT 목록 테이블 */}
-      <Card className="table-card">
+      <Card bordered={false} style={{ padding: "20px" }} className="table-card">
         <Table
           columns={columns}
           dataSource={searchText ? filteredNfts : nfts}
