@@ -47,23 +47,113 @@
   display: flex;
   align-items: center;
   flex: 1;
-  min-width: 0;
-  margin-right: 24px;
+  overflow: hidden;
 }
 
 .desktop-header .logo {
+  flex-shrink: 0;
   margin-right: 32px;
 }
 
-.desktop-header .main-menu {
-  border: none;
+.nav-menu {
   flex: 1;
-  min-width: 0;
+  overflow: hidden;
+}
+
+.nav-menu-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-menu-list::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-menu-item {
+  flex-shrink: 0;
+  padding: 0 20px;
+  height: 64px;
+  line-height: 64px;
+  position: relative;
+  transition: all 0.3s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-menu-item .anticon {
+  font-size: 16px;
+}
+
+.nav-menu-item a {
+  color: rgba(0, 0, 0, 0.88);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-menu-item:hover a {
+  color: #1677ff;
+}
+
+.nav-menu-item.active a {
+  color: #1677ff;
+}
+
+.nav-menu-item.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #1677ff;
+}
+
+/* 로그인/로그아웃 메뉴 아이템 스타일 */
+.nav-menu-item.auth-menu-item {
+  margin-left: auto;
+}
+
+.nav-menu-item.auth-menu-item a {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.nav-menu-item.auth-menu-item:hover {
+  background-color: transparent;
+}
+
+.nav-menu-item.auth-menu-item:hover a {
+  color: #1677ff;
+}
+
+.nav-menu-item.auth-menu-item.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #1677ff;
+}
+
+@media (max-width: 1200px) {
+  .nav-menu-item {
+    padding: 0 12px;
+  }
 }
 
 .desktop-header .right-section {
   flex-shrink: 0;
-  padding-left: 16px;
+  margin-left: 24px;
 }
 
 /* 모바일 헤더 스타일 */
@@ -92,9 +182,47 @@
   padding: 0;
 }
 
+.mobile-menu-drawer .ant-menu {
+  border-right: none;
+}
+
 .mobile-menu-drawer .ant-menu-item {
   height: 48px;
   line-height: 48px;
+  margin: 0;
+  padding: 0 24px;
+}
+
+.mobile-menu-drawer .ant-menu-item.auth-menu-item {
+  margin-top: 16px;
+  background-color: #1677ff;
+  color: white;
+}
+
+.mobile-menu-drawer .ant-menu-item.auth-menu-item a {
+  color: white !important;
+}
+
+.mobile-menu-drawer .ant-menu-item.auth-menu-item:hover {
+  background-color: #4096ff !important;
+}
+
+.mobile-menu-drawer .ant-menu-item.auth-menu-item:active {
+  background-color: #4096ff !important;
+}
+
+.mobile-menu-drawer .ant-menu-item.auth-menu-item::after {
+  display: none;
+}
+
+.mobile-menu-drawer .ant-menu-item-selected {
+  background-color: transparent !important;
+  color: #1677ff !important;
+}
+
+.mobile-menu-drawer .ant-menu-item-selected.auth-menu-item {
+  background-color: #1677ff !important;
+  color: white !important;
 }
 
 /* Ant Design Menu 오버라이드 */

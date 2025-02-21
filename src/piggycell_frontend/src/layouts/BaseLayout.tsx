@@ -28,9 +28,10 @@ interface BaseLayoutProps {
 
 interface MenuItem {
   key: string;
-  label: JSX.Element;
-  icon?: JSX.Element;
+  label: React.JSX.Element;
+  icon?: React.JSX.Element;
   disabled?: boolean;
+  className?: string;
 }
 
 const BaseLayout: React.FC<BaseLayoutProps> = ({
@@ -63,8 +64,9 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
       const authManager = AuthManager.getInstance();
       await authManager.init();
       const authenticated = await authManager.isAuthenticated();
+      const admin = authenticated ? await authManager.isAdmin() : false;
       setIsAuthenticated(authenticated);
-      setIsAdmin(authenticated);
+      setIsAdmin(admin);
       setKey((prev) => prev + 1); // 초기 인증 상태 설정 후 리렌더링
     };
     initAuth();
@@ -74,8 +76,10 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
     try {
       const authManager = AuthManager.getInstance();
       await authManager.login();
-      setIsAuthenticated(true);
-      setIsAdmin(true);
+      const authenticated = await authManager.isAuthenticated();
+      const admin = authenticated ? await authManager.isAdmin() : false;
+      setIsAuthenticated(authenticated);
+      setIsAdmin(admin);
       setKey((prev) => prev + 1); // 로그인 후 리렌더링
     } catch (error) {
       console.error("Login failed:", error);
@@ -99,7 +103,11 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
   const defaultNavItems: MenuItem[] = [
     {
       key: "/",
-      label: <Link to="/">홈</Link>,
+      label: (
+        <Link to="/">
+          <HomeOutlined /> 홈
+        </Link>
+      ),
       icon: <HomeOutlined />,
     },
   ];
@@ -108,17 +116,29 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
   const userNavItems: MenuItem[] = [
     {
       key: "/nft-market",
-      label: <Link to="/nft-market">NFT 마켓</Link>,
+      label: (
+        <Link to="/nft-market">
+          <ShoppingCartOutlined /> NFT 마켓
+        </Link>
+      ),
       icon: <ShoppingCartOutlined />,
     },
     {
       key: "/staking",
-      label: <Link to="/staking">스테이킹</Link>,
+      label: (
+        <Link to="/staking">
+          <BankOutlined /> 스테이킹
+        </Link>
+      ),
       icon: <BankOutlined />,
     },
     {
       key: "/revenue",
-      label: <Link to="/revenue">수익 현황</Link>,
+      label: (
+        <Link to="/revenue">
+          <BarChartOutlined /> 수익 현황
+        </Link>
+      ),
       icon: <BarChartOutlined />,
     },
   ];
@@ -132,32 +152,128 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
     },
     {
       key: "/admin",
-      label: <Link to="/admin">관리자</Link>,
+      label: (
+        <Link to="/admin">
+          <CrownOutlined /> 관리자
+        </Link>
+      ),
       icon: <CrownOutlined />,
     },
     {
       key: "/admin/nft-market",
-      label: <Link to="/admin/nft-market">NFT 관리</Link>,
+      label: (
+        <Link to="/admin/nft-market">
+          <AppstoreOutlined /> NFT 관리
+        </Link>
+      ),
       icon: <AppstoreOutlined />,
     },
     {
       key: "/admin/revenue",
-      label: <Link to="/admin/revenue">수익 관리</Link>,
+      label: (
+        <Link to="/admin/revenue">
+          <DollarOutlined /> 수익 관리
+        </Link>
+      ),
       icon: <DollarOutlined />,
     },
   ];
 
   const menuItems = [
     ...defaultNavItems,
-    ...userNavItems,
-    ...(isAuthenticated ? adminNavItems : []),
+    ...(isAuthenticated ? userNavItems : []),
+    ...(isAdmin ? adminNavItems : []),
   ];
 
-  const authButton = isAuthenticated ? (
-    <StyledButton onClick={handleLogout}>로그아웃</StyledButton>
-  ) : (
-    <StyledButton onClick={handleLogin}>로그인</StyledButton>
-  );
+  // 모바일 메뉴용 아이템
+  const mobileMenuItems = [
+    {
+      key: "/",
+      label: "홈",
+      icon: <HomeOutlined />,
+      onClick: () => navigate("/"),
+    },
+    ...(isAuthenticated
+      ? [
+          {
+            key: "/nft-market",
+            label: "NFT 마켓",
+            icon: <ShoppingCartOutlined />,
+            onClick: () => navigate("/nft-market"),
+          },
+          {
+            key: "/staking",
+            label: "스테이킹",
+            icon: <BankOutlined />,
+            onClick: () => navigate("/staking"),
+          },
+          {
+            key: "/revenue",
+            label: "수익 현황",
+            icon: <BarChartOutlined />,
+            onClick: () => navigate("/revenue"),
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            key: "divider",
+            label: "\\",
+            disabled: true,
+          },
+          {
+            key: "/admin",
+            label: "관리자",
+            icon: <CrownOutlined />,
+            onClick: () => navigate("/admin"),
+          },
+          {
+            key: "/admin/nft-market",
+            label: "NFT 관리",
+            icon: <AppstoreOutlined />,
+            onClick: () => navigate("/admin/nft-market"),
+          },
+          {
+            key: "/admin/revenue",
+            label: "수익 관리",
+            icon: <DollarOutlined />,
+            onClick: () => navigate("/admin/revenue"),
+          },
+        ]
+      : []),
+    {
+      key: "auth",
+      label: isAuthenticated ? "로그아웃" : "로그인",
+      className: "auth-menu-item",
+      onClick: () => {
+        if (isAuthenticated) {
+          handleLogout();
+        } else {
+          handleLogin();
+        }
+        setMobileMenuOpen(false);
+      },
+    },
+  ];
+
+  // 데스크톱 메뉴용 아이템
+  const desktopMenuItems = [
+    ...menuItems,
+    {
+      key: "auth",
+      label: isAuthenticated ? (
+        <Link to="#" onClick={handleLogout}>
+          로그아웃
+        </Link>
+      ) : (
+        <Link to="#" onClick={handleLogin}>
+          로그인
+        </Link>
+      ),
+      className: "auth-menu-item",
+    },
+  ];
 
   const MobileHeader = (
     <div className="mobile-header">
@@ -168,7 +284,6 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
       <Link to="/" className="logo">
         PiggyCell
       </Link>
-      {authButton}
     </div>
   );
 
@@ -178,14 +293,21 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
         <Link to="/" className="logo">
           PiggyCell
         </Link>
-        <Menu
-          mode="horizontal"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          className="main-menu"
-        />
+        <nav className="nav-menu">
+          <ul className="nav-menu-list">
+            {desktopMenuItems.map((item) => (
+              <li
+                key={item.key}
+                className={`nav-menu-item ${item.className || ""} ${
+                  location.pathname === item.key ? "active" : ""
+                }`}
+              >
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
-      <div className="right-section">{authButton}</div>
     </div>
   );
 
@@ -204,7 +326,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
         <Menu
           mode="vertical"
           selectedKeys={[location.pathname]}
-          items={menuItems}
+          items={mobileMenuItems}
           onClick={() => setMobileMenuOpen(false)}
         />
       </Drawer>
