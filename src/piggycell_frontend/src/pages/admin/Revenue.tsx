@@ -102,18 +102,18 @@ const AdminRevenue = () => {
       </Row>
 
       <div className="search-box">
-        <StyledInput
-          placeholder="수익 내역 검색..."
-          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          customSize="md"
-        />
-      </div>
-
-      <div className="flex justify-end mb-4">
+        <div className="search-input-wrapper">
+          <StyledInput
+            placeholder="수익 내역 검색..."
+            prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+            customSize="md"
+          />
+        </div>
         <StyledButton
           customVariant="primary"
           customColor="primary"
           onClick={handleRefresh}
+          icon={<SearchOutlined />}
         >
           새로고침
         </StyledButton>

@@ -621,6 +621,11 @@ const NFTManagement = () => {
     message.info("NFT 삭제 기능은 추후 구현 예정입니다.");
   };
 
+  const handleRefresh = async () => {
+    await fetchNFTs();
+    await fetchTotalVolume();
+  };
+
   return (
     <div className="nft-management">
       <div className="page-header">
@@ -674,12 +679,22 @@ const NFTManagement = () => {
       </Row>
 
       <div className="search-box">
-        <StyledInput
-          placeholder="NFT ID, 위치 또는 소유자로 검색..."
-          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          customSize="md"
-          onChange={(e) => handleSearch(e.target.value)}
-        />
+        <div className="search-input-wrapper">
+          <StyledInput
+            placeholder="NFT ID, 위치 또는 소유자로 검색..."
+            prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+            customSize="md"
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
+        <StyledButton
+          customVariant="primary"
+          customColor="primary"
+          onClick={handleRefresh}
+          icon={<SearchOutlined />}
+        >
+          새로고침
+        </StyledButton>
       </div>
 
       <StyledTable

@@ -8,8 +8,8 @@ const { Content } = Layout;
 const UserLayout = () => {
   return (
     <BaseLayout className="user-layout">
-      <Content className="p-6">
-        <div className="bg-white p-6 rounded-lg min-h-[80vh]">
+      <Content className="base-content">
+        <div className="page-container">
           <Outlet />
         </div>
       </Content>

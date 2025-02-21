@@ -436,6 +436,7 @@ const NFTMarket = () => {
                       status="available"
                       onBuy={() => handleBuyNFT(nft.id)}
                       loading={buyingNFT === nft.id}
+                      primaryButtonText="구매하기"
                     />
                   </Col>
                 ))}
@@ -455,6 +456,7 @@ const NFTMarket = () => {
                       chargerCount={nft.chargerCount}
                       price={Number(nft.price)}
                       status="sold"
+                      primaryButtonText="판매 완료"
                     />
                   </Col>
                 ))}

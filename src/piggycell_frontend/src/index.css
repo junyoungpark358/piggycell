@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@300;400;700&display=swap");
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Comic Neue", cursive;
   line-height: 1.5;
   font-weight: 400;
 
@@ -14,21 +14,21 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --primary-color: #1a73e8;
-  --secondary-color: #34a853;
-  --background-color: #f8f9fa;
+  --primary-color: #ff6b6b;
+  --secondary-color: #4ecdc4;
+  --background-color: #fffbe6;
   --paper-color: #ffffff;
-  --text-color: #202124;
-  --text-secondary: #5f6368;
-  --border-color: #e2e8f0;
-  --hover-color: #60a5fa;
-  --focus-color: #3b82f6;
-  --error-color: #d93025;
-  --warning-color: #f29900;
-  --success-color: #1e8e3e;
-  --info-color: #1a73e8;
-  --border-radius: 12px;
-  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --text-color: #2d3436;
+  --text-secondary: #636e72;
+  --border-color: #2d3436;
+  --hover-color: #ff8787;
+  --focus-color: #ff8787;
+  --error-color: #ff4757;
+  --warning-color: #ffa502;
+  --success-color: #2ed573;
+  --info-color: #70a1ff;
+  --border-radius: 15px;
+  --box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
 }
 
 body {
@@ -54,24 +54,26 @@ h6 {
 }
 
 button {
-  font-family: "Comic Neue", cursive;
+  font-family: "Bangers", cursive;
   border-radius: var(--border-radius);
-  border: 3px solid var(--text-color);
+  border: 3px solid var(--border-color);
   box-shadow: var(--box-shadow);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  padding: 0.8em 1.5em;
+  font-size: 1.1em;
   font-weight: 500;
   cursor: pointer;
   background-color: var(--paper-color);
   color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
 }
 
 button:focus,
@@ -83,20 +85,23 @@ input,
 select,
 textarea {
   font-family: "Comic Neue", cursive;
-  border: 2px solid var(--border-color);
+  border: 3px solid var(--border-color);
   border-radius: var(--border-radius);
   background-color: var(--paper-color);
   color: var(--text-color);
-  padding: 8px 12px;
+  padding: 10px 15px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
 }
 
 .card {
   background: var(--paper-color);
-  border: 3px solid var(--text-color);
+  border: 3px solid var(--border-color);
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   position: relative;
   overflow: hidden;
+  padding: 20px;
+  transform: rotate(-1deg);
 }
 
 .card::before {
@@ -105,8 +110,14 @@ textarea {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: var(--primary-color);
+  height: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--primary-color),
+    var(--primary-color) 10px,
+    var(--secondary-color) 10px,
+    var(--secondary-color) 20px
+  );
 }
 
 /* 테마 토글 버튼 스타일 */

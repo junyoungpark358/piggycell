@@ -6,6 +6,7 @@ import {
 import { StyledCard } from "./common/StyledCard";
 import { StyledButton } from "./common/StyledButton";
 import styled from "@emotion/styled";
+import { css } from "@emotion/react";
 
 const CardContent = styled.div`
   display: flex;
@@ -63,17 +64,23 @@ const ButtonContainer = styled.div<ButtonContainerProps>`
   gap: 0.75rem;
   margin-top: 0.5rem;
   width: 100%;
+  overflow: hidden;
+  padding: 0.5rem;
 
-  > div {
-    flex: 1;
+  > button {
+    width: 100%;
     min-width: 0;
-
-    button {
-      width: 100%;
-      min-width: 0;
-      white-space: nowrap;
-    }
+    white-space: nowrap;
+    max-width: 100%;
   }
+
+  ${(props) =>
+    props.hasSecondaryButton &&
+    css`
+      > button {
+        flex: 1;
+      }
+    `}
 `;
 
 interface NFTCardProps {

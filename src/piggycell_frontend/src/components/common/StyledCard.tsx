@@ -34,63 +34,148 @@ const getCardStyles = ({
     xl: theme.spacing.xl,
   };
 
-  const elevationStyles = {
-    none: "none",
-    sm: theme.shadows.sm,
-    md: theme.shadows.md,
-    lg: theme.shadows.lg,
-    xl: theme.shadows.xl,
-  };
-
   const baseStyles = css`
     border-radius: ${theme.borderRadius.lg};
-    box-shadow: ${elevationStyles[elevation]};
-    transition: all 0.3s ease;
-    border: ${bordered ? `1px solid ${theme.colors.border.default}` : "none"};
-    background: ${theme.colors.background.card};
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 3px solid #000;
+    background: ${theme.colors.background.paper};
+    transform: ${customVariant === "stats" ? "rotate(-1deg)" : "none"};
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
+    position: relative;
+    overflow: visible;
+
+    .ant-card-head {
+      border-bottom: 3px solid #000;
+      background: linear-gradient(
+        135deg,
+        ${theme.colors.primary.main} 0%,
+        ${theme.colors.secondary.main} 100%
+      );
+      margin: -1px;
+      border-radius: ${theme.borderRadius.lg} ${theme.borderRadius.lg} 0 0;
+
+      .ant-card-head-title {
+        font-family: "Bangers", cursive;
+        font-size: 1.5rem;
+        color: #fff;
+        text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+        letter-spacing: 1px;
+      }
+    }
 
     .ant-card-body {
       padding: ${paddingStyles[customPadding]};
+      font-family: "Comic Neue", cursive;
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      width: 30px;
+      height: 30px;
+      background: ${theme.colors.primary.main};
+      border: 3px solid #000;
+      border-radius: 50%;
+      transform: rotate(15deg);
+      z-index: 1;
+    }
+
+    &::after {
+      content: "★";
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      color: #fff;
+      font-size: 1.2rem;
+      z-index: 2;
+      transform: rotate(-15deg);
     }
 
     ${interactive &&
     css`
       cursor: pointer;
       &:hover {
-        transform: translateY(-4px);
-        box-shadow: ${theme.shadows.lg};
+        transform: translateY(-5px) rotate(1deg);
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
       }
     `}
   `;
 
   const variantStyles = {
     nft: css`
-      overflow: hidden;
       background: ${theme.colors.background.paper};
+      &::before {
+        background: ${theme.colors.secondary.main};
+      }
       &:hover {
-        box-shadow: ${theme.shadows.lg};
+        transform: translateY(-5px) rotate(1deg);
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
+      }
+      .ant-card-cover {
+        border-bottom: 3px solid #000;
+        padding: 1rem;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 10px,
+          rgba(0, 0, 0, 0.05) 10px,
+          rgba(0, 0, 0, 0.05) 20px
+        );
       }
     `,
     stats: css`
       background: linear-gradient(
         135deg,
         ${theme.colors.background.paper} 0%,
-        ${theme.colors.neutral.gray[50]} 100%
+        ${theme.colors.primary.light} 100%
       );
-      border: 1px solid ${theme.colors.neutral.gray[200]};
-      &:hover {
-        box-shadow: ${theme.shadows.md};
+      &::before {
+        background: ${theme.colors.success.main};
+      }
+      .ant-statistic-title {
+        font-family: "Bangers", cursive;
+        color: ${theme.colors.text.primary};
+        font-size: 1.2rem;
+        letter-spacing: 1px;
+        margin-bottom: 0.8rem;
+        text-transform: uppercase;
+      }
+      .ant-statistic-content {
+        font-family: "Comic Neue", cursive;
+        color: ${theme.colors.primary.main};
+        font-size: 2rem;
+        font-weight: 700;
+        text-shadow: 2px 2px 0 #000;
       }
     `,
     data: css`
-      background: ${theme.colors.background.card};
-      backdrop-filter: blur(10px);
-      border: 1px solid ${theme.colors.neutral.gray[200]};
+      background: ${theme.colors.background.paper};
+      &::before {
+        background: ${theme.colors.info.main};
+      }
+      .ant-table {
+        font-family: "Comic Neue", cursive;
+      }
+      .ant-table-thead > tr > th {
+        font-family: "Bangers", cursive;
+        background: linear-gradient(
+          135deg,
+          ${theme.colors.primary.main} 0%,
+          ${theme.colors.secondary.main} 100%
+        );
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 3px solid #000;
+      }
     `,
     default: css`
       background: ${theme.colors.background.paper};
       &:hover {
-        box-shadow: ${theme.shadows.sm};
+        transform: translateY(-5px) rotate(1deg);
+        box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
       }
     `,
   };

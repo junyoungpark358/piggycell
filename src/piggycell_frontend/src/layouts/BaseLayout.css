@@ -3,16 +3,17 @@
   top: 0;
   width: 100%;
   z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  height: 64px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8) !important;
+  height: 56px;
   background: white;
   padding: 0;
+  border-bottom: 3px solid #000;
 }
 
 .base-content {
-  margin-top: 64px;
-  padding: 24px;
-  min-height: calc(100vh - 64px);
+  margin-top: 0;
+  padding: 0;
+  min-height: calc(100vh - 56px);
   background-color: #f5f5f5;
 }
 
@@ -23,15 +24,32 @@
 }
 
 .logo {
-  color: #1677ff;
+  color: #ffffff !important;
   font-weight: bold;
-  font-size: 1.25rem;
+  font-size: 1.8rem !important;
   white-space: nowrap;
   text-decoration: none;
+  font-family: "Bangers", cursive !important;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000,
+    -1px 1px 0 #000, 1px 1px 0 #000 !important;
+  transform: rotate(-2deg);
+  transition: all 0.3s ease;
+  padding: 2px 10px;
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+  border-radius: 6px;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
 }
 
 .logo:hover {
-  color: #4096ff;
+  transform: rotate(2deg) scale(1.05);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
 }
 
 /* 데스크톱 헤더 스타일 */
@@ -41,6 +59,11 @@
   align-items: center;
   height: 100%;
   padding: 0 24px;
+  background: linear-gradient(
+    to right,
+    var(--primary-color),
+    var(--secondary-color)
+  );
 }
 
 .desktop-header .left-section {
@@ -86,63 +109,72 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: "Bangers", cursive !important;
+  letter-spacing: 1px;
+  transform: none;
 }
 
 .nav-menu-item .anticon {
-  font-size: 16px;
+  font-size: 18px;
+  transform: none;
 }
 
 .nav-menu-item a {
-  color: rgba(0, 0, 0, 0.88);
+  color: #000000 !important;
   text-decoration: none;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+  text-shadow: none;
+}
+
+.nav-menu-item:hover {
+  transform: translateY(-2px);
 }
 
 .nav-menu-item:hover a {
-  color: #1677ff;
+  color: #ffffff !important;
 }
 
 .nav-menu-item.active a {
-  color: #1677ff;
+  color: #ffffff !important;
 }
 
 .nav-menu-item.active::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: #1677ff;
+  left: 10%;
+  right: 10%;
+  bottom: 15px;
+  height: 3px;
+  background: #000000;
+  transform: none;
+  border-radius: 3px;
 }
 
 /* 로그인/로그아웃 메뉴 아이템 스타일 */
 .nav-menu-item.auth-menu-item {
   margin-left: auto;
+  background: #000000;
+  border-radius: 8px;
+  margin: 12px 0;
+  height: 40px;
+  line-height: 40px;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
 }
 
 .nav-menu-item.auth-menu-item a {
-  color: rgba(0, 0, 0, 0.88);
+  color: #ffffff !important;
+  padding: 0 16px;
 }
 
 .nav-menu-item.auth-menu-item:hover {
-  background-color: transparent;
-}
-
-.nav-menu-item.auth-menu-item:hover a {
-  color: #1677ff;
-}
-
-.nav-menu-item.auth-menu-item.active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: #1677ff;
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
+  background: var(--primary-color);
 }
 
 @media (max-width: 1200px) {
@@ -162,67 +194,144 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 16px;
-  height: 100%;
+  height: 56px;
   padding: 0 16px;
   width: 100%;
+  background: linear-gradient(
+    to right,
+    var(--primary-color),
+    var(--secondary-color)
+  );
+  border-bottom: 3px solid #000;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.8) !important;
 }
 
 .mobile-header .menu-icon {
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
+  color: #000000;
+  background: #ffffff;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
+  transition: all 0.3s ease;
+}
+
+.mobile-header .menu-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8);
+  background: var(--primary-color);
+  color: #ffffff;
 }
 
 .mobile-header .logo {
   text-align: center;
   margin: 0;
+  justify-self: center;
 }
 
 /* 모바일 메뉴 스타일 */
+.mobile-menu-drawer .ant-drawer-content {
+  background: var(--background-color) !important;
+  border-right: 3px solid #000;
+  box-shadow: -4px 0 0 rgba(0, 0, 0, 0.8) !important;
+}
+
+.mobile-menu-drawer .ant-drawer-header {
+  background: linear-gradient(
+    to right,
+    var(--primary-color),
+    var(--secondary-color)
+  );
+  border-bottom: 3px solid #000;
+  padding: 16px !important;
+}
+
+.mobile-menu-drawer .ant-drawer-title {
+  font-family: "Bangers", cursive !important;
+  color: #000000 !important;
+  text-shadow: 2px 2px 0 #ffffff;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+}
+
 .mobile-menu-drawer .ant-drawer-body {
-  padding: 0;
+  padding: 16px !important;
 }
 
 .mobile-menu-drawer .ant-menu {
-  border-right: none;
+  background: transparent !important;
+  border: none !important;
 }
 
 .mobile-menu-drawer .ant-menu-item {
-  height: 48px;
-  line-height: 48px;
-  margin: 0;
-  padding: 0 24px;
+  font-family: "Bangers", cursive !important;
+  letter-spacing: 1px;
+  font-size: 1.2rem;
+  margin: 4px 0 !important;
+  padding: 0 16px !important;
+  height: 56px !important;
+  line-height: 56px !important;
+  border: 2px solid #000 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8) !important;
+  transition: all 0.3s ease !important;
+}
+
+.mobile-menu-drawer .ant-menu-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8) !important;
+  background: var(--primary-color) !important;
+}
+
+.mobile-menu-drawer .ant-menu-item a {
+  color: #000000 !important;
+  font-family: "Bangers", cursive !important;
+  letter-spacing: 1px;
+}
+
+.mobile-menu-drawer .ant-menu-item:hover a {
+  color: #ffffff !important;
+}
+
+.mobile-menu-drawer .ant-menu-item.ant-menu-item-selected {
+  background: var(--primary-color) !important;
+}
+
+.mobile-menu-drawer .ant-menu-item.ant-menu-item-selected a {
+  color: #ffffff !important;
 }
 
 .mobile-menu-drawer .ant-menu-item.auth-menu-item {
-  margin-top: 16px;
-  background-color: #1677ff;
-  color: white;
+  background: #000000 !important;
+  margin-top: 24px !important;
+  border: 2px solid #000 !important;
 }
 
 .mobile-menu-drawer .ant-menu-item.auth-menu-item a {
-  color: white !important;
+  color: #ffffff !important;
 }
 
 .mobile-menu-drawer .ant-menu-item.auth-menu-item:hover {
-  background-color: #4096ff !important;
+  background: var(--primary-color) !important;
 }
 
-.mobile-menu-drawer .ant-menu-item.auth-menu-item:active {
-  background-color: #4096ff !important;
+.mobile-menu-drawer .ant-drawer-close {
+  color: #000000 !important;
+  font-size: 24px !important;
+  top: 16px !important;
+  right: 16px !important;
 }
 
-.mobile-menu-drawer .ant-menu-item.auth-menu-item::after {
-  display: none;
-}
-
-.mobile-menu-drawer .ant-menu-item-selected {
-  background-color: transparent !important;
-  color: #1677ff !important;
-}
-
-.mobile-menu-drawer .ant-menu-item-selected.auth-menu-item {
-  background-color: #1677ff !important;
-  color: white !important;
+.mobile-menu-drawer .ant-drawer-close:hover {
+  color: var(--primary-color) !important;
+  transform: rotate(90deg);
 }
 
 /* Ant Design Menu 오버라이드 */
@@ -241,5 +350,84 @@
 @media (max-width: 768px) {
   .base-content {
     padding: 16px;
+  }
+
+  .content-custom {
+    padding: 12px !important;
+  }
+
+  .content-custom > div {
+    padding: 12px !important;
+  }
+
+  .header-content {
+    padding: 0 12px !important;
+  }
+
+  .auth-button {
+    margin-left: auto !important;
+  }
+
+  .admin-menu-divider {
+    width: 100%;
+    height: 2px;
+    margin: 4px 0 !important;
+    background: linear-gradient(
+      to right,
+      rgba(148, 163, 184, 0.2),
+      rgba(56, 189, 248, 0.8),
+      rgba(148, 163, 184, 0.2)
+    );
+  }
+
+  .logo {
+    font-size: 1.4rem !important;
+    padding: 2px 8px;
+    height: 36px;
+    margin-top: 8px;
+  }
+
+  .logo-link {
+    height: 56px !important;
+    padding-right: 16px !important;
+    padding-top: 6px !important;
+  }
+}
+
+/* 페이지 컨테이너 공통 스타일 */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 0 0 0;
+}
+
+/* 페이지 헤더 공통 스타일 */
+.page-header {
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.page-header h1 {
+  font-family: "Bangers", cursive !important;
+  font-size: 2.5rem !important;
+  color: var(--primary-color) !important;
+  text-shadow: 3px 3px 0 #000, 6px 6px 0 #fff !important;
+  letter-spacing: 2px;
+  transform: rotate(-2deg);
+  margin: 0;
+  line-height: 1;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 375px) {
+  .page-container {
+    padding: 12px;
   }
 }

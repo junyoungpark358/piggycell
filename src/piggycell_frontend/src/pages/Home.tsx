@@ -261,6 +261,7 @@ const Home = () => {
                         status="available"
                         onBuy={() => handleStake(nft.id)}
                         loading={stakingInProgress === nft.id}
+                        primaryButtonText="스테이킹"
                       />
                     </Col>
                   ))
@@ -285,9 +286,10 @@ const Home = () => {
                         location={nft.location}
                         chargerCount={nft.chargerCount}
                         price={Number(nft.price)}
-                        status="sold"
+                        status="available"
                         onBuy={() => handleUnstake(nft.id)}
                         loading={stakingInProgress === nft.id}
+                        primaryButtonText="언스테이킹"
                       />
                     </Col>
                   ))
