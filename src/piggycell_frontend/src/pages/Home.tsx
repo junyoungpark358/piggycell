@@ -1,4 +1,4 @@
-import { Row, Col, Button, Tabs, Empty } from "antd";
+import { Row, Col, Tabs, Empty } from "antd";
 import {
   ThunderboltOutlined,
   ShoppingCartOutlined,
@@ -17,6 +17,7 @@ import "./Home.css";
 import { message } from "antd";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
+import { StyledButton } from "../components/common/StyledButton";
 
 interface MetadataValue {
   Text?: string;

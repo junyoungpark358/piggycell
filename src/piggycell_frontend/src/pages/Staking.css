@@ -192,27 +192,6 @@
   margin-bottom: 1rem;
 }
 
-.primary-gradient {
-  width: 100%;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
-  border: none;
-  color: white;
-  height: 40px;
-  font-weight: 600;
-  margin-top: 0.5rem;
-}
-
-.primary-gradient:hover {
-  opacity: 0.9;
-  color: white !important;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
-}
-
-.primary-gradient.disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
-}
-
 .staking-card .text-gray-600 {
   display: flex !important;
   align-items: center !important;
@@ -232,14 +211,6 @@
 .staking-card .text-gray-600 .font-medium {
   margin-right: 0.125rem !important;
   color: #64748b !important;
-}
-
-.staking-card .ant-btn {
-  width: 100%;
-  margin-top: 12px;
-  font-size: 12px;
-  height: 32px;
-  padding: 0 16px;
 }
 
 @media (min-width: 1200px) {

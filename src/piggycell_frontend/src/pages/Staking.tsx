@@ -1,15 +1,5 @@
 import React from "react";
-import {
-  Row,
-  Col,
-  Button,
-  Input,
-  Statistic,
-  message,
-  Spin,
-  Empty,
-  Card,
-} from "antd";
+import { Row, Col, Input, Statistic, message, Spin, Empty } from "antd";
 import {
   SearchOutlined,
   BankOutlined,
@@ -27,6 +17,7 @@ import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell
 import "./Staking.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
+import { StyledButton } from "../components/common/StyledButton";
 
 interface MetadataValue {
   Text?: string;
@@ -291,9 +282,12 @@ const Staking = () => {
                 location={nft.location}
                 chargerCount={nft.chargerCount}
                 price={Number(nft.estimatedReward)}
-                status="sold"
+                status="available"
                 onBuy={() => handleUnstake(nft.id)}
-                loading={loading}
+                onSecondaryAction={() => handleClaimReward(nft.id)}
+                loading={processingNFT === nft.id}
+                primaryButtonText="언스테이킹"
+                secondaryButtonText="보상 수령"
               />
             </Col>
           ))}

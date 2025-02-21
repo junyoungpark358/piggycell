@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Button, Input, message, Spin, Empty, Tabs } from "antd";
+import { Row, Col, Input, message, Spin, Empty, Tabs } from "antd";
 import {
   SearchOutlined,
   ShoppingCartOutlined,
@@ -20,6 +20,7 @@ import type {
 import "./NFTMarket.css";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
+import { StyledButton } from "../components/common/StyledButton";
 
 interface MetadataValue {
   Text?: string;
@@ -463,7 +464,7 @@ const NFTMarket = () => {
       />
 
       {loadingMore && (
-        <div className="text-center my-5">
+        <div className="my-5 text-center">
           <Spin />
         </div>
       )}

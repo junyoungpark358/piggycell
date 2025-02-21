@@ -243,27 +243,6 @@
   margin-bottom: 1rem;
 }
 
-.primary-gradient {
-  width: 100%;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
-  border: none;
-  color: white;
-  height: 40px;
-  font-weight: 600;
-  margin-top: 0.5rem;
-}
-
-.primary-gradient:hover {
-  opacity: 0.9;
-  color: white !important;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
-}
-
-.primary-gradient.disabled {
-  background: #e2e8f0;
-  color: #94a3b8;
-}
-
 .nft-card .text-gray-600 {
   display: flex !important;
   align-items: center !important;
@@ -283,26 +262,6 @@
 .nft-card .text-gray-600 .font-medium {
   margin-right: 0.125rem !important;
   color: #64748b !important;
-}
-
-.nft-card .ant-btn {
-  width: 100% !important;
-  font-size: 12px;
-  height: 32px;
-  padding: 0 16px;
-}
-
-.nft-card .ant-btn.sold-button {
-  background: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
-  color: #94a3b8 !important;
-  cursor: not-allowed !important;
-}
-
-.nft-card .ant-btn.sold-button:hover {
-  background: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
-  color: #94a3b8 !important;
 }
 
 @media (min-width: 1200px) {
@@ -349,23 +308,6 @@
   color: #0284c7;
 }
 
-.sold-button {
-  background: #e2e8f0 !important;
-  border: none !important;
-  color: #94a3b8 !important;
-  cursor: not-allowed !important;
-  height: 40px !important;
-  font-weight: 600 !important;
-  margin-top: 0.5rem !important;
-  width: 100% !important;
-}
-
-.sold-button:hover {
-  background: #e2e8f0 !important;
-  border: none !important;
-  color: #94a3b8 !important;
-}
-
 /* 주소 표시 스타일 */
 .address-display {
   display: flex;
@@ -404,25 +346,6 @@
 
 .search-box .ant-input-prefix {
   margin-right: 8px;
-}
-
-/* 버튼 스타일 */
-.primary-gradient {
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
-  border: none;
-  color: white;
-  font-weight: 600;
-}
-
-.primary-gradient:hover {
-  opacity: 0.9;
-  color: white !important;
-  background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%) !important;
-}
-
-.sold-button {
-  background: #e2e8f0;
-  color: #94a3b8;
 }
 
 /* 반응형 스타일 */

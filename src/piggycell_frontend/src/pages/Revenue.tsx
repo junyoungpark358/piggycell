@@ -1,16 +1,15 @@
-import { Row, Col, Button, Input, Card } from "antd";
+import { Row, Col, Input } from "antd";
 import {
   SearchOutlined,
   DollarOutlined,
   LineChartOutlined,
   RiseOutlined,
-  ThunderboltOutlined,
-  BankOutlined,
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
+import { StyledButton } from "../components/common/StyledButton";
 
 const Revenue = () => {
   // 임시 수익 데이터
@@ -191,7 +190,7 @@ const Revenue = () => {
   return (
     <div className="revenue-page">
       <div className="page-header">
-        <h1 className="text-5xl font-extrabold mb-6 text-sky-600">수익 관리</h1>
+        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">수익 관리</h1>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">

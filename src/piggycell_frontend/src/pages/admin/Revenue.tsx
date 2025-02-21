@@ -1,4 +1,4 @@
-import { Row, Col, Input } from "antd";
+import { Row, Col, Input, message } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
@@ -7,6 +7,7 @@ import {
 import "./Revenue.css";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
+import { StyledButton } from "../../components/common/StyledButton";
 
 const AdminRevenue = () => {
   // 임시 수익 데이터
@@ -61,6 +62,10 @@ const AdminRevenue = () => {
     },
   ];
 
+  const handleRefresh = () => {
+    // Implementation of handleRefresh function
+  };
+
   return (
     <div className="revenue-management">
       <div className="page-header">
@@ -101,6 +106,12 @@ const AdminRevenue = () => {
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
           size="middle"
         />
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <StyledButton variant="primary" color="primary" onClick={handleRefresh}>
+          새로고침
+        </StyledButton>
       </div>
 
       <StyledTable

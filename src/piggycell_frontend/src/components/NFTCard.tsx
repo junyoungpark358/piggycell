@@ -1,10 +1,10 @@
-import { Button } from "antd";
 import {
   EnvironmentOutlined,
   ThunderboltOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
 import { StyledCard } from "./common/StyledCard";
+import { StyledButton } from "./common/StyledButton";
 
 interface NFTCardProps {
   name: string;
@@ -13,7 +13,10 @@ interface NFTCardProps {
   price: number;
   status: "available" | "sold";
   onBuy?: () => void;
+  onSecondaryAction?: () => void;
   loading?: boolean;
+  primaryButtonText?: string;
+  secondaryButtonText?: string;
 }
 
 export const NFTCard: React.FC<NFTCardProps> = ({
@@ -23,7 +26,10 @@ export const NFTCard: React.FC<NFTCardProps> = ({
   price,
   status,
   onBuy,
+  onSecondaryAction,
   loading,
+  primaryButtonText = "구매하기",
+  secondaryButtonText,
 }) => {
   return (
     <StyledCard styleVariant="nft">
@@ -43,17 +49,28 @@ export const NFTCard: React.FC<NFTCardProps> = ({
             {price.toFixed(2)} ICP
           </p>
         </div>
-        <div className="mt-4">
-          <Button
-            type="primary"
-            className={status === "sold" ? "sold-button" : "primary-gradient"}
+        <div className="flex mt-4 space-x-2">
+          <StyledButton
+            variant={status === "sold" ? "ghost" : "primary"}
+            color="primary"
             onClick={onBuy}
             loading={loading}
             disabled={status === "sold"}
-            block
+            fullWidth={!secondaryButtonText}
           >
-            {status === "sold" ? "판매 완료" : "구매하기"}
-          </Button>
+            {status === "sold" ? "판매 완료" : primaryButtonText}
+          </StyledButton>
+          {secondaryButtonText && onSecondaryAction && (
+            <StyledButton
+              variant="secondary"
+              color="primary"
+              onClick={onSecondaryAction}
+              loading={loading}
+              fullWidth
+            >
+              {secondaryButtonText}
+            </StyledButton>
+          )}
         </div>
       </div>
     </StyledCard>

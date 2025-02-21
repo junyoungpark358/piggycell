@@ -1,6 +1,4 @@
 import {
-  Table,
-  Button,
   Modal,
   Form,
   Input,
@@ -10,7 +8,6 @@ import {
   Col,
   message,
   Tooltip,
-  Card,
 } from "antd";
 import {
   PlusOutlined,
@@ -37,6 +34,7 @@ import type {
 import "./NFTManagement.css";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
+import { StyledButton } from "../../components/common/StyledButton";
 
 interface NFTData {
   id: number;
@@ -53,6 +51,7 @@ type MetadataPair = [string, Value];
 
 const NFTManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form] = Form.useForm();
   const [nfts, setNfts] = useState<NFTData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -491,8 +490,9 @@ const NFTManagement = () => {
               <span>{shortenAddress(text)}</span>
             </Tooltip>
             <Tooltip title="주소 복사">
-              <Button
-                type="link"
+              <StyledButton
+                variant="ghost"
+                size="sm"
                 icon={<CopyOutlined />}
                 onClick={() => copyToClipboard(text)}
               />
@@ -524,17 +524,18 @@ const NFTManagement = () => {
       align: "center" as const,
       render: (_: any, record: NFTData) => (
         <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
+          <StyledButton
+            variant="ghost"
+            size="sm"
             onClick={() => handleEdit(record)}
+            icon={<EditOutlined />}
           />
           {record.status === "created" && (
-            <Button
-              type="link"
-              icon={<DeleteOutlined />}
-              danger
+            <StyledButton
+              variant="ghost"
+              size="sm"
               onClick={() => handleDelete(record.id)}
+              icon={<DeleteOutlined />}
             />
           )}
         </Space>
@@ -549,6 +550,7 @@ const NFTManagement = () => {
 
   const handleModalOk = async () => {
     try {
+      setIsSubmitting(true);
       const values = await form.validateFields();
       if (!actor) {
         throw new Error("Actor가 초기화되지 않았습니다.");
@@ -608,6 +610,8 @@ const NFTManagement = () => {
     } catch (error) {
       console.error("NFT 생성 실패:", error);
       message.error("NFT 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -630,9 +634,16 @@ const NFTManagement = () => {
     <div className="nft-management">
       <div className="page-header">
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 관리</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNFT}>
-          새 NFT 생성
-        </Button>
+        <div className="flex justify-end mb-4">
+          <StyledButton
+            variant="primary"
+            size="md"
+            onClick={handleAddNFT}
+            icon={<PlusOutlined />}
+          >
+            NFT 추가
+          </StyledButton>
+        </div>
       </div>
 
       {/* 전체 통계 */}
@@ -691,10 +702,28 @@ const NFTManagement = () => {
 
       {/* NFT 생성 모달 */}
       <Modal
-        title="새 NFT 생성"
+        title="NFT 추가"
         open={isModalVisible}
-        onOk={handleModalOk}
         onCancel={handleModalCancel}
+        footer={[
+          <StyledButton
+            key="cancel"
+            variant="ghost"
+            color="primary"
+            onClick={handleModalCancel}
+          >
+            취소
+          </StyledButton>,
+          <StyledButton
+            key="submit"
+            variant="primary"
+            color="primary"
+            loading={isSubmitting}
+            onClick={handleModalOk}
+          >
+            추가
+          </StyledButton>,
+        ]}
       >
         <Form form={form} layout="vertical">
           <Form.Item

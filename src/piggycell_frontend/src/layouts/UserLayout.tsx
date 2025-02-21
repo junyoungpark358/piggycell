@@ -1,4 +1,4 @@
-import { Layout, Menu, Button, Drawer } from "antd";
+import { Layout, Menu, Drawer } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
@@ -13,9 +13,11 @@ import {
   CrownOutlined,
   AppstoreOutlined,
   DollarOutlined,
+  MenuOutlined,
 } from "@ant-design/icons";
 import { AuthManager } from "../utils/auth";
 import "./UserLayout.css";
+import { StyledButton } from "../components/common/StyledButton";
 
 const { Header, Content, Footer } = Layout;
 
@@ -131,8 +133,9 @@ const UserLayout = () => {
         <div className="header-content">
           {isMobile ? (
             <>
-              <Button
-                type="text"
+              <StyledButton
+                variant="ghost"
+                size="md"
                 icon={
                   <MenuUnfoldOutlined
                     style={{ fontSize: "24px", color: "#000000" }}
@@ -150,11 +153,11 @@ const UserLayout = () => {
               </Link>
               <div className="auth-button">
                 {isAuthenticated ? (
-                  <Button onClick={handleLogout}>로그아웃</Button>
+                  <StyledButton onClick={handleLogout}>로그아웃</StyledButton>
                 ) : (
-                  <Button type="primary" onClick={handleLogin}>
+                  <StyledButton variant="primary" onClick={handleLogin}>
                     로그인
-                  </Button>
+                  </StyledButton>
                 )}
               </div>
             </>
@@ -190,11 +193,11 @@ const UserLayout = () => {
               </div>
               <div className="auth-button">
                 {isAuthenticated ? (
-                  <Button onClick={handleLogout}>로그아웃</Button>
+                  <StyledButton onClick={handleLogout}>로그아웃</StyledButton>
                 ) : (
-                  <Button type="primary" onClick={handleLogin}>
+                  <StyledButton variant="primary" onClick={handleLogin}>
                     로그인
-                  </Button>
+                  </StyledButton>
                 )}
               </div>
             </>

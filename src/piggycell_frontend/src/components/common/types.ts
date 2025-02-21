@@ -33,15 +33,6 @@ export interface ButtonProps extends BaseProps {
   onClick?: () => void;
 }
 
-export interface TableProps extends BaseProps {
-  headers: string[];
-  rows: any[][];
-  striped?: boolean;
-  hoverable?: boolean;
-  compact?: boolean;
-  bordered?: boolean;
-}
-
 export interface InputProps extends BaseProps {
   type?: string;
   placeholder?: string;

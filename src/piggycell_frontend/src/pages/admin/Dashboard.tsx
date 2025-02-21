@@ -1,4 +1,4 @@
-import { Row, Col, Input, message, Tooltip, Button } from "antd";
+import { Row, Col, Input, message, Tooltip } from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
@@ -16,6 +16,7 @@ import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggyc
 import { Principal } from "@dfinity/principal";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
+import { StyledButton } from "../../components/common/StyledButton";
 
 // ICRC-3 트랜잭션 관련 타입 정의
 interface ICRC3Account {
@@ -157,8 +158,9 @@ const AdminDashboard = () => {
           <span>{shortenAddress(text)}</span>
         </Tooltip>
         <Tooltip title={`${label} 복사`}>
-          <Button
-            type="link"
+          <StyledButton
+            variant="ghost"
+            size="xs"
             icon={<CopyOutlined />}
             onClick={() => copyToClipboard(text)}
           />
@@ -359,6 +361,10 @@ const AdminDashboard = () => {
     },
   ];
 
+  const handleRefresh = async () => {
+    await fetchTransactions(currentPage);
+  };
+
   return (
     <div className="admin-dashboard">
       <div className="page-header">
@@ -427,6 +433,10 @@ const AdminDashboard = () => {
           onChange: handlePageChange,
         }}
       />
+
+      <StyledButton variant="primary" color="primary" onClick={handleRefresh}>
+        새로고침
+      </StyledButton>
     </div>
   );
 };
