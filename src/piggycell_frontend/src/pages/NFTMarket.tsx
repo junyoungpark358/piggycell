@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Input, message, Spin, Empty, Tabs } from "antd";
+import { Row, Col, message, Spin, Empty, Tabs } from "antd";
 import {
   SearchOutlined,
   ShoppingCartOutlined,
@@ -21,6 +21,7 @@ import "./NFTMarket.css";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
 import { StyledButton } from "../components/common/StyledButton";
+import { StyledInput } from "../components/common/StyledInput";
 
 interface MetadataValue {
   Text?: string;
@@ -409,11 +410,11 @@ const NFTMarket = () => {
         </Col>
       </Row>
 
-      <div className="search-section">
-        <Input
+      <div className="search-box mb-4">
+        <StyledInput
           placeholder="충전 허브 검색..."
-          prefix={<SearchOutlined />}
-          className="search-box"
+          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          customSize="md"
         />
       </div>
 

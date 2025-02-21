@@ -1,46 +1,60 @@
 import { Statistic } from "antd";
 import type { StatisticProps } from "antd";
 import { StyledCard } from "./common/StyledCard";
+import styled from "@emotion/styled";
 
 interface StatCardProps extends Omit<StatisticProps, "className"> {
   loading?: boolean;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ loading, ...props }) => {
-  const statisticStyles = [
-    // 기본 스타일
-    "text-center",
-    // 타이틀 스타일
-    "[&_.ant-statistic-title]:text-gray-600",
-    "[&_.ant-statistic-title]:text-base",
-    "[&_.ant-statistic-title]:font-medium",
-    "[&_.ant-statistic-title]:mb-2",
-    // 컨텐츠 스타일
-    "[&_.ant-statistic-content]:inline-flex",
-    "[&_.ant-statistic-content]:items-center",
-    "[&_.ant-statistic-content]:justify-center",
-    "[&_.ant-statistic-content]:gap-1",
-    // 값 스타일
-    "[&_.ant-statistic-content-value]:text-2xl",
-    "[&_.ant-statistic-content-value]:font-semibold",
-    "[&_.ant-statistic-content-value]:text-sky-600",
-    // 접미사 스타일
-    "[&_.ant-statistic-content-suffix]:text-base",
-    "[&_.ant-statistic-content-suffix]:font-medium",
-    "[&_.ant-statistic-content-suffix]:text-gray-600",
-    "[&_.ant-statistic-content-suffix]:ml-1",
-    // 아이콘 스타일
-    "[&_.anticon]:text-xl",
-    "[&_.anticon]:text-sky-600",
-    "[&_.anticon]:mr-2",
-  ].join(" ");
+const StyledStatistic = styled(Statistic)`
+  text-align: center;
 
+  .ant-statistic-title {
+    color: #4b5563;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .ant-statistic-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .ant-statistic-content-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0284c7;
+  }
+
+  .ant-statistic-content-suffix {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4b5563;
+    margin-left: 0.25rem;
+  }
+
+  .anticon {
+    font-size: 1.25rem;
+    color: #0284c7;
+    margin-right: 0.5rem;
+  }
+`;
+
+const AnimatedCard = styled(StyledCard)`
+  transition: transform 0.2s;
+  &:hover {
+    transform: translateY(-0.25rem);
+  }
+`;
+
+export const StatCard: React.FC<StatCardProps> = ({ loading, ...props }) => {
   return (
-    <StyledCard
-      styleVariant="stats"
-      className="hover:-translate-y-1 transition-transform"
-    >
-      <Statistic className={statisticStyles} loading={loading} {...props} />
-    </StyledCard>
+    <AnimatedCard customVariant="stats">
+      <StyledStatistic loading={loading} {...props} />
+    </AnimatedCard>
   );
 };

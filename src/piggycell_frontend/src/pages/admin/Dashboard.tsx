@@ -1,4 +1,4 @@
-import { Row, Col, Input, message, Tooltip } from "antd";
+import { Row, Col, message, Tooltip } from "antd";
 import {
   ShoppingCartOutlined,
   BankOutlined,
@@ -17,6 +17,7 @@ import { Principal } from "@dfinity/principal";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
+import { StyledInput } from "../../components/common/StyledInput";
 
 // ICRC-3 트랜잭션 관련 타입 정의
 interface ICRC3Account {
@@ -159,8 +160,8 @@ const AdminDashboard = () => {
         </Tooltip>
         <Tooltip title={`${label} 복사`}>
           <StyledButton
-            variant="ghost"
-            size="xs"
+            customVariant="ghost"
+            customSize="xs"
             icon={<CopyOutlined />}
             onClick={() => copyToClipboard(text)}
           />
@@ -410,22 +411,20 @@ const AdminDashboard = () => {
         </Col>
       </Row>
 
-      <div className="search-box">
-        <div className="mb-4">
-          <Input
-            placeholder="NFT ID 또는 주소로 검색"
-            prefix={<SearchOutlined />}
-            onChange={(e) => handleSearch(e.target.value)}
-            style={{ width: 300 }}
-          />
-        </div>
+      <div className="mb-4 search-box">
+        <StyledInput
+          placeholder="검색..."
+          prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          customSize="md"
+          onChange={(e) => handleSearch(e.target.value)}
+        />
       </div>
 
       <StyledTable
         columns={columns}
         dataSource={transactions}
         loading={loading}
-        styleVariant="compact"
+        customVariant="compact"
         pagination={{
           current: currentPage,
           pageSize: PAGE_SIZE,
@@ -434,7 +433,11 @@ const AdminDashboard = () => {
         }}
       />
 
-      <StyledButton variant="primary" color="primary" onClick={handleRefresh}>
+      <StyledButton
+        customVariant="primary"
+        customColor="primary"
+        onClick={handleRefresh}
+      >
         새로고침
       </StyledButton>
     </div>

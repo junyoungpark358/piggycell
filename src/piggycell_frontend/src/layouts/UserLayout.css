@@ -326,3 +326,157 @@
   background-color: var(--secondary-color);
   transform: rotate(0.5deg);
 }
+
+.user-layout .ant-menu {
+  line-height: 64px;
+  border-bottom: none;
+}
+
+.user-layout .ant-menu-horizontal {
+  border-bottom: none;
+}
+
+.user-layout .ant-menu-item {
+  padding: 0 20px;
+  margin: 0 4px !important;
+}
+
+.user-layout .ant-menu-item:hover {
+  color: #1890ff;
+}
+
+.user-layout .ant-menu-item-selected {
+  color: #1890ff;
+}
+
+.user-layout .ant-menu-item a {
+  color: inherit;
+}
+
+.admin-menu-divider {
+  height: 24px;
+  width: 1px;
+  background-color: #f0f0f0;
+  margin: 0 16px;
+}
+
+.user-layout .ant-drawer .ant-menu {
+  border-right: none;
+}
+
+.user-layout .ant-drawer .ant-menu-item {
+  margin: 0 !important;
+  padding: 0 16px;
+  height: 48px;
+  line-height: 48px;
+}
+
+.user-layout .ant-drawer .admin-menu-divider {
+  height: 1px;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.user-layout .base-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  background: white;
+}
+
+.user-layout .logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1890ff;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.user-layout .nav-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  margin-left: 48px;
+}
+
+.user-layout .ant-menu {
+  flex: 1;
+  line-height: 64px;
+  background: transparent;
+}
+
+.user-layout .ant-menu-horizontal {
+  border-bottom: none;
+}
+
+.user-layout .ant-menu-item {
+  padding: 0 16px;
+  margin: 0 4px !important;
+  font-size: 15px;
+}
+
+.user-layout .ant-menu-item:hover {
+  color: #1890ff;
+}
+
+.user-layout .ant-menu-item-selected {
+  color: #1890ff !important;
+}
+
+.user-layout .ant-menu-item a {
+  color: inherit;
+}
+
+.admin-menu-divider {
+  height: 24px;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(24, 144, 255, 0.1),
+    rgba(24, 144, 255, 0.6),
+    rgba(24, 144, 255, 0.1)
+  );
+  margin: 0 8px;
+  border-radius: 1px;
+}
+
+.user-layout .auth-buttons {
+  margin-left: 24px;
+}
+
+/* 모바일 스타일 */
+@media (max-width: 768px) {
+  .user-layout .base-header {
+    padding: 0 16px;
+  }
+
+  .user-layout .nav-container {
+    margin-left: 24px;
+  }
+
+  .user-layout .ant-drawer .ant-menu {
+    border-right: none;
+  }
+
+  .user-layout .ant-drawer .ant-menu-item {
+    margin: 0 !important;
+    padding: 0 16px;
+    height: 48px;
+    line-height: 48px;
+  }
+
+  .user-layout .ant-drawer .admin-menu-divider {
+    height: 1px;
+    width: 100%;
+    margin: 8px 0;
+    background: linear-gradient(
+      to right,
+      rgba(24, 144, 255, 0.1),
+      rgba(24, 144, 255, 0.6),
+      rgba(24, 144, 255, 0.1)
+    );
+  }
+}

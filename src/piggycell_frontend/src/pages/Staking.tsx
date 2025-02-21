@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Input, Statistic, message, Spin, Empty } from "antd";
+import { Row, Col, Statistic, message, Spin, Empty } from "antd";
 import {
   SearchOutlined,
   BankOutlined,
@@ -18,6 +18,7 @@ import "./Staking.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
 import { StyledButton } from "../components/common/StyledButton";
+import { StyledInput } from "../components/common/StyledInput";
 
 interface MetadataValue {
   Text?: string;
@@ -257,10 +258,10 @@ const Staking = () => {
       </Row>
 
       <div className="search-box">
-        <Input
-          placeholder="충전 허브 검색..."
+        <StyledInput
+          placeholder="스테이킹 내역 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          size="middle"
+          customSize="md"
         />
       </div>
 

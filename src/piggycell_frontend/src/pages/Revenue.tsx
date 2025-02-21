@@ -1,4 +1,4 @@
-import { Row, Col, Input } from "antd";
+import { Row, Col } from "antd";
 import {
   SearchOutlined,
   DollarOutlined,
@@ -10,6 +10,7 @@ import "./Revenue.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
 import { StyledButton } from "../components/common/StyledButton";
+import { StyledInput } from "../components/common/StyledInput";
 
 const Revenue = () => {
   // 임시 수익 데이터
@@ -229,10 +230,10 @@ const Revenue = () => {
       </Row>
 
       <div className="search-box">
-        <Input
+        <StyledInput
           placeholder="수익 내역 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          size="middle"
+          customSize="md"
         />
       </div>
 

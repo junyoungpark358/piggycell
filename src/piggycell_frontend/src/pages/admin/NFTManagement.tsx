@@ -1,14 +1,4 @@
-import {
-  Modal,
-  Form,
-  Input,
-  Space,
-  Select,
-  Row,
-  Col,
-  message,
-  Tooltip,
-} from "antd";
+import { Modal, Form, Space, Select, Row, Col, message, Tooltip } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -35,6 +25,7 @@ import "./NFTManagement.css";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
+import { StyledInput } from "../../components/common/StyledInput";
 
 interface NFTData {
   id: number;
@@ -491,8 +482,8 @@ const NFTManagement = () => {
             </Tooltip>
             <Tooltip title="주소 복사">
               <StyledButton
-                variant="ghost"
-                size="sm"
+                customVariant="ghost"
+                customSize="sm"
                 icon={<CopyOutlined />}
                 onClick={() => copyToClipboard(text)}
               />
@@ -525,15 +516,15 @@ const NFTManagement = () => {
       render: (_: any, record: NFTData) => (
         <Space size="middle">
           <StyledButton
-            variant="ghost"
-            size="sm"
+            customVariant="ghost"
+            customSize="sm"
             onClick={() => handleEdit(record)}
             icon={<EditOutlined />}
           />
           {record.status === "created" && (
             <StyledButton
-              variant="ghost"
-              size="sm"
+              customVariant="ghost"
+              customSize="sm"
               onClick={() => handleDelete(record.id)}
               icon={<DeleteOutlined />}
             />
@@ -636,8 +627,8 @@ const NFTManagement = () => {
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 관리</h1>
         <div className="flex justify-end mb-4">
           <StyledButton
-            variant="primary"
-            size="md"
+            customVariant="primary"
+            customSize="md"
             onClick={handleAddNFT}
             icon={<PlusOutlined />}
           >
@@ -683,11 +674,11 @@ const NFTManagement = () => {
       </Row>
 
       <div className="search-box">
-        <Input
+        <StyledInput
           placeholder="NFT ID, 위치 또는 소유자로 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
+          customSize="md"
           onChange={(e) => handleSearch(e.target.value)}
-          style={{ width: 300 }}
         />
       </div>
 
@@ -696,7 +687,7 @@ const NFTManagement = () => {
         dataSource={searchText ? filteredNfts : nfts}
         loading={loading}
         rowKey="id"
-        styleVariant="bordered"
+        customVariant="bordered"
         pagination={{ pageSize: 10 }}
       />
 
@@ -708,16 +699,16 @@ const NFTManagement = () => {
         footer={[
           <StyledButton
             key="cancel"
-            variant="ghost"
-            color="primary"
+            customVariant="ghost"
+            customColor="primary"
             onClick={handleModalCancel}
           >
             취소
           </StyledButton>,
           <StyledButton
             key="submit"
-            variant="primary"
-            color="primary"
+            customVariant="primary"
+            customColor="primary"
             loading={isSubmitting}
             onClick={handleModalOk}
           >
@@ -731,7 +722,10 @@ const NFTManagement = () => {
             label="위치"
             rules={[{ required: true, message: "위치를 입력해주세요" }]}
           >
-            <Input placeholder="예: 서울시 강남구 역삼동" />
+            <StyledInput
+              placeholder="예: 서울시 강남구 역삼동"
+              customSize="md"
+            />
           </Form.Item>
 
           <Form.Item
@@ -739,7 +733,12 @@ const NFTManagement = () => {
             label="충전기 수"
             rules={[{ required: true, message: "충전기 수를 입력해주세요" }]}
           >
-            <Input type="number" min={1} placeholder="예: 8" />
+            <StyledInput
+              type="number"
+              min={1}
+              placeholder="예: 8"
+              customSize="md"
+            />
           </Form.Item>
 
           <Form.Item
@@ -768,7 +767,12 @@ const NFTManagement = () => {
                     { required: true, message: "판매 가격을 입력해주세요" },
                   ]}
                 >
-                  <Input type="number" min={0} placeholder="예: 100" />
+                  <StyledInput
+                    type="number"
+                    min={0}
+                    placeholder="예: 100"
+                    customSize="md"
+                  />
                 </Form.Item>
               ) : getFieldValue("transferType") === "address" ? (
                 <Form.Item
@@ -778,7 +782,10 @@ const NFTManagement = () => {
                     { required: true, message: "전송할 주소를 입력해주세요" },
                   ]}
                 >
-                  <Input placeholder="Principal ID를 입력하세요" />
+                  <StyledInput
+                    placeholder="Principal ID를 입력하세요"
+                    customSize="md"
+                  />
                 </Form.Item>
               ) : null
             }

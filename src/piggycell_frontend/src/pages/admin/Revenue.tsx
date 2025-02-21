@@ -1,4 +1,4 @@
-import { Row, Col, Input, message } from "antd";
+import { Row, Col, message } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
@@ -8,6 +8,7 @@ import "./Revenue.css";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
+import { StyledInput } from "../../components/common/StyledInput";
 
 const AdminRevenue = () => {
   // 임시 수익 데이터
@@ -101,15 +102,19 @@ const AdminRevenue = () => {
       </Row>
 
       <div className="search-box">
-        <Input
+        <StyledInput
           placeholder="수익 내역 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
-          size="middle"
+          customSize="md"
         />
       </div>
 
       <div className="flex justify-end mb-4">
-        <StyledButton variant="primary" color="primary" onClick={handleRefresh}>
+        <StyledButton
+          customVariant="primary"
+          customColor="primary"
+          onClick={handleRefresh}
+        >
           새로고침
         </StyledButton>
       </div>
@@ -117,7 +122,7 @@ const AdminRevenue = () => {
       <StyledTable
         columns={columns}
         dataSource={revenueData}
-        styleVariant="default"
+        customVariant="default"
         pagination={{ pageSize: 10 }}
       />
     </div>
