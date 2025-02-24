@@ -164,11 +164,14 @@ const NFTMarket = () => {
 
       // 통계 업데이트
       const allNFTs = [...nfts, ...newNFTData];
+      const totalVolume = await actor.getTotalVolume();
+      const totalSupply = await actor.icrc7_total_supply();
+
       const stats = {
-        totalNFTs: Number(result.total),
+        totalNFTs: Number(totalSupply),
         availableNFTs: allNFTs.length,
-        soldNFTs: Number(result.total) - allNFTs.length,
-        totalValue: allNFTs.reduce((sum, nft) => sum + Number(nft.price), 0),
+        soldNFTs: Number(totalSupply) - allNFTs.length,
+        totalValue: Number(totalVolume),
       };
       setTotalStats(stats);
     } catch (error) {
@@ -253,6 +256,10 @@ const NFTMarket = () => {
         const totalSupply = await actor.icrc7_total_supply();
         console.log("전체 NFT 발행량:", Number(totalSupply));
 
+        // 총 거래량 조회
+        const totalVolume = await actor.getTotalVolume();
+        console.log("총 거래량:", Number(totalVolume));
+
         if (result.items.length === 0) {
           console.log("판매 중인 NFT가 없음");
           setNfts([]);
@@ -260,7 +267,7 @@ const NFTMarket = () => {
             totalNFTs: Number(totalSupply),
             availableNFTs: 0,
             soldNFTs: Number(totalSupply),
-            totalValue: 0,
+            totalValue: Number(totalVolume),
           });
           setHasMore(false);
           setLoading(false);
@@ -269,9 +276,7 @@ const NFTMarket = () => {
 
         const nftDataPromises = result.items.map(async (listing) => {
           const tokenId = listing.tokenId;
-          console.log(`NFT #${tokenId} 메타데이터 조회 시작`);
           const metadata = await actor.icrc7_token_metadata([tokenId]);
-          console.log(`NFT #${tokenId} 메타데이터:`, metadata);
 
           let location = "위치 정보 없음";
           let chargerCount = 0;
@@ -287,7 +292,6 @@ const NFTMarket = () => {
             }
           }
 
-          console.log(`NFT #${tokenId} 파싱 결과:`, { location, chargerCount });
           return {
             id: tokenId,
             name: `충전 허브 #${tokenId.toString()}`,
@@ -299,20 +303,17 @@ const NFTMarket = () => {
         });
 
         const nftData = await Promise.all(nftDataPromises);
-        console.log("모든 NFT 데이터 로딩 완료:", nftData);
-
         setNfts(nftData);
         setNextStart(result.nextStart ? Number(result.nextStart) : null);
         setHasMore(!!result.nextStart);
 
-        const stats = {
+        // 통계 업데이트
+        setTotalStats({
           totalNFTs: Number(totalSupply),
           availableNFTs: nftData.length,
           soldNFTs: Number(totalSupply) - nftData.length,
-          totalValue: nftData.reduce((sum, nft) => sum + Number(nft.price), 0),
-        };
-        console.log("최종 통계 데이터:", stats);
-        setTotalStats(stats);
+          totalValue: Number(totalVolume),
+        });
       } catch (error) {
         console.error("NFT 데이터 로딩 실패:", error);
         message.error("NFT 데이터를 불러오는데 실패했습니다.");
@@ -404,13 +405,13 @@ const NFTMarket = () => {
             title="총 거래량"
             value={totalStats.totalValue}
             prefix={<DollarOutlined />}
-            suffix="ICP"
+            suffix="PGC"
             loading={loading}
           />
         </Col>
       </Row>
 
-      <div className="search-box mb-4">
+      <div className="mb-4 search-box">
         <StyledInput
           placeholder="충전 허브 검색..."
           prefix={<SearchOutlined style={{ color: "#0284c7" }} />}

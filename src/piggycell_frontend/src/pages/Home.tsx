@@ -98,15 +98,38 @@ const Home = () => {
         let location = "위치 정보 없음";
         let chargerCount = 0;
 
-        if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0] as Metadata;
-          for (const [key, value] of metadataEntries) {
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+
+          // 메타데이터의 전체 구조를 자세히 출력
+          console.log(
+            `NFT #${tokenId} 메타데이터 전체 구조:`,
+            JSON.stringify(
+              metadata,
+              (key, value) => {
+                if (typeof value === "bigint") {
+                  return value.toString();
+                }
+                return value;
+              },
+              2
+            )
+          );
+
+          // 각 필드를 순회하면서 처리
+          metadataFields.forEach(([key, value]) => {
+            console.log(`NFT #${tokenId} 필드:`, { key, value });
+
             if (key === "location" && value.Text) {
               location = value.Text;
+              console.log(`위치 설정:`, location);
             } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
+              console.log(`충전기 수 설정:`, chargerCount);
             }
-          }
+          });
         }
 
         // 실제 스테이킹 상태 확인
@@ -121,16 +144,50 @@ const Home = () => {
           isStaked,
         };
 
+        console.log(`NFT #${tokenId} 최종 데이터:`, {
+          ...nftData,
+          id: nftData.id.toString(),
+          price: nftData.price.toString(),
+        });
         return nftData;
       });
 
       const nftData = await Promise.all(nftDataPromises);
+      console.log(
+        "전체 NFT 데이터:",
+        nftData.map((nft) => ({
+          ...nft,
+          id: nft.id.toString(),
+          price: nft.price.toString(),
+        }))
+      );
 
       // 스테이킹 상태에 따라 분류
-      setOwnedNFTs(nftData.filter((nft) => !nft.isStaked));
-      setStakedNFTs(nftData.filter((nft) => nft.isStaked));
+      const owned = nftData.filter((nft) => !nft.isStaked);
+      const staked = nftData.filter((nft) => nft.isStaked);
+
+      console.log(
+        "보유 중인 NFT:",
+        owned.map((nft) => ({
+          ...nft,
+          id: nft.id.toString(),
+          price: nft.price.toString(),
+        }))
+      );
+      console.log(
+        "스테이킹된 NFT:",
+        staked.map((nft) => ({
+          ...nft,
+          id: nft.id.toString(),
+          price: nft.price.toString(),
+        }))
+      );
+
+      setOwnedNFTs(owned);
+      setStakedNFTs(staked);
     } catch (error) {
       console.error("NFT 데이터 로딩 실패:", error);
+      message.error("NFT 데이터를 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
     }
