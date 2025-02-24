@@ -59,20 +59,39 @@ actor Main {
     private let transactions = Buffer.Buffer<Transaction>(0);
     private let activeUsers = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
 
-    // 거래 내역 추가 함수
+    // 정렬된 상태로 트랜잭션 추가
     private func addTransaction(txType: TransactionType, nftId: ?Nat, user: Principal, amount: Nat) {
-        let tx = {
+        let newTx = {
             txType = txType;
             nftId = nftId;
             user = user;
             amount = amount;
             timestamp = Time.now();
         };
-        transactions.add(tx);
         
+        // 버퍼가 비어있거나 새 트랜잭션이 가장 최신인 경우
+        if (transactions.size() == 0 or newTx.timestamp > transactions.get(0).timestamp) {
+            transactions.insert(0, newTx);
+        } else {
+            // 적절한 위치 찾아서 삽입
+            var i = 0;
+            label l loop {
+                if (i >= transactions.size()) break l;
+                if (newTx.timestamp > transactions.get(i).timestamp) {
+                    transactions.insert(i, newTx);
+                    break l;
+                };
+                i += 1;
+            };
+            
+            if (i >= transactions.size()) {
+                transactions.add(newTx);
+            };
+        };
+
         // Mint 타입이 아닐 때만 활성 사용자로 기록
         switch (txType) {
-            case (#Mint) { };  // Mint는 활성 사용자로 기록하지 않음
+            case (#Mint) { };
             case (_) { activeUsers.put(user, Time.now()) };
         };
     };
@@ -187,6 +206,7 @@ actor Main {
         let secondsInDay = koreaSeconds % 86400;
         let hour = secondsInDay / 3600;
         let minute = (secondsInDay % 3600) / 60;
+        let second = secondsInDay % 60;
         
         // 문자열 생성
         let yearStr = Nat.toText(Nat64.toNat(Nat64.fromIntWrap(year)));
@@ -196,8 +216,10 @@ actor Main {
                      else Nat.toText(Nat64.toNat(Nat64.fromIntWrap(hour)));
         let minuteStr = if (Nat64.toNat(Nat64.fromIntWrap(minute)) < 10) "0" # Nat.toText(Nat64.toNat(Nat64.fromIntWrap(minute))) 
                        else Nat.toText(Nat64.toNat(Nat64.fromIntWrap(minute)));
+        let secondStr = if (Nat64.toNat(Nat64.fromIntWrap(second)) < 10) "0" # Nat.toText(Nat64.toNat(Nat64.fromIntWrap(second))) 
+                       else Nat.toText(Nat64.toNat(Nat64.fromIntWrap(second)));
         
-        yearStr # "-" # monthStr # "-" # dayStr # " " # hourStr # ":" # minuteStr
+        yearStr # "-" # monthStr # "-" # dayStr # " " # hourStr # ":" # minuteStr # ":" # secondStr
     };
 
     // ICRC-7 표준 메소드
@@ -311,6 +333,34 @@ actor Main {
     };
 
     // ICRC-3 인터페이스 구현
+    // ICRC3Transaction 변환 함수
+    private func convertToICRC3Transaction(tx: Transaction) : ICRC3Transaction {
+        {
+            kind = switch (tx.txType) {
+                case (#Mint) "mint";
+                case (#NFTSale) "transfer";
+                case (#Stake) "stake";
+                case (#Unstake) "unstake";
+                case (#StakingReward) "reward";
+            };
+            timestamp = tx.timestamp;
+            from = ?{ owner = tx.user; subaccount = null };
+            to = switch (tx.txType) {
+                case (#Mint) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
+                case (#NFTSale) { ?{ owner = tx.user; subaccount = null } };
+                case (#Stake) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
+                case (#Unstake) { ?{ owner = tx.user; subaccount = null } };
+                case (#StakingReward) { ?{ owner = tx.user; subaccount = null } };
+            };
+            token_ids = switch (tx.nftId) {
+                case (null) [];
+                case (?id) [id];
+            };
+            memo = null;
+            amount = ?tx.amount;
+        }
+    };
+
     public query func icrc3_get_transactions(request : GetTransactionsRequest) : async GetTransactionsResponse {
         let start = Option.get(request.start, 0);
         let length = Option.get(request.length, 10);
@@ -318,6 +368,7 @@ actor Main {
 
         let filteredTxs = Buffer.Buffer<ICRC3Transaction>(0);
         
+        // 이미 정렬된 트랜잭션에서 필터링만 수행
         for (tx in transactions.vals()) {
             let icrc3Tx : ICRC3Transaction = {
                 kind = switch (tx.txType) {
@@ -331,10 +382,7 @@ actor Main {
                 from = ?{ owner = tx.user; subaccount = null };
                 to = switch (tx.txType) {
                     case (#Mint) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
-                    case (#NFTSale) {
-                        // NFT 판매의 경우 구매자가 받는 주소가 됨
-                        ?{ owner = tx.user; subaccount = null }
-                    };
+                    case (#NFTSale) { ?{ owner = tx.user; subaccount = null } };
                     case (#Stake) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
                     case (#Unstake) { ?{ owner = tx.user; subaccount = null } };
                     case (#StakingReward) { ?{ owner = tx.user; subaccount = null } };
@@ -344,7 +392,7 @@ actor Main {
                     case (?id) [id];
                 };
                 memo = null;
-                amount = ?tx.amount;  // 거래 금액 포함
+                amount = ?tx.amount;
             };
 
             // 계정 필터링
@@ -364,10 +412,10 @@ actor Main {
         let end = Nat.min(start + length, total);
         let pageItems = Buffer.Buffer<ICRC3Transaction>(0);
 
-        var i = start;
-        while (i < end) {
-            pageItems.add(filteredTxs.get(i));
-            i += 1;
+        var j = start;
+        while (j < end) {
+            pageItems.add(filteredTxs.get(j));
+            j += 1;
         };
 
         {
