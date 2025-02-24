@@ -36,6 +36,7 @@ interface StakedNFT {
   estimatedReward: bigint;
   stakedAt: bigint;
   lastRewardClaimAt: bigint;
+  price: bigint;
 }
 
 const Staking = () => {
@@ -93,16 +94,26 @@ const Staking = () => {
         const metadata = await actor.icrc7_token_metadata([tokenId]);
         let location = "위치 정보 없음";
         let chargerCount = 0;
+        let price = BigInt(0);
 
-        if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0] as Metadata;
-          for (const [key, value] of metadataEntries) {
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+          metadataFields.forEach(([key, value]) => {
+            console.log(`NFT #${tokenId} 필드:`, { key, value });
+
             if (key === "location" && value.Text) {
               location = value.Text;
+              console.log(`위치 설정:`, location);
             } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
+              console.log(`충전기 수 설정:`, chargerCount);
+            } else if (key === "price" && value.Nat) {
+              price = value.Nat;
+              console.log(`가격 설정:`, price.toString());
             }
-          }
+          });
         }
 
         // 스테이킹 정보 조회
@@ -125,6 +136,7 @@ const Staking = () => {
           estimatedReward: estimatedReward.ok,
           stakedAt: stakingInfo[0].stakedAt,
           lastRewardClaimAt: stakingInfo[0].lastRewardClaimAt,
+          price,
         };
       });
 
@@ -282,7 +294,7 @@ const Staking = () => {
                 name={nft.name}
                 location={nft.location}
                 chargerCount={nft.chargerCount}
-                price={Number(nft.estimatedReward)}
+                price={Number(nft.price)}
                 status="available"
                 onBuy={() => handleUnstake(nft.id)}
                 onSecondaryAction={() => handleClaimReward(nft.id)}

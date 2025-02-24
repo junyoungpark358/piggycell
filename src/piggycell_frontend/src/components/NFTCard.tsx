@@ -123,7 +123,7 @@ export const NFTCard: React.FC<NFTCardProps> = ({
           </InfoItem>
           <InfoItem>
             <DollarOutlined />
-            {price.toFixed(2)} ICP
+            {price.toFixed(2)} PGC
           </InfoItem>
         </InfoContainer>
         <ButtonContainer

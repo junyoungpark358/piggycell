@@ -136,15 +136,17 @@ const NFTMarket = () => {
         let location = "위치 정보 없음";
         let chargerCount = 0;
 
-        if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0] as Metadata;
-          for (const [key, value] of metadataEntries) {
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+          metadataFields.forEach(([key, value]) => {
             if (key === "location" && value.Text) {
               location = value.Text;
             } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
             }
-          }
+          });
         }
 
         return {
@@ -214,9 +216,9 @@ const NFTMarket = () => {
         if (metadata && metadata.length > 0 && metadata[0]) {
           const metadataEntries = metadata[0] as Metadata;
           for (const [key, value] of metadataEntries) {
-            if (key === "location" && value.Text) {
+            if (key === "piggycell:location" && value.Text) {
               location = value.Text;
-            } else if (key === "chargerCount" && value.Nat) {
+            } else if (key === "piggycell:charger_count" && value.Nat) {
               chargerCount = Number(value.Nat);
             } else if (key === "price" && value.Nat) {
               price = value.Nat;
@@ -281,15 +283,22 @@ const NFTMarket = () => {
           let location = "위치 정보 없음";
           let chargerCount = 0;
 
-          if (metadata && metadata.length > 0 && metadata[0]) {
-            const metadataEntries = metadata[0] as Metadata;
-            for (const [key, value] of metadataEntries) {
+          if (
+            metadata &&
+            metadata.length > 0 &&
+            metadata[0] &&
+            metadata[0][0]
+          ) {
+            const metadataFields = metadata[0][0] as Array<
+              [string, { Text?: string; Nat?: bigint }]
+            >;
+            metadataFields.forEach(([key, value]) => {
               if (key === "location" && value.Text) {
                 location = value.Text;
               } else if (key === "chargerCount" && value.Nat) {
                 chargerCount = Number(value.Nat);
               }
-            }
+            });
           }
 
           return {

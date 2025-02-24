@@ -97,6 +97,7 @@ const Home = () => {
         const metadata = await actor.icrc7_token_metadata([tokenId]);
         let location = "위치 정보 없음";
         let chargerCount = 0;
+        let price = BigInt(0);
 
         if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
           const metadataFields = metadata[0][0] as Array<
@@ -128,6 +129,9 @@ const Home = () => {
             } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
               console.log(`충전기 수 설정:`, chargerCount);
+            } else if (key === "price" && value.Nat) {
+              price = value.Nat;
+              console.log(`가격 설정:`, price.toString());
             }
           });
         }
@@ -139,7 +143,7 @@ const Home = () => {
           id: tokenId,
           name: `충전 허브 #${tokenId.toString()}`,
           location,
-          price: BigInt(0),
+          price,
           chargerCount,
           isStaked,
         };
