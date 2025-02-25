@@ -77,12 +77,25 @@ const NFTMarket = () => {
     (node: HTMLDivElement) => {
       if (loading || loadingMore) return;
       if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          fetchMoreNFTs();
+
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore) {
+            console.log("마지막 요소가 화면에 표시됨. 추가 데이터 로드 시작");
+            fetchMoreNFTs();
+          }
+        },
+        {
+          root: null,
+          rootMargin: "0px",
+          threshold: 0.1,
         }
-      });
-      if (node) observer.current.observe(node);
+      );
+
+      if (node) {
+        console.log("마지막 요소에 observer 연결됨");
+        observer.current.observe(node);
+      }
     },
     [loading, loadingMore, hasMore]
   );
@@ -165,17 +178,24 @@ const NFTMarket = () => {
       setHasMore(!!result.nextStart);
 
       // 통계 업데이트
-      const allNFTs = [...nfts, ...newNFTData];
-      const totalVolume = await actor.getTotalVolume();
-      const totalSupply = await actor.icrc7_total_supply();
+      const avail = Number(result.total);
+      const total = await actor.icrc7_total_supply();
+      const sold = Number(total) - avail;
 
-      const stats = {
-        totalNFTs: Number(totalSupply),
-        availableNFTs: allNFTs.length,
-        soldNFTs: Number(totalSupply) - allNFTs.length,
-        totalValue: Number(totalVolume),
-      };
-      setTotalStats(stats);
+      console.log("통계 계산 상세:", {
+        "전체 NFT (totalSupply)": Number(total),
+        "판매중 NFT (result.total)": avail,
+        "계산된 판매완료 NFT (totalSupply - result.total)": sold,
+        "현재 페이지 NFT 개수": newNFTData.length,
+        "모든 NFT 정보": newNFTData,
+      });
+
+      setTotalStats({
+        totalNFTs: Number(total),
+        availableNFTs: avail,
+        soldNFTs: sold,
+        totalValue: Number(await actor.getTotalVolume()),
+      });
     } catch (error) {
       console.error("추가 NFT 데이터 로딩 실패:", error);
       message.error("추가 NFT 데이터를 불러오는데 실패했습니다.");
@@ -251,8 +271,18 @@ const NFTMarket = () => {
         const actor = await createActor();
         console.log("Actor 생성 완료");
 
-        const result = await actor.getListings([], BigInt(5));
+        // 페이지 크기를 5에서 8로 증가
+        const result = await actor.getListings([], BigInt(8));
         console.log("마켓 리스팅 결과:", result);
+        console.log("마켓 리스팅 항목 수:", result.items.length);
+        console.log(
+          "마켓 리스팅 항목 세부 정보:",
+          JSON.stringify(
+            result.items,
+            (_, v) => (typeof v === "bigint" ? v.toString() : v),
+            2
+          )
+        );
 
         // 전체 NFT 수 조회
         const totalSupply = await actor.icrc7_total_supply();
@@ -317,10 +347,22 @@ const NFTMarket = () => {
         setHasMore(!!result.nextStart);
 
         // 통계 업데이트
+        const avail = Number(result.total);
+        const total = Number(totalSupply);
+        const sold = total - avail;
+
+        console.log("통계 계산 상세:", {
+          "전체 NFT (totalSupply)": total,
+          "판매중 NFT (result.total)": avail,
+          "계산된 판매완료 NFT (totalSupply - result.total)": sold,
+          "현재 페이지 NFT 개수": nftData.length,
+          "모든 NFT 정보": nftData,
+        });
+
         setTotalStats({
-          totalNFTs: Number(totalSupply),
-          availableNFTs: nftData.length,
-          soldNFTs: Number(totalSupply) - nftData.length,
+          totalNFTs: total,
+          availableNFTs: avail,
+          soldNFTs: sold,
           totalValue: Number(totalVolume),
         });
       } catch (error) {
@@ -437,7 +479,16 @@ const NFTMarket = () => {
             children: (
               <Row gutter={[24, 24]} className="nft-grid">
                 {nfts.map((nft, index) => (
-                  <Col xs={24} sm={12} md={8} lg={6} key={nft.id.toString()}>
+                  <Col
+                    xs={24}
+                    sm={12}
+                    md={8}
+                    lg={6}
+                    key={nft.id.toString()}
+                    ref={
+                      index === nfts.length - 1 ? lastNFTElementRef : undefined
+                    }
+                  >
                     <NFTCard
                       name={nft.name}
                       location={nft.location}
@@ -450,6 +501,16 @@ const NFTMarket = () => {
                     />
                   </Col>
                 ))}
+                {(loading || loadingMore) && (
+                  <Col span={24} className="my-5 text-center">
+                    <Spin size="large" />
+                  </Col>
+                )}
+                {!loading && !loadingMore && nfts.length === 0 && (
+                  <Col span={24} className="my-5 text-center">
+                    <Empty description="판매중인 NFT가 없습니다" />
+                  </Col>
+                )}
               </Row>
             ),
           },
@@ -476,11 +537,17 @@ const NFTMarket = () => {
         ]}
       />
 
-      {loadingMore && (
-        <div className="my-5 text-center">
-          <Spin />
-        </div>
-      )}
+      <div className="mt-6 text-center text-gray-500">
+        {hasMore ? (
+          loadingMore ? (
+            <p>추가 NFT 로딩 중...</p>
+          ) : (
+            <p>더 많은 NFT를 보려면 스크롤하세요</p>
+          )
+        ) : (
+          nfts.length > 0 && <p>모든 NFT가 로드되었습니다</p>
+        )}
+      </div>
     </div>
   );
 };
