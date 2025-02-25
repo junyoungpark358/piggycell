@@ -18,6 +18,7 @@ import { message } from "antd";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
 import { StyledButton } from "../components/common/StyledButton";
+import { getUserNFTs, NFTData, createActor } from "../utils/statsApi";
 
 interface MetadataValue {
   Text?: string;
@@ -27,15 +28,6 @@ interface MetadataValue {
 type MetadataEntry = [string, MetadataValue];
 type Metadata = MetadataEntry[];
 
-interface NFTData {
-  id: bigint;
-  name: string;
-  location: string;
-  price: bigint;
-  chargerCount: number;
-  isStaked: boolean;
-}
-
 const Home = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -44,151 +36,23 @@ const Home = () => {
   const [stakingInProgress, setStakingInProgress] = useState<bigint | null>(
     null
   );
-
-  const createActor = async () => {
-    const authManager = AuthManager.getInstance();
-    const identity = await authManager.getIdentity();
-
-    if (!identity) {
-      throw new Error("인증되지 않은 사용자입니다.");
-    }
-
-    const agent = new HttpAgent({ identity });
-    if (process.env.NODE_ENV !== "production") {
-      await agent.fetchRootKey();
-    }
-
-    const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
-    if (!canisterId) {
-      throw new Error("Canister ID를 찾을 수 없습니다.");
-    }
-
-    return Actor.createActor<_SERVICE>(idlFactory, {
-      agent,
-      canisterId,
-    });
-  };
+  const [stats, setStats] = useState({
+    ownedCount: 0,
+    stakedCount: 0,
+    totalChargerCount: 0,
+    estimatedMonthlyRevenue: 0,
+  });
 
   const fetchNFTs = async () => {
     try {
       setLoading(true);
-      const authManager = AuthManager.getInstance();
-      const identity = await authManager.getIdentity();
 
-      if (!identity) {
-        setLoading(false);
-        return;
-      }
+      // statsApi의 getUserNFTs 함수 사용
+      const userData = await getUserNFTs();
 
-      const actor = await createActor();
-
-      // 소유한 NFT 목록 조회
-      const ownedTokens = await actor.icrc7_tokens_of(
-        { owner: identity.getPrincipal(), subaccount: [] },
-        [],
-        []
-      );
-
-      // 스테이킹된 NFT 목록 조회
-      const stakedTokens = await actor.getStakedNFTs(identity.getPrincipal());
-      const stakedTokenSet = new Set(stakedTokens.map((id) => id.toString()));
-
-      const nftDataPromises = ownedTokens.map(async (tokenId) => {
-        const metadata = await actor.icrc7_token_metadata([tokenId]);
-        let location = "위치 정보 없음";
-        let chargerCount = 0;
-        let price = BigInt(0);
-
-        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
-          const metadataFields = metadata[0][0] as Array<
-            [string, { Text?: string; Nat?: bigint }]
-          >;
-
-          // 메타데이터의 전체 구조를 자세히 출력
-          console.log(
-            `NFT #${tokenId} 메타데이터 전체 구조:`,
-            JSON.stringify(
-              metadata,
-              (key, value) => {
-                if (typeof value === "bigint") {
-                  return value.toString();
-                }
-                return value;
-              },
-              2
-            )
-          );
-
-          // 각 필드를 순회하면서 처리
-          metadataFields.forEach(([key, value]) => {
-            console.log(`NFT #${tokenId} 필드:`, { key, value });
-
-            if (key === "location" && value.Text) {
-              location = value.Text;
-              console.log(`위치 설정:`, location);
-            } else if (key === "chargerCount" && value.Nat) {
-              chargerCount = Number(value.Nat);
-              console.log(`충전기 수 설정:`, chargerCount);
-            } else if (key === "price" && value.Nat) {
-              price = value.Nat;
-              console.log(`가격 설정:`, price.toString());
-            }
-          });
-        }
-
-        // 실제 스테이킹 상태 확인
-        const isStaked = stakedTokenSet.has(tokenId.toString());
-
-        const nftData: NFTData = {
-          id: tokenId,
-          name: `충전 허브 #${tokenId.toString()}`,
-          location,
-          price,
-          chargerCount,
-          isStaked,
-        };
-
-        console.log(`NFT #${tokenId} 최종 데이터:`, {
-          ...nftData,
-          id: nftData.id.toString(),
-          price: nftData.price.toString(),
-        });
-        return nftData;
-      });
-
-      const nftData = await Promise.all(nftDataPromises);
-      console.log(
-        "전체 NFT 데이터:",
-        nftData.map((nft) => ({
-          ...nft,
-          id: nft.id.toString(),
-          price: nft.price.toString(),
-        }))
-      );
-
-      // 스테이킹 상태에 따라 분류
-      const owned = nftData.filter((nft) => !nft.isStaked);
-      const staked = nftData.filter((nft) => nft.isStaked);
-
-      console.log(
-        "보유 중인 NFT:",
-        owned.map((nft) => ({
-          ...nft,
-          id: nft.id.toString(),
-          price: nft.price.toString(),
-        }))
-      );
-      console.log(
-        "스테이킹된 NFT:",
-        staked.map((nft) => ({
-          ...nft,
-          id: nft.id.toString(),
-          price: nft.price.toString(),
-        }))
-      );
-
-      setOwnedNFTs(owned);
-      setStakedNFTs(staked);
+      setOwnedNFTs(userData.ownedNFTs);
+      setStakedNFTs(userData.stakedNFTs);
+      setStats(userData.stats);
     } catch (error) {
       console.error("NFT 데이터 로딩 실패:", error);
       message.error("NFT 데이터를 불러오는데 실패했습니다.");
@@ -266,7 +130,7 @@ const Home = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="보유 중인 NFT"
-            value={ownedNFTs.length}
+            value={stats.ownedCount}
             prefix={<ShoppingCartOutlined />}
             suffix="개"
             loading={loading}
@@ -275,7 +139,7 @@ const Home = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="스테이킹 중인 NFT"
-            value={stakedNFTs.length}
+            value={stats.stakedCount}
             prefix={<BankOutlined />}
             suffix="개"
             loading={loading}
@@ -284,10 +148,7 @@ const Home = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="총 충전기"
-            value={[...ownedNFTs, ...stakedNFTs].reduce(
-              (sum, nft) => sum + nft.chargerCount,
-              0
-            )}
+            value={stats.totalChargerCount}
             prefix={<ThunderboltOutlined />}
             suffix="대"
             loading={loading}
@@ -296,7 +157,7 @@ const Home = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="예상 월 수익"
-            value={1234}
+            value={stats.estimatedMonthlyRevenue}
             prefix={<DollarOutlined />}
             suffix="PGC"
             loading={loading}

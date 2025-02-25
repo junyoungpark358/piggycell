@@ -22,6 +22,7 @@ import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
 import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
+import { getMarketStats, NFTStats, createActor } from "../utils/statsApi";
 
 interface MetadataValue {
   Text?: string;
@@ -61,11 +62,13 @@ interface TransactionPage {
 const NFTMarket = () => {
   const [nfts, setNfts] = useState<NFTData[]>([]);
   const [soldNfts, setSoldNfts] = useState<NFTData[]>([]);
-  const [totalStats, setTotalStats] = useState({
-    totalNFTs: 0,
+  const [marketStats, setMarketStats] = useState<NFTStats>({
+    totalSupply: 0,
+    stakedCount: 0,
+    activeUsers: 0,
+    totalVolume: 0,
     availableNFTs: 0,
     soldNFTs: 0,
-    totalValue: 0,
   });
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -99,31 +102,6 @@ const NFTMarket = () => {
     },
     [loading, loadingMore, hasMore]
   );
-
-  const createActor = async () => {
-    const authManager = AuthManager.getInstance();
-    const identity = await authManager.getIdentity();
-
-    if (!identity) {
-      throw new Error("인증되지 않은 사용자입니다.");
-    }
-
-    const agent = new HttpAgent({ identity });
-
-    if (process.env.NODE_ENV !== "production") {
-      await agent.fetchRootKey();
-    }
-
-    const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
-    if (!canisterId) {
-      throw new Error("Canister ID를 찾을 수 없습니다.");
-    }
-
-    return Actor.createActor<_SERVICE>(idlFactory, {
-      agent,
-      canisterId,
-    });
-  };
 
   const fetchMoreNFTs = async () => {
     if (!hasMore || loadingMore) return;
@@ -178,24 +156,8 @@ const NFTMarket = () => {
       setHasMore(!!result.nextStart);
 
       // 통계 업데이트
-      const avail = Number(result.total);
-      const total = await actor.icrc7_total_supply();
-      const sold = Number(total) - avail;
-
-      console.log("통계 계산 상세:", {
-        "전체 NFT (totalSupply)": Number(total),
-        "판매중 NFT (result.total)": avail,
-        "계산된 판매완료 NFT (totalSupply - result.total)": sold,
-        "현재 페이지 NFT 개수": newNFTData.length,
-        "모든 NFT 정보": newNFTData,
-      });
-
-      setTotalStats({
-        totalNFTs: Number(total),
-        availableNFTs: avail,
-        soldNFTs: sold,
-        totalValue: Number(await actor.getTotalVolume()),
-      });
+      const stats = await getMarketStats();
+      setMarketStats(stats);
     } catch (error) {
       console.error("추가 NFT 데이터 로딩 실패:", error);
       message.error("추가 NFT 데이터를 불러오는데 실패했습니다.");
@@ -267,8 +229,15 @@ const NFTMarket = () => {
   useEffect(() => {
     const fetchInitialNFTs = async () => {
       try {
-        console.log("초기 NFT 데이터 로딩 시작");
+        setLoading(true);
         const actor = await createActor();
+
+        // 통계 데이터 가져오기
+        const stats = await getMarketStats();
+        setMarketStats(stats);
+
+        // 리스팅 데이터 가져오기
+        console.log("초기 NFT 데이터 로딩 시작");
         console.log("Actor 생성 완료");
 
         // 페이지 크기를 5에서 8로 증가
@@ -295,11 +264,13 @@ const NFTMarket = () => {
         if (result.items.length === 0) {
           console.log("판매 중인 NFT가 없음");
           setNfts([]);
-          setTotalStats({
-            totalNFTs: Number(totalSupply),
+          setMarketStats({
+            totalSupply: Number(totalSupply),
             availableNFTs: 0,
             soldNFTs: Number(totalSupply),
-            totalValue: Number(totalVolume),
+            totalVolume: Number(totalVolume),
+            stakedCount: 0,
+            activeUsers: 0,
           });
           setHasMore(false);
           setLoading(false);
@@ -359,11 +330,13 @@ const NFTMarket = () => {
           "모든 NFT 정보": nftData,
         });
 
-        setTotalStats({
-          totalNFTs: total,
+        setMarketStats({
+          totalSupply: total,
           availableNFTs: avail,
           soldNFTs: sold,
-          totalValue: Number(totalVolume),
+          totalVolume: Number(totalVolume),
+          stakedCount: 0,
+          activeUsers: 0,
         });
       } catch (error) {
         console.error("NFT 데이터 로딩 실패:", error);
@@ -402,12 +375,13 @@ const NFTMarket = () => {
       if ("ok" in result) {
         message.success("NFT 구매가 완료되었습니다.");
         setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
-        setTotalStats((prev) => ({
+        setMarketStats((prev) => ({
           ...prev,
-          availableNFTs: prev.availableNFTs - 1,
+          availableNFTs: (prev.availableNFTs || 0) - 1,
+          soldNFTs: (prev.soldNFTs || 0) + 1,
         }));
       } else {
-        message.error(`NFT 구매 실패: ${getErrorMessage(result.err)}`);
+        message.error(`구매 실패: ${getErrorMessage(result.err)}`);
       }
     } catch (error) {
       console.error("NFT 구매 실패:", error);
@@ -420,23 +394,16 @@ const NFTMarket = () => {
   return (
     <div className="nft-market-page">
       <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 마켓</h1>
+        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">
+          마켓플레이스
+        </h1>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
           <StatCard
-            title="전체 NFT"
-            value={totalStats.totalNFTs}
-            prefix={<ThunderboltOutlined />}
-            suffix="개"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={6}>
-          <StatCard
-            title="판매중인 NFT"
-            value={totalStats.availableNFTs}
+            title="총 NFT"
+            value={marketStats.totalSupply}
             prefix={<ShoppingCartOutlined />}
             suffix="개"
             loading={loading}
@@ -444,8 +411,17 @@ const NFTMarket = () => {
         </Col>
         <Col xs={12} sm={6} md={6}>
           <StatCard
-            title="판매 완료된 NFT"
-            value={totalStats.soldNFTs}
+            title="판매 중인 NFT"
+            value={marketStats.availableNFTs || 0}
+            prefix={<ThunderboltOutlined />}
+            suffix="개"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={6} md={6}>
+          <StatCard
+            title="판매 완료 NFT"
+            value={marketStats.soldNFTs || 0}
             prefix={<CheckCircleOutlined />}
             suffix="개"
             loading={loading}
@@ -454,7 +430,7 @@ const NFTMarket = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="총 거래량"
-            value={totalStats.totalValue}
+            value={marketStats.totalVolume}
             prefix={<DollarOutlined />}
             suffix="PGC"
             loading={loading}

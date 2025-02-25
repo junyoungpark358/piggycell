@@ -19,6 +19,7 @@ import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
 import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
+import { getStakingStats, NFTStats, createActor } from "../utils/statsApi";
 
 interface MetadataValue {
   Text?: string;
@@ -43,37 +44,16 @@ const Staking = () => {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [stakedNFTs, setStakedNFTs] = useState<StakedNFT[]>([]);
-  const [totalStakedNFTs, setTotalStakedNFTs] = useState(0);
-  const [totalChargers, setTotalChargers] = useState(0);
-  const [totalEstimatedRewards, setTotalEstimatedRewards] = useState<bigint>(
-    BigInt(0)
-  );
+  const [stakingStats, setStakingStats] = useState<NFTStats>({
+    totalSupply: 0,
+    stakedCount: 0,
+    activeUsers: 0,
+    totalVolume: 0,
+    totalChargers: 0,
+    totalEstimatedRewards: BigInt(0),
+  });
   const [processingNFT, setProcessingNFT] = useState<bigint | null>(null);
   const [highlightedNFT, setHighlightedNFT] = useState<string | null>(null);
-
-  const createActor = async () => {
-    const authManager = AuthManager.getInstance();
-    const identity = await authManager.getIdentity();
-
-    if (!identity) {
-      throw new Error("인증되지 않은 사용자입니다.");
-    }
-
-    const agent = new HttpAgent({ identity });
-    if (process.env.NODE_ENV !== "production") {
-      await agent.fetchRootKey();
-    }
-
-    const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
-    if (!canisterId) {
-      throw new Error("Canister ID를 찾을 수 없습니다.");
-    }
-
-    return Actor.createActor<_SERVICE>(idlFactory, {
-      agent,
-      canisterId,
-    });
-  };
 
   const fetchStakedNFTs = async () => {
     try {
@@ -85,6 +65,10 @@ const Staking = () => {
       if (!identity) {
         return;
       }
+
+      // 통계 데이터 가져오기
+      const stats = await getStakingStats();
+      setStakingStats(stats);
 
       // 스테이킹된 NFT 목록 조회
       const stakedTokens = await actor.getStakedNFTs(identity.getPrincipal());
@@ -142,13 +126,6 @@ const Staking = () => {
 
       const nftData = await Promise.all(nftDataPromises);
       setStakedNFTs(nftData);
-
-      // 통계 업데이트
-      setTotalStakedNFTs(nftData.length);
-      setTotalChargers(nftData.reduce((sum, nft) => sum + nft.chargerCount, 0));
-      setTotalEstimatedRewards(
-        nftData.reduce((sum, nft) => sum + nft.estimatedReward, BigInt(0))
-      );
     } catch (error) {
       console.error("스테이킹 데이터 로딩 실패:", error);
       message.error("스테이킹 데이터를 불러오는데 실패했습니다.");
@@ -243,7 +220,7 @@ const Staking = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="스테이킹된 NFT"
-            value={stakedNFTs.length}
+            value={stakingStats.stakedCount}
             prefix={<BankOutlined />}
             suffix="개"
             loading={loading}
@@ -251,17 +228,17 @@ const Staking = () => {
         </Col>
         <Col xs={12} sm={6} md={6}>
           <StatCard
-            title="총 충전기"
-            value={totalChargers}
+            title="충전기 수"
+            value={stakingStats.totalChargers || 0}
             prefix={<ThunderboltOutlined />}
-            suffix="대"
+            suffix="개"
             loading={loading}
           />
         </Col>
-        <Col xs={12} sm={6} md={6}>
+        <Col xs={12} sm={12} md={12}>
           <StatCard
             title="예상 보상"
-            value={Number(totalEstimatedRewards)}
+            value={Number(stakingStats.totalEstimatedRewards || 0)}
             prefix={<DollarOutlined />}
             suffix="PGC"
             loading={loading}

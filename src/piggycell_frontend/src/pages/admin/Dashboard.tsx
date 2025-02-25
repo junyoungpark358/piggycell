@@ -18,35 +18,20 @@ import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
+import {
+  getAdminDashboardStats,
+  NFTStats,
+  getTransactions,
+  TransactionDisplay,
+  TransactionFilter,
+  ICRC3Account,
+} from "../../utils/statsApi";
 
 // ICRC-3 트랜잭션 관련 타입 정의
-interface ICRC3Account {
-  owner: Principal;
-  subaccount: [] | [Uint8Array];
-}
-
-interface ICRC3Transaction {
-  kind: string;
-  timestamp: bigint;
-  from: [] | [ICRC3Account];
-  to: [] | [ICRC3Account];
-  token_ids: bigint[];
-  memo: [] | [Uint8Array];
-}
+// 이미 statsApi.ts에서 가져온 타입을 사용하므로 여기서는 정의하지 않음
 
 // ICRC-3 필터 타입 정의
-interface TransactionFilter {
-  date_range:
-    | []
-    | [
-        {
-          start: bigint;
-          end: bigint;
-        }
-      ];
-  account: [] | [ICRC3Account];
-  type: [] | [string[]];
-}
+// 이미 statsApi.ts에서 가져온 TransactionFilter를 사용하므로 여기서는 정의하지 않음
 
 interface GetTransactionsArgs {
   start: [] | [bigint];
@@ -54,20 +39,10 @@ interface GetTransactionsArgs {
   account: [] | [ICRC3Account];
 }
 
-type TransactionDisplay = {
-  key: string;
-  type: string;
-  nftId: string;
-  from: string;
-  to: string;
-  isFromMarket: boolean;
-  date: string;
-};
-
 const PAGE_SIZE = 10;
 
 const AdminDashboard = () => {
-  const [nftStats, setNftStats] = useState({
+  const [nftStats, setNftStats] = useState<NFTStats>({
     totalSupply: 0,
     stakedCount: 0,
     activeUsers: 0,
@@ -84,185 +59,12 @@ const AdminDashboard = () => {
   });
   const [searchText, setSearchText] = useState("");
 
-  const createActor = async () => {
-    const authManager = AuthManager.getInstance();
-    const identity = await authManager.getIdentity();
-
-    if (!identity) {
-      throw new Error("인증되지 않은 사용자입니다.");
-    }
-
-    const agent = new HttpAgent({ identity });
-    if (process.env.NODE_ENV !== "production") {
-      await agent.fetchRootKey();
-    }
-
-    const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
-    if (!canisterId) {
-      throw new Error("Canister ID를 찾을 수 없습니다.");
-    }
-
-    return Actor.createActor<_SERVICE>(idlFactory, {
-      agent,
-      canisterId,
-    });
-  };
-
-  // 타임스탬프를 한국 시간 문자열로 변환하는 함수
-  const formatTimestamp = (timestamp: bigint): string => {
-    // 나노초를 밀리초로 변환 (1 밀리초 = 1,000,000 나노초)
-    const milliseconds = Number(timestamp) / 1_000_000;
-    const date = new Date(milliseconds);
-    return new Intl.DateTimeFormat("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Seoul",
-    }).format(date);
-  };
-
-  // Principal을 문자열로 변환하고 축약하는 함수
-  const formatPrincipal = (principal: Principal | undefined): string => {
-    if (!principal) return "-";
-    const text = principal.toString();
-    return text.length > 10 ? `${text.slice(0, 5)}...${text.slice(-5)}` : text;
-  };
-
-  // 주소 축약 함수 추가
-  const shortenAddress = (address: string) => {
-    if (address === "-") return "-";
-    return `${address.slice(0, 6)}...${address.slice(-6)}`;
-  };
-
-  // 클립보드 복사 함수 추가
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(
-      () => {
-        message.success("주소가 복사되었습니다.");
-      },
-      (err) => {
-        message.error("주소 복사에 실패했습니다.");
-        console.error("복사 실패:", err);
-      }
-    );
-  };
-
-  // 주소 렌더링 컴포넌트 수정
-  const renderAddress = (text: string, label: string) => {
-    if (text === "-") return "-";
-    return (
-      <div className="address-display">
-        <Tooltip title={text}>
-          <span>{shortenAddress(text)}</span>
-        </Tooltip>
-        <Tooltip title={`${label} 복사`}>
-          <StyledButton
-            customVariant="ghost"
-            customSize="xs"
-            icon={<CopyOutlined />}
-            onClick={() => copyToClipboard(text)}
-          />
-        </Tooltip>
-      </div>
-    );
-  };
-
   const fetchTransactions = async (page: number) => {
     try {
-      const actor = await createActor();
-      const start = (page - 1) * PAGE_SIZE;
-
-      const result = await actor.icrc3_get_transactions({
-        start: [BigInt(start)],
-        length: [BigInt(PAGE_SIZE)],
-        account: filter.account,
-      });
-
-      // BigInt를 문자열로 변환하는 replacer 함수
-      const bigIntReplacer = (key: string, value: any) => {
-        if (typeof value === "bigint") {
-          return value.toString();
-        }
-        return value;
-      };
-
-      console.log(
-        "받은 트랜잭션 데이터:",
-        JSON.stringify(result, bigIntReplacer, 2)
-      );
-
-      const formattedTransactions = (
-        result.transactions as unknown as ICRC3Transaction[]
-      )
-        .filter((tx) => {
-          if (searchText) {
-            const searchLower = searchText.toLowerCase();
-            return (
-              tx.token_ids.some((id) => id.toString().includes(searchLower)) ||
-              (tx.from?.[0]?.owner
-                ?.toString()
-                .toLowerCase()
-                .includes(searchLower) ??
-                false) ||
-              (tx.to?.[0]?.owner
-                ?.toString()
-                .toLowerCase()
-                .includes(searchLower) ??
-                false)
-            );
-          }
-          return true;
-        })
-        .map((tx) => {
-          console.log("트랜잭션 변환 전:", tx);
-          const typeMap: { [key: string]: string } = {
-            mint: "NFT 발행",
-            transfer: "NFT 전송",
-            stake: "NFT 스테이킹",
-            unstake: "NFT 언스테이킹",
-            reward: "스테이킹 보상",
-          };
-
-          const backendCanisterId =
-            process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
-          let fromAddress = tx.from?.[0]?.owner
-            ? tx.from[0].owner.toString()
-            : "-";
-          let toAddress = tx.to?.[0]?.owner ? tx.to[0].owner.toString() : "-";
-
-          // 거래 유형에 따른 주소 처리
-          if (tx.kind === "stake") {
-            toAddress = backendCanisterId;
-          } else if (tx.kind === "unstake") {
-            // 언스테이킹의 경우 보내는 주소를 백엔드 컨트랙트로 설정
-            const temp = fromAddress;
-            fromAddress = backendCanisterId;
-            toAddress = temp;
-          } else if (tx.kind === "mint") {
-            toAddress = backendCanisterId;
-          } else if (tx.kind === "transfer") {
-            // NFT 구매의 경우 보내는 주소를 백엔드 컨트랙트로 설정
-            fromAddress = backendCanisterId;
-          }
-
-          const formatted = {
-            key: `${tx.timestamp.toString()}`,
-            type: typeMap[tx.kind] || tx.kind,
-            nftId: tx.token_ids.map((id) => `#${id.toString()}`).join(", "),
-            from: fromAddress,
-            to: toAddress,
-            isFromMarket: fromAddress === backendCanisterId,
-            date: formatTimestamp(tx.timestamp),
-          };
-          console.log("트랜잭션 변환 후:", formatted);
-          return formatted;
-        });
-
-      setTransactions(formattedTransactions);
-      setTotal(Number(result.total));
+      // statsApi의 getTransactions 함수 사용
+      const result = await getTransactions(page, PAGE_SIZE, filter, searchText);
+      setTransactions(result.transactions);
+      setTotal(result.total);
     } catch (error) {
       console.error("거래 내역 조회 중 오류 발생:", error);
       message.error("거래 내역을 불러오는데 실패했습니다.");
@@ -273,32 +75,10 @@ const AdminDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const actor = await createActor();
 
-        // NFT 총 발행량 조회
-        const totalSupply = await actor.icrc7_total_supply();
-
-        // 스테이킹된 NFT 수 조회
-        const authManager = AuthManager.getInstance();
-        const identity = await authManager.getIdentity();
-        if (!identity) {
-          throw new Error("인증되지 않은 사용자입니다.");
-        }
-        const stakedNFTs = await actor.getStakedNFTs(identity.getPrincipal());
-        const stakedCount = stakedNFTs.length;
-
-        // 활성 사용자 수 조회
-        const activeUsers = await actor.getActiveUsersCount();
-
-        // 총 거래액 조회
-        const totalVolume = await actor.getTotalVolume();
-
-        setNftStats({
-          totalSupply: Number(totalSupply),
-          stakedCount: stakedCount,
-          activeUsers: Number(activeUsers),
-          totalVolume: Number(totalVolume),
-        });
+        // 새로운 모듈화된 API 사용
+        const stats = await getAdminDashboardStats();
+        setNftStats(stats);
 
         // 거래 내역 조회
         await fetchTransactions(currentPage);
@@ -364,6 +144,68 @@ const AdminDashboard = () => {
 
   const handleRefresh = async () => {
     await fetchTransactions(currentPage);
+  };
+
+  // 타임스탬프를 한국 시간 문자열로 변환하는 함수
+  const formatTimestamp = (timestamp: bigint): string => {
+    // 나노초를 밀리초로 변환 (1 밀리초 = 1,000,000 나노초)
+    const milliseconds = Number(timestamp) / 1_000_000;
+    const date = new Date(milliseconds);
+    return new Intl.DateTimeFormat("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Seoul",
+    }).format(date);
+  };
+
+  // Principal을 문자열로 변환하고 축약하는 함수
+  const formatPrincipal = (principal: Principal | undefined): string => {
+    if (!principal) return "-";
+    const text = principal.toString();
+    return text.length > 10 ? `${text.slice(0, 5)}...${text.slice(-5)}` : text;
+  };
+
+  // 주소 축약 함수 추가
+  const shortenAddress = (address: string) => {
+    if (address === "-") return "-";
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+  };
+
+  // 클립보드 복사 함수 추가
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        message.success("주소가 복사되었습니다.");
+      },
+      (err) => {
+        message.error("주소 복사에 실패했습니다.");
+        console.error("복사 실패:", err);
+      }
+    );
+  };
+
+  // 주소 렌더링 컴포넌트 수정
+  const renderAddress = (text: string, label: string) => {
+    if (text === "-") return "-";
+    return (
+      <div className="address-display">
+        <Tooltip title={text}>
+          <span>{shortenAddress(text)}</span>
+        </Tooltip>
+        <Tooltip title={`${label} 복사`}>
+          <StyledButton
+            customVariant="ghost"
+            customSize="xs"
+            icon={<CopyOutlined />}
+            onClick={() => copyToClipboard(text)}
+          />
+        </Tooltip>
+      </div>
+    );
   };
 
   return (

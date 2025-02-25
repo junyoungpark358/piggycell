@@ -28,6 +28,11 @@ import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
 import { FilterValue, SorterResult } from "antd/es/table/interface";
 import { AuthManager } from "../../utils/auth";
+import {
+  createActor,
+  getNFTManagementStats,
+  NFTManagementStats,
+} from "../../utils/statsApi";
 
 // NFT 데이터 타입 정의
 interface NFTData {
@@ -55,11 +60,12 @@ const NFTManagement = () => {
   const [filteredNfts, setFilteredNfts] = useState<NFTData[]>([]);
 
   // 전체 통계 데이터를 위한 상태 추가
-  const [totalStats, setTotalStats] = useState({
+  const [totalStats, setTotalStats] = useState<NFTManagementStats>({
     totalNFTs: 0,
-    availableNFTs: 0,
+    activeLocations: 0,
     totalChargers: 0,
     totalValue: 0,
+    availableNFTs: 0,
   });
 
   // 페이지네이션 상태 추가
@@ -109,44 +115,14 @@ const NFTManagement = () => {
     }
   };
 
-  // 전체 통계 데이터를 가져오는 함수 추가
+  // 전체 통계 데이터를 가져오는 함수 수정
   const fetchStats = async () => {
     try {
-      if (!actor) return;
-
-      // 총 NFT 개수 조회
-      const totalSupply = await actor.icrc7_total_supply();
-      console.log("총 NFT 개수:", Number(totalSupply));
-
-      // NFTMarket.tsx와 동일한 방식으로 판매중인 NFT 데이터 가져오기
-      // getListings API를 사용하여 판매중인 NFT 목록 가져오기
-      const listings = await actor.getListings([], BigInt(9999)); // 최대치로 가져옴
-      console.log("마켓 리스팅 결과:", listings);
-
-      // 판매중인 NFT 수
-      const availableNFTs = Number(listings.total);
-      console.log("판매중인 NFT 수:", availableNFTs);
-
-      // 충전기 수 계산을 위한 모든 NFT 가져오기
-      const allNFTs = await actor.getSortedNFTs();
-      console.log("모든 NFT 토큰 ID:", allNFTs);
-
-      // 충전기 수 계산 - 하드코딩(일단 유지)
-      let totalChargers = 12; // 임시로 하드코딩된 값 사용
-
-      // 총 거래액 조회
-      const volume = await actor.getTotalVolume();
-      console.log("총 거래액:", Number(volume));
-
-      // 통계 상태 업데이트
-      setTotalStats({
-        totalNFTs: Number(totalSupply),
-        availableNFTs: availableNFTs,
-        totalChargers: totalChargers,
-        totalValue: Number(volume),
-      });
-
-      setTotalVolume(Number(volume));
+      // statsApi의 getNFTManagementStats 함수 사용
+      const stats = await getNFTManagementStats();
+      setTotalStats(stats);
+      setTotalVolume(stats.totalValue); // 총 거래액 설정
+      console.log("통계 데이터 조회 완료:", stats);
     } catch (error) {
       console.error("통계 데이터 조회 실패:", error);
     }
@@ -726,6 +702,7 @@ const NFTManagement = () => {
             value={totalStats.availableNFTs}
             prefix={<BarChartOutlined />}
             suffix="개"
+            loading={loading}
           />
         </Col>
         <Col xs={12} sm={6} md={6}>
