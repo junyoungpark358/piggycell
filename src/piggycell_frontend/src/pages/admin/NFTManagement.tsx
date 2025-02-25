@@ -94,6 +94,9 @@ const NFTManagement = () => {
         throw new Error("Actor not initialized");
       }
 
+      // 캐시 무시를 위한 타임스탬프 추가
+      console.log("NFT 데이터 로드 시작:", new Date().toISOString());
+
       // getSortedNFTs 함수를 사용하여 이미 정렬된 NFT 목록을 가져옵니다
       try {
         const sortedNFTsResult = await actor.getSortedNFTs();
@@ -127,7 +130,7 @@ const NFTManagement = () => {
               owner,
               status: nft.status,
               price,
-              statusChangedAt: nft.createdAt,
+              statusChangedAt: nft.statusChangedAt,
             };
 
             return nftData;
@@ -261,6 +264,27 @@ const NFTManagement = () => {
             const ownerPrincipal = ownerAccount?.owner?.toString() || "-";
             console.log("소유자 정보:", ownerPrincipal);
 
+            // 소유자 정보 디버깅 강화
+            console.log("소유자 정보 상세:", {
+              rawOwner: ownerAccount?.owner,
+              stringOwner: ownerPrincipal,
+              isBackendCanister:
+                ownerPrincipal === process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+              backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+            });
+
+            // 충전 허브 #0에 대한 특별 디버깅
+            if (Number(tokenId) === 0) {
+              console.log("충전 허브 #0 디버깅:", {
+                tokenId,
+                owner: ownerPrincipal,
+                backendId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+                isBackendOwner:
+                  ownerPrincipal === process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+                rawOwnerData: ownerAccount,
+              });
+            }
+
             // Listing 타입 체크 함수 추가
             const getListingPrice = (
               listing: [] | [Listing]
@@ -283,6 +307,28 @@ const NFTManagement = () => {
             let statusChangedAt = BigInt(Date.now()) * BigInt(1_000_000);
             let currentOwner = ownerPrincipal;
 
+            // 상태 설정 로직 개선: 소유자 확인을 먼저하여 백엔드가 아닌 경우 바로 'sold' 처리
+            const backendCanisterID =
+              process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
+            const isOwnedByBackend =
+              ownerPrincipal.toLowerCase() === backendCanisterID.toLowerCase();
+            const isValidOwner = ownerPrincipal !== "-";
+
+            // 충전 허브 #0인 경우 소유자 검증 로직 추가 디버깅
+            if (Number(tokenId) === 0) {
+              console.log("충전 허브 #0 상태 설정 검사:", {
+                isOwnedByBackend,
+                isValidOwner,
+                backendCanisterID,
+                ownerPrincipal,
+                lowerCaseOwner: ownerPrincipal.toLowerCase(),
+                lowerCaseBackend: backendCanisterID.toLowerCase(),
+                compareResult:
+                  ownerPrincipal.toLowerCase() ===
+                  backendCanisterID.toLowerCase(),
+              });
+            }
+
             if (isStaked) {
               status = "staked";
               // 스테이킹 정보 조회
@@ -302,11 +348,16 @@ const NFTManagement = () => {
               if (firstListing && "listedAt" in firstListing) {
                 statusChangedAt = BigInt(firstListing.listedAt);
               }
-            } else if (
-              ownerPrincipal !== "-" &&
-              ownerPrincipal !== process.env.CANISTER_ID_PIGGYCELL_BACKEND
-            ) {
+            } else if (isValidOwner && !isOwnedByBackend) {
+              // 소유자가 백엔드 캐니스터가 아니고 유효한 소유자가 있으면 "sold" 상태로 설정
               status = "sold";
+
+              // sold 상태일 때 로그 추가
+              console.log("판매완료 상태로 설정:", {
+                id: Number(tokenId),
+                owner: ownerPrincipal,
+                backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+              });
             }
 
             console.log("NFT 상태 설정:", {
@@ -334,16 +385,54 @@ const NFTManagement = () => {
             batchError
           );
           message.error(
-            `NFT 데이터 조회 중 오류가 발생했습니다 (${batchStart}-${batchEnd})`
+            `NFT 데이터 조회 중 오류가 발생했습니다 (${batchStart}-${batchEnd})`,
+            2
           );
         }
       }
 
       // 최종적으로 ID 기준으로 내림차순 정렬하여 최신 NFT가 맨 위에 표시되도록 함
       setNfts(nftList.sort((a, b) => b.id - a.id));
+
+      // 충전 허브 #0의 상태를 특별히 확인
+      const hub0 = nftList.find((nft) => nft.id === 0);
+      if (hub0) {
+        console.log("정렬 후 충전 허브 #0 최종 상태:", {
+          id: hub0.id,
+          status: hub0.status,
+          owner: hub0.owner,
+          backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
+        });
+
+        const backendId = process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
+        const isNotBackendOwner =
+          hub0.owner.toLowerCase() !== backendId.toLowerCase();
+
+        // 충전 허브 #0이 백엔드 소유가 아닌데 상태가 'sold'가 아니면 강제로 'sold'로 설정
+        if (
+          isNotBackendOwner &&
+          hub0.status !== "listed" &&
+          hub0.status !== "staked" &&
+          hub0.owner !== "-"
+        ) {
+          console.log("충전 허브 #0 상태 강제 수정: 'sold'로 변경");
+
+          // 복사본 생성 후 수정
+          const updatedNfts = nftList
+            .map((nft) => {
+              if (nft.id === 0) {
+                return { ...nft, status: "sold" };
+              }
+              return nft;
+            })
+            .sort((a, b) => b.id - a.id);
+
+          setNfts(updatedNfts);
+        }
+      }
     } catch (error) {
       console.error("NFT 데이터 조회 중 오류 발생:", error);
-      message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.");
+      message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.", 2);
     } finally {
       setLoading(false);
     }
@@ -640,18 +729,18 @@ const NFTManagement = () => {
       console.log("민팅 결과:", result);
 
       if ("ok" in result) {
-        message.success("NFT가 성공적으로 생성되었습니다.");
+        message.success("NFT가 성공적으로 생성되었습니다.", 2);
         // 생성 후 즉시 NFT 목록을 새로고침
         await fetchNFTs();
       } else {
-        message.error(`NFT 생성 실패: ${result.err}`);
+        message.error(`NFT 생성 실패: ${result.err}`, 2);
       }
 
       setIsModalVisible(false);
       form.resetFields();
     } catch (error) {
       console.error("NFT 생성 실패:", error);
-      message.error("NFT 생성 중 오류가 발생했습니다.");
+      message.error("NFT 생성 중 오류가 발생했습니다.", 2);
     } finally {
       setIsSubmitting(false);
     }
@@ -664,17 +753,69 @@ const NFTManagement = () => {
 
   const handleEdit = async (record: NFTData) => {
     // TODO: NFT 메타데이터 수정 기능 구현
-    message.info("메타데이터 수정 기능은 추후 구현 예정입니다.");
+    message.info("메타데이터 수정 기능은 추후 구현 예정입니다.", 2);
   };
 
   const handleDelete = async (tokenId: number) => {
     // TODO: NFT 삭제 기능 구현
-    message.info("NFT 삭제 기능은 추후 구현 예정입니다.");
+    message.info("NFT 삭제 기능은 추후 구현 예정입니다.", 2);
   };
 
   const handleRefresh = async () => {
-    await fetchNFTs();
-    await fetchTotalVolume();
+    try {
+      // App 컴포넌트의 messageApi 사용 방식으로 변경
+      const hide = message.loading("데이터를 새로고침 중입니다...", 0);
+
+      // actor를 다시 초기화하여 최신 상태를 가져옵니다
+      const refreshedActor = await createActor();
+      setActor(refreshedActor);
+
+      // 데이터 다시 로드
+      await fetchNFTs();
+      await fetchTotalVolume();
+
+      // 데이터 로드 후 충전 허브 #0 상태 확인 및 강제 처리
+      const currentNfts = [...nfts];
+      const hub0 = currentNfts.find((nft) => nft.id === 0);
+
+      if (hub0) {
+        const backendId = process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
+        console.log("새로고침 후 충전 허브 #0 상태 확인:", {
+          id: hub0.id,
+          status: hub0.status,
+          owner: hub0.owner,
+          backendId,
+          isBackendOwner: hub0.owner.toLowerCase() === backendId.toLowerCase(),
+        });
+
+        // 백엔드가 소유자가 아니고, 상태가 listed나 staked가 아니면 sold로 설정
+        if (
+          hub0.owner.toLowerCase() !== backendId.toLowerCase() &&
+          hub0.status !== "listed" &&
+          hub0.status !== "staked" &&
+          hub0.owner !== "-"
+        ) {
+          console.log("새로고침 후 충전 허브 #0 상태 강제 수정");
+          const updatedNfts = currentNfts.map((nft) => {
+            if (nft.id === 0) {
+              return { ...nft, status: "sold" };
+            }
+            return nft;
+          });
+
+          setNfts(updatedNfts);
+        }
+      }
+
+      // 로딩 메시지 닫기
+      hide();
+
+      // 성공 메시지
+      message.success("새로고침 완료!", 2);
+    } catch (error) {
+      console.error("새로고침 실패:", error);
+      message.error("새로고침 실패!", 2);
+    }
   };
 
   return (

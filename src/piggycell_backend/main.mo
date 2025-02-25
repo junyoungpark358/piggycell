@@ -61,6 +61,14 @@ actor Main {
 
     // NFT ID를 저장하는 순서화된 배열 추가
     private var sortedNFTIds = Buffer.Buffer<Nat>(0);
+    
+    // NFT 상태를 추적하는 맵 추가
+    private let nftStatuses = TrieMap.TrieMap<Nat, Text>(Nat.equal, Hash.hash);
+
+    // NFT 상태 업데이트 함수
+    private func updateNFTStatus(tokenId: Nat, status: Text) {
+        nftStatuses.put(tokenId, status);
+    };
 
     // 정렬된 상태로 트랜잭션 추가
     private func addTransaction(txType: TransactionType, nftId: ?Nat, user: Principal, amount: Nat) {
@@ -501,6 +509,9 @@ actor Main {
 
                 // NFT 발행 거래 내역 추가
                 addTransaction(#Mint, ?token_id, caller, 0);
+                
+                // NFT 상태를 "created"로 설정
+                updateNFTStatus(token_id, "created");
 
                 // NFT 마켓 등록인 경우
                 if (transferType == "market") {
@@ -511,7 +522,11 @@ actor Main {
                                 case (#ok()) {
                                     // 마켓에 리스팅
                                     switch(marketManager.listNFT(caller, token_id, listing_price)) {
-                                        case (#ok()) { #ok(token_id) };
+                                        case (#ok()) { 
+                                            // 리스팅 성공 시 상태를 "listed"로 변경
+                                            updateNFTStatus(token_id, "listed");
+                                            #ok(token_id) 
+                                        };
                                         case (#err(error)) { 
                                             #err("마켓 리스팅 실패: " # debug_show(error))
                                         };
@@ -561,7 +576,30 @@ actor Main {
     };
 
     public shared({ caller }) func delistNFT(tokenId: Nat) : async Result.Result<(), Market.ListingError> {
-        marketManager.delistNFT(caller, tokenId)
+        switch(marketManager.delistNFT(caller, tokenId)) {
+            case (#ok()) {
+                // NFT 소유자 확인
+                let ownerResult = nft.icrc7_owner_of([tokenId]);
+                
+                if (ownerResult.size() > 0) {
+                    switch (ownerResult[0]) {
+                        case (?account) {
+                            // 소유자가 백엔드 캐니스터가 아니면 "sold" 상태로 설정
+                            if (account.owner != Principal.fromActor(Main)) {
+                                updateNFTStatus(tokenId, "sold");
+                            } else {
+                                // 소유자가 백엔드 캐니스터이면 "created" 상태로 설정
+                                updateNFTStatus(tokenId, "created");
+                            };
+                        };
+                        case (null) {};
+                    };
+                };
+                
+                #ok()
+            };
+            case (#err(error)) { #err(error) };
+        }
     };
 
     public shared({ caller }) func buyNFT(tokenId: Nat) : async Result.Result<Market.Listing, Market.ListingError> {
@@ -569,6 +607,10 @@ actor Main {
             case (#ok(listing)) {
                 // 거래 내역 추가
                 addTransaction(#NFTSale, ?tokenId, caller, listing.price);
+                
+                // NFT 상태를 "sold"로 변경
+                updateNFTStatus(tokenId, "sold");
+                
                 #ok(listing)
             };
             case (#err(error)) { #err(error) };
@@ -652,6 +694,10 @@ actor Main {
             case (#ok()) {
                 // 스테이킹 거래 내역 추가
                 addTransaction(#Stake, ?tokenId, caller, 0);
+                
+                // NFT 상태를 "staked"로 변경
+                updateNFTStatus(tokenId, "staked");
+                
                 #ok()
             };
             case (#err(error)) { #err(error) };
@@ -663,6 +709,10 @@ actor Main {
             case (#ok(reward)) {
                 // 언스테이킹 거래 내역 추가
                 addTransaction(#Unstake, ?tokenId, caller, reward);
+                
+                // NFT 상태를 "sold"로 변경 (언스테이킹 시 소유자에게 돌아가므로)
+                updateNFTStatus(tokenId, "sold");
+                
                 #ok(reward)
             };
             case (#err(error)) { #err(error) };
@@ -698,6 +748,7 @@ actor Main {
         let result = Buffer.Buffer<NFTMetadata>(0);
         let ids = Buffer.toArray(sortedNFTIds);
         
+        // 모든 NFT 데이터를 먼저 수집
         for (id in ids.vals()) {
             let ownerResult = nft.icrc7_owner_of([id]);
             let metadataResult = nft.icrc7_token_metadata([id]);
@@ -707,10 +758,31 @@ actor Main {
                 let metadata = metadataResult[0];
                 
                 if (Option.isSome(owner) and Option.isSome(metadata)) {
-                    let status = if (marketManager.isListed(id)) { "listed" } 
-                              else if (stakingManager.isStaked(id)) { "staked" }
-                              else { "created" };
-                              
+                    let isListed = marketManager.isListed(id);
+                    let isStaked = stakingManager.isStaked(id);
+                    
+                    // 상태 결정 - nftStatuses에서 먼저 확인하고 없으면 기존 로직 사용
+                    let status = switch (nftStatuses.get(id)) {
+                        case (?storedStatus) { storedStatus };
+                        case (null) {
+                            if (isListed) { "listed" } 
+                            else if (isStaked) { "staked" }
+                            else { 
+                                // 소유자가 백엔드 캐니스터가 아닌 경우 "sold" 상태로 설정
+                                switch (owner) {
+                                    case (?ownerAccount) {
+                                        if (ownerAccount.owner != Principal.fromActor(Main)) {
+                                            "sold"
+                                        } else {
+                                            "created"
+                                        }
+                                    };
+                                    case (null) { "created" };
+                                }
+                            }
+                        };
+                    };
+                    
                     // 메타데이터에서 필요한 정보 추출
                     var location: ?Text = null;
                     var chargerCount: ?Nat = null;
@@ -740,6 +812,50 @@ actor Main {
                         case (null) {};
                     };
                     
+                    // 상태에 따라 상태 변경 시간 결정
+                    var statusChangedAt = Time.now(); // 기본값으로 현재 시간 설정
+                    
+                    if (stakingManager.isStaked(id)) {
+                        // 스테이킹된 경우, 스테이킹 시간 가져오기
+                        let stakingInfo = stakingManager.getStakingInfo(id);
+                        switch(stakingInfo) {
+                            case (?info) {
+                                statusChangedAt := info.stakedAt;
+                            };
+                            case (null) {};
+                        };
+                    } else if (marketManager.isListed(id)) {
+                        // 리스팅된 경우, 리스팅 시간 가져오기
+                        let listing = marketManager.getListing(id);
+                        switch(listing) {
+                            case (?l) {
+                                statusChangedAt := l.listedAt;
+                            };
+                            case (null) {};
+                        };
+                    } else {
+                        // 생성된 경우 또는 판매된 경우, 관련 트랜잭션 찾기
+                        var foundTx = false;
+                        label l for (tx in transactions.vals()) {
+                            switch(tx.txType, tx.nftId) {
+                                case (#NFTSale, ?nftId) {
+                                    if (nftId == id) {
+                                        statusChangedAt := tx.timestamp;
+                                        foundTx := true;
+                                        break l;
+                                    };
+                                };
+                                case (#Mint, ?nftId) {
+                                    if (nftId == id and not foundTx) {
+                                        statusChangedAt := tx.timestamp;
+                                        break l;
+                                    };
+                                };
+                                case (_, _) {};
+                            };
+                        };
+                    };
+                    
                     let nftData: NFTMetadata = {
                         id = id;
                         location = location;
@@ -750,7 +866,7 @@ actor Main {
                         };
                         status = status;
                         price = price;
-                        createdAt = Time.now();
+                        statusChangedAt = statusChangedAt;
                     };
                     
                     result.add(nftData);
@@ -758,7 +874,15 @@ actor Main {
             };
         };
         
-        Buffer.toArray(result)
+        // 상태 변경 시간을 기준으로 정렬 (최신순)
+        let nftArray = Buffer.toArray(result);
+        let sortedNFTs = Array.sort<NFTMetadata>(nftArray, func(a, b) {
+            if (a.statusChangedAt > b.statusChangedAt) { #less }
+            else if (a.statusChangedAt < b.statusChangedAt) { #greater }
+            else { #equal }
+        });
+        
+        sortedNFTs
     };
 
     // NFT 메타데이터 타입 정의
@@ -769,7 +893,7 @@ actor Main {
         owner: ?Principal;
         status: Text;
         price: ?Nat;
-        createdAt: Int;
+        statusChangedAt: Int;
     };
 
     // 단일 NFT의 메타데이터 조회 함수
@@ -788,10 +912,31 @@ actor Main {
             return null;
         };
         
-        let status = if (marketManager.isListed(tokenId)) { "listed" } 
-                   else if (stakingManager.isStaked(tokenId)) { "staked" }
-                   else { "created" };
-                   
+        let isListed = marketManager.isListed(tokenId);
+        let isStaked = stakingManager.isStaked(tokenId);
+        
+        // 상태 결정 - nftStatuses에서 먼저 확인하고 없으면 기존 로직 사용
+        let status = switch (nftStatuses.get(tokenId)) {
+            case (?storedStatus) { storedStatus };
+            case (null) {
+                if (isListed) { "listed" } 
+                else if (isStaked) { "staked" }
+                else { 
+                    // 소유자가 백엔드 캐니스터가 아닌 경우 "sold" 상태로 설정
+                    switch (owner) {
+                        case (?ownerAccount) {
+                            if (ownerAccount.owner != Principal.fromActor(Main)) {
+                                "sold"
+                            } else {
+                                "created"
+                            }
+                        };
+                        case (null) { "created" };
+                    }
+                }
+            };
+        };
+        
         // 메타데이터에서 필요한 정보 추출
         var location: ?Text = null;
         var chargerCount: ?Nat = null;
@@ -821,6 +966,50 @@ actor Main {
             case (null) {};
         };
         
+        // 상태에 따라 상태 변경 시간 결정
+        var statusChangedAt = Time.now(); // 기본값으로 현재 시간 설정
+        
+        if (isStaked) {
+            // 스테이킹된 경우, 스테이킹 시간 가져오기
+            let stakingInfo = stakingManager.getStakingInfo(tokenId);
+            switch(stakingInfo) {
+                case (?info) {
+                    statusChangedAt := info.stakedAt;
+                };
+                case (null) {};
+            };
+        } else if (isListed) {
+            // 리스팅된 경우, 리스팅 시간 가져오기
+            let listing = marketManager.getListing(tokenId);
+            switch(listing) {
+                case (?l) {
+                    statusChangedAt := l.listedAt;
+                };
+                case (null) {};
+            };
+        } else {
+            // 생성된 경우 또는 판매된 경우, 관련 트랜잭션 찾기
+            var foundTx = false;
+            label l for (tx in transactions.vals()) {
+                switch(tx.txType, tx.nftId) {
+                    case (#NFTSale, ?nftId) {
+                        if (nftId == tokenId) {
+                            statusChangedAt := tx.timestamp;
+                            foundTx := true;
+                            break l;
+                        };
+                    };
+                    case (#Mint, ?nftId) {
+                        if (nftId == tokenId and not foundTx) {
+                            statusChangedAt := tx.timestamp;
+                            break l;
+                        };
+                    };
+                    case (_, _) {};
+                };
+            };
+        };
+        
         ?{
             id = tokenId;
             location = location;
@@ -831,7 +1020,94 @@ actor Main {
             };
             status = status;
             price = price;
-            createdAt = Time.now();
+            statusChangedAt = statusChangedAt;
         }
+    };
+
+    // 단일 NFT의 상태만 조회하는 함수
+    public query func getNFTStatus(tokenId: Nat) : async Text {
+        switch (nftStatuses.get(tokenId)) {
+            case (?storedStatus) { 
+                // 저장된 상태가 있으면 그대로 반환
+                storedStatus 
+            };
+            case (null) {
+                // 저장된 상태가 없으면 상태 계산
+                if (marketManager.isListed(tokenId)) { 
+                    "listed" 
+                } else if (stakingManager.isStaked(tokenId)) { 
+                    "staked" 
+                } else { 
+                    // 소유자 확인
+                    let ownerResult = nft.icrc7_owner_of([tokenId]);
+                    if (ownerResult.size() > 0) {
+                        switch (ownerResult[0]) {
+                            case (?ownerAccount) {
+                                if (ownerAccount.owner != Principal.fromActor(Main)) {
+                                    "sold"
+                                } else {
+                                    "created"
+                                }
+                            };
+                            case (null) { "created" };
+                        }
+                    } else {
+                        "created"
+                    }
+                }
+            };
+        }
+    };
+
+    // 여러 NFT의 상태를 한번에 조회하는 함수
+    public query func getBatchNFTStatus(tokenIds: [Nat]) : async [Text] {
+        Array.map<Nat, Text>(
+            tokenIds,
+            func(tokenId: Nat) : Text {
+                switch (nftStatuses.get(tokenId)) {
+                    case (?storedStatus) { storedStatus };
+                    case (null) {
+                        if (marketManager.isListed(tokenId)) { 
+                            "listed" 
+                        } else if (stakingManager.isStaked(tokenId)) { 
+                            "staked" 
+                        } else { 
+                            // 소유자 확인
+                            let ownerResult = nft.icrc7_owner_of([tokenId]);
+                            if (ownerResult.size() > 0) {
+                                switch (ownerResult[0]) {
+                                    case (?ownerAccount) {
+                                        if (ownerAccount.owner != Principal.fromActor(Main)) {
+                                            "sold"
+                                        } else {
+                                            "created"
+                                        }
+                                    };
+                                    case (null) { "created" };
+                                }
+                            } else {
+                                "created"
+                            }
+                        }
+                    };
+                }
+            }
+        )
+    };
+
+    // NFT 상태를 직접 설정하는 관리자 함수
+    public shared({ caller }) func setNFTStatus(tokenId: Nat, status: Text) : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            return #err("관리자만 NFT 상태를 직접 설정할 수 있습니다.");
+        };
+        
+        // 상태 값 검증
+        if (status != "created" and status != "listed" and status != "sold" and status != "staked") {
+            return #err("유효하지 않은 상태입니다. 'created', 'listed', 'sold', 'staked' 중 하나여야 합니다.");
+        };
+        
+        // 상태 업데이트
+        updateNFTStatus(tokenId, status);
+        #ok()
     };
 };
