@@ -59,6 +59,9 @@ actor Main {
     private let transactions = Buffer.Buffer<Transaction>(0);
     private let activeUsers = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
 
+    // NFT ID를 저장하는 순서화된 배열 추가
+    private var sortedNFTIds = Buffer.Buffer<Nat>(0);
+
     // 정렬된 상태로 트랜잭션 추가
     private func addTransaction(txType: TransactionType, nftId: ?Nat, user: Principal, amount: Nat) {
         let newTx = {
@@ -493,6 +496,9 @@ actor Main {
 
         switch(nft.mint(caller, mintArgs)) {
             case (#ok(token_id)) {
+                // 생성된 NFT ID를 정렬된 배열의 맨 앞에 추가 (최신 NFT를 맨 앞에 배치)
+                sortedNFTIds.insert(0, token_id);
+
                 // NFT 발행 거래 내역 추가
                 addTransaction(#Mint, ?token_id, caller, 0);
 
@@ -680,5 +686,152 @@ actor Main {
 
     public query func getStakedNFTs(owner: Principal) : async [Nat] {
         stakingManager.getStakedNFTs(owner)
+    };
+
+    // 정렬된 NFT ID 목록을 반환하는 함수 추가
+    public query func getSortedNFTIds() : async [Nat] {
+        Buffer.toArray(sortedNFTIds)
+    };
+
+    // 정렬된 NFT 목록을 반환하는 함수 수정
+    public query func getSortedNFTs() : async [NFTMetadata] {
+        let result = Buffer.Buffer<NFTMetadata>(0);
+        let ids = Buffer.toArray(sortedNFTIds);
+        
+        for (id in ids.vals()) {
+            let ownerResult = nft.icrc7_owner_of([id]);
+            let metadataResult = nft.icrc7_token_metadata([id]);
+            
+            if (ownerResult.size() > 0 and metadataResult.size() > 0) {
+                let owner = ownerResult[0];
+                let metadata = metadataResult[0];
+                
+                if (Option.isSome(owner) and Option.isSome(metadata)) {
+                    let status = if (marketManager.isListed(id)) { "listed" } 
+                              else if (stakingManager.isStaked(id)) { "staked" }
+                              else { "created" };
+                              
+                    // 메타데이터에서 필요한 정보 추출
+                    var location: ?Text = null;
+                    var chargerCount: ?Nat = null;
+                    var price: ?Nat = null;
+                    
+                    switch (metadata) {
+                        case (?meta) {
+                            for ((key, value) in meta.vals()) {
+                                if (key == "location" or key == "piggycell:location") {
+                                    switch (value) {
+                                        case (#Text(text)) { location := ?text };
+                                        case (_) {};
+                                    };
+                                } else if (key == "chargerCount" or key == "piggycell:charger_count") {
+                                    switch (value) {
+                                        case (#Nat(nat)) { chargerCount := ?nat };
+                                        case (_) {};
+                                    };
+                                } else if (key == "price") {
+                                    switch (value) {
+                                        case (#Nat(nat)) { price := ?nat };
+                                        case (_) {};
+                                    };
+                                };
+                            };
+                        };
+                        case (null) {};
+                    };
+                    
+                    let nftData: NFTMetadata = {
+                        id = id;
+                        location = location;
+                        chargerCount = chargerCount;
+                        owner = switch (owner) {
+                            case (?acc) { ?acc.owner };
+                            case (null) { null };
+                        };
+                        status = status;
+                        price = price;
+                        createdAt = Time.now();
+                    };
+                    
+                    result.add(nftData);
+                };
+            };
+        };
+        
+        Buffer.toArray(result)
+    };
+
+    // NFT 메타데이터 타입 정의
+    type NFTMetadata = {
+        id: Nat;
+        location: ?Text;
+        chargerCount: ?Nat;
+        owner: ?Principal;
+        status: Text;
+        price: ?Nat;
+        createdAt: Int;
+    };
+
+    // 단일 NFT의 메타데이터 조회 함수
+    public query func getNFTMetadata(tokenId: Nat) : async ?NFTMetadata {
+        let ownerResult = nft.icrc7_owner_of([tokenId]);
+        let metadataResult = nft.icrc7_token_metadata([tokenId]);
+        
+        if (ownerResult.size() == 0 or metadataResult.size() == 0) {
+            return null;
+        };
+        
+        let owner = ownerResult[0];
+        let metadata = metadataResult[0];
+        
+        if (Option.isNull(owner) or Option.isNull(metadata)) {
+            return null;
+        };
+        
+        let status = if (marketManager.isListed(tokenId)) { "listed" } 
+                   else if (stakingManager.isStaked(tokenId)) { "staked" }
+                   else { "created" };
+                   
+        // 메타데이터에서 필요한 정보 추출
+        var location: ?Text = null;
+        var chargerCount: ?Nat = null;
+        var price: ?Nat = null;
+        
+        switch (metadata) {
+            case (?meta) {
+                for ((key, value) in meta.vals()) {
+                    if (key == "location" or key == "piggycell:location") {
+                        switch (value) {
+                            case (#Text(text)) { location := ?text };
+                            case (_) {};
+                        };
+                    } else if (key == "chargerCount" or key == "piggycell:charger_count") {
+                        switch (value) {
+                            case (#Nat(nat)) { chargerCount := ?nat };
+                            case (_) {};
+                        };
+                    } else if (key == "price") {
+                        switch (value) {
+                            case (#Nat(nat)) { price := ?nat };
+                            case (_) {};
+                        };
+                    };
+                };
+            };
+            case (null) {};
+        };
+        
+        ?{
+            id = tokenId;
+            location = location;
+            chargerCount = chargerCount;
+            owner = switch (owner) {
+                case (?acc) { ?acc.owner };
+                case (null) { null };
+            };
+            status = status;
+            price = price;
+            createdAt = Time.now();
+        }
     };
 };

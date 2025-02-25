@@ -20,6 +20,7 @@ import type {
   Listing,
   Account,
   Value,
+  NFTMetadata,
 } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTManagement.css";
 import { StatCard } from "../../components/StatCard";
@@ -27,6 +28,7 @@ import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
 
+// NFT 데이터 타입 정의
 interface NFTData {
   id: number;
   location: string;
@@ -92,6 +94,53 @@ const NFTManagement = () => {
         throw new Error("Actor not initialized");
       }
 
+      // getSortedNFTs 함수를 사용하여 이미 정렬된 NFT 목록을 가져옵니다
+      try {
+        const sortedNFTsResult = await actor.getSortedNFTs();
+        console.log("정렬된 NFT 데이터 수신:", sortedNFTsResult.length);
+
+        if (sortedNFTsResult.length > 0) {
+          // 백엔드에서 정렬된 NFT 목록 처리
+          const nftList: NFTData[] = sortedNFTsResult.map((nft) => {
+            // 명시적으로 값이 항상 string 타입이 되도록 확인
+            const location: string = nft.location?.length
+              ? (nft.location[0] as string)
+              : "";
+
+            const chargerCount: number = nft.chargerCount?.length
+              ? Number(nft.chargerCount[0])
+              : 0;
+
+            const owner: string = nft.owner?.length
+              ? nft.owner[0].toString()
+              : "-";
+
+            const price: number | undefined = nft.price?.length
+              ? Number(nft.price[0])
+              : undefined;
+
+            // 오류 없는 변환을 위해 명시적으로 NFTData 객체 생성
+            const nftData: NFTData = {
+              id: Number(nft.id),
+              location,
+              chargerCount,
+              owner,
+              status: nft.status,
+              price,
+              statusChangedAt: nft.createdAt,
+            };
+
+            return nftData;
+          });
+
+          setNfts(nftList);
+          return;
+        }
+      } catch (error) {
+        console.error("getSortedNFTs 호출 실패, 기존 방식으로 대체:", error);
+      }
+
+      // getSortedNFTs가 실패하면 기존 방식으로 폴백
       const supply = await actor.icrc7_total_supply();
       console.log("NFT 총 공급량:", Number(supply));
 
@@ -100,15 +149,16 @@ const NFTManagement = () => {
       const nftList: NFTData[] = [];
       const totalNFTs = Number(supply);
 
-      // 배치 처리를 위한 반복
+      // 배치 처리를 위한 반복 - 내림차순(최신순)으로 요청
       for (
         let batchStart = 0;
         batchStart < totalNFTs;
         batchStart += BATCH_SIZE
       ) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, totalNFTs);
+        // ID를 내림차순으로 요청하도록 수정 (최신 NFT부터 요청)
         const tokenIds = Array.from({ length: batchEnd - batchStart }, (_, i) =>
-          BigInt(i + batchStart)
+          BigInt(totalNFTs - 1 - (i + batchStart))
         );
 
         try {
@@ -289,7 +339,8 @@ const NFTManagement = () => {
         }
       }
 
-      setNfts(nftList);
+      // 최종적으로 ID 기준으로 내림차순 정렬하여 최신 NFT가 맨 위에 표시되도록 함
+      setNfts(nftList.sort((a, b) => b.id - a.id));
     } catch (error) {
       console.error("NFT 데이터 조회 중 오류 발생:", error);
       message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.");
