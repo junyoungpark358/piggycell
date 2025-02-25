@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo } from "react";
 import { Modal, Form, Space, Select, Row, Col, message, Tooltip } from "antd";
 import {
   PlusOutlined,
@@ -9,8 +10,6 @@ import {
   SearchOutlined,
   CopyOutlined,
 } from "@ant-design/icons";
-import { useEffect, useState } from "react";
-import { AuthManager } from "../../utils/auth";
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
 import { idlFactory } from "../../../../declarations/piggycell_backend";
@@ -27,16 +26,18 @@ import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
+import { FilterValue, SorterResult } from "antd/es/table/interface";
+import { AuthManager } from "../../utils/auth";
 
 // NFT 데이터 타입 정의
 interface NFTData {
-  id: number;
+  id: number | bigint | string;
   location: string;
-  chargerCount: number;
+  chargerCount: number | bigint | string;
   status: string;
   owner: string;
-  price?: number;
-  statusChangedAt: bigint;
+  price?: number | bigint | string;
+  statusChangedAt: bigint | string | number;
 }
 
 // MetadataValue를 Value로 대체
@@ -53,11 +54,31 @@ const NFTManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filteredNfts, setFilteredNfts] = useState<NFTData[]>([]);
 
+  // 페이지네이션 상태 추가
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  // 정렬 상태 추가
+  const [sortField, setSortField] = useState<string>("statusChangedAt");
+  const [sortDirection, setSortDirection] = useState<string>("descend");
+
   // 전체 통계 계산
   const totalStats = {
     totalNFTs: nfts.length,
     availableNFTs: nfts.filter((nft) => nft.status === "listed").length,
-    totalChargers: nfts.reduce((sum, nft) => sum + nft.chargerCount, 0),
+    totalChargers: nfts.reduce((sum, nft) => {
+      // chargerCount가 문자열이거나 숫자인 경우를 모두 처리
+      const count =
+        typeof nft.chargerCount === "string"
+          ? parseInt(nft.chargerCount, 10)
+          : typeof nft.chargerCount === "bigint"
+          ? Number(nft.chargerCount)
+          : nft.chargerCount;
+      return sum + (isNaN(Number(count)) ? 0 : Number(count));
+    }, 0),
     totalValue: totalVolume,
   };
 
@@ -85,357 +106,6 @@ const NFTManagement = () => {
       agent,
       canisterId,
     });
-  };
-
-  const fetchNFTs = async () => {
-    try {
-      setLoading(true);
-      if (!actor) {
-        throw new Error("Actor not initialized");
-      }
-
-      // 캐시 무시를 위한 타임스탬프 추가
-      console.log("NFT 데이터 로드 시작:", new Date().toISOString());
-
-      // getSortedNFTs 함수를 사용하여 이미 정렬된 NFT 목록을 가져옵니다
-      try {
-        const sortedNFTsResult = await actor.getSortedNFTs();
-        console.log("정렬된 NFT 데이터 수신:", sortedNFTsResult.length);
-
-        if (sortedNFTsResult.length > 0) {
-          // 백엔드에서 정렬된 NFT 목록 처리
-          const nftList: NFTData[] = sortedNFTsResult.map((nft) => {
-            // 명시적으로 값이 항상 string 타입이 되도록 확인
-            const location: string = nft.location?.length
-              ? (nft.location[0] as string)
-              : "";
-
-            const chargerCount: number = nft.chargerCount?.length
-              ? Number(nft.chargerCount[0])
-              : 0;
-
-            const owner: string = nft.owner?.length
-              ? nft.owner[0].toString()
-              : "-";
-
-            const price: number | undefined = nft.price?.length
-              ? Number(nft.price[0])
-              : undefined;
-
-            // 오류 없는 변환을 위해 명시적으로 NFTData 객체 생성
-            const nftData: NFTData = {
-              id: Number(nft.id),
-              location,
-              chargerCount,
-              owner,
-              status: nft.status,
-              price,
-              statusChangedAt: nft.statusChangedAt,
-            };
-
-            return nftData;
-          });
-
-          setNfts(nftList);
-          return;
-        }
-      } catch (error) {
-        console.error("getSortedNFTs 호출 실패, 기존 방식으로 대체:", error);
-      }
-
-      // getSortedNFTs가 실패하면 기존 방식으로 폴백
-      const supply = await actor.icrc7_total_supply();
-      console.log("NFT 총 공급량:", Number(supply));
-
-      // 배치 크기 설정
-      const BATCH_SIZE = 10;
-      const nftList: NFTData[] = [];
-      const totalNFTs = Number(supply);
-
-      // 배치 처리를 위한 반복 - 내림차순(최신순)으로 요청
-      for (
-        let batchStart = 0;
-        batchStart < totalNFTs;
-        batchStart += BATCH_SIZE
-      ) {
-        const batchEnd = Math.min(batchStart + BATCH_SIZE, totalNFTs);
-        // ID를 내림차순으로 요청하도록 수정 (최신 NFT부터 요청)
-        const tokenIds = Array.from({ length: batchEnd - batchStart }, (_, i) =>
-          BigInt(totalNFTs - 1 - (i + batchStart))
-        );
-
-        try {
-          // 병렬로 데이터 조회
-          const [metadataResults, ownerResults, stakedResults, listingResults] =
-            await Promise.all([
-              actor.icrc7_token_metadata(tokenIds),
-              actor.icrc7_owner_of(tokenIds),
-              Promise.all(tokenIds.map((id) => actor.isNFTStaked(id))),
-              Promise.all(tokenIds.map((id) => actor.getListing(id))),
-            ]);
-
-          // 배치 결과 처리
-          for (let i = 0; i < tokenIds.length; i++) {
-            const tokenId = tokenIds[i];
-            const metadata = metadataResults[i] || [];
-            const ownerAccount = ownerResults[i] as unknown as Account;
-            const isStaked = stakedResults[i];
-            const listing = listingResults[i];
-
-            // 메타데이터 파싱 함수 수정
-            const parseMetadata = (
-              metadata: any
-            ): { location: string; chargerCount: number; price?: number } => {
-              let location = "";
-              let chargerCount = 0;
-              let price: number | undefined = undefined;
-
-              console.log("메타데이터 파싱 시작 - 원본 데이터:", metadata);
-
-              try {
-                if (Array.isArray(metadata) && metadata.length > 0) {
-                  metadata.forEach((item) => {
-                    console.log("메타데이터 항목:", item);
-
-                    if (Array.isArray(item)) {
-                      item.forEach((pair) => {
-                        if (Array.isArray(pair) && pair.length === 2) {
-                          const [key, value] = pair;
-                          console.log("처리중인 키-값 쌍:", { key, value });
-
-                          if (
-                            key === "location" &&
-                            value &&
-                            typeof value === "object" &&
-                            "Text" in value
-                          ) {
-                            location = value.Text;
-                            console.log("위치 설정됨:", location);
-                          }
-
-                          if (
-                            key === "chargerCount" &&
-                            value &&
-                            typeof value === "object" &&
-                            "Nat" in value
-                          ) {
-                            chargerCount = Number(value.Nat);
-                            console.log("충전기 수 설정됨:", chargerCount);
-                          }
-
-                          if (
-                            key === "price" &&
-                            value &&
-                            typeof value === "object" &&
-                            "Nat" in value
-                          ) {
-                            price = Number(value.Nat);
-                            console.log("가격 설정됨:", price);
-                          }
-                        }
-                      });
-                    }
-                  });
-                }
-
-                console.log("메타데이터 파싱 완료:", {
-                  location,
-                  chargerCount,
-                  price,
-                });
-              } catch (error) {
-                console.error("메타데이터 파싱 중 오류:", error);
-              }
-
-              return { location, chargerCount, price };
-            };
-
-            const {
-              location,
-              chargerCount,
-              price: metadataPrice,
-            } = parseMetadata(metadata);
-            console.log("파싱된 최종 결과:", {
-              location,
-              chargerCount,
-              price: metadataPrice,
-            });
-
-            const ownerPrincipal = ownerAccount?.owner?.toString() || "-";
-            console.log("소유자 정보:", ownerPrincipal);
-
-            // 소유자 정보 디버깅 강화
-            console.log("소유자 정보 상세:", {
-              rawOwner: ownerAccount?.owner,
-              stringOwner: ownerPrincipal,
-              isBackendCanister:
-                ownerPrincipal === process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-              backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-            });
-
-            // 충전 허브 #0에 대한 특별 디버깅
-            if (Number(tokenId) === 0) {
-              console.log("충전 허브 #0 디버깅:", {
-                tokenId,
-                owner: ownerPrincipal,
-                backendId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-                isBackendOwner:
-                  ownerPrincipal === process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-                rawOwnerData: ownerAccount,
-              });
-            }
-
-            // Listing 타입 체크 함수 추가
-            const getListingPrice = (
-              listing: [] | [Listing]
-            ): number | undefined => {
-              if (
-                Array.isArray(listing) &&
-                listing.length > 0 &&
-                listing[0] &&
-                "price" in listing[0] &&
-                listing[0].price !== undefined
-              ) {
-                return Number(listing[0].price);
-              }
-              return undefined;
-            };
-
-            // NFT 상태 및 가격 설정
-            let status = "created";
-            let nftPrice = metadataPrice; // 메타데이터의 가격을 기본값으로 사용
-            let statusChangedAt = BigInt(Date.now()) * BigInt(1_000_000);
-            let currentOwner = ownerPrincipal;
-
-            // 상태 설정 로직 개선: 소유자 확인을 먼저하여 백엔드가 아닌 경우 바로 'sold' 처리
-            const backendCanisterID =
-              process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
-            const isOwnedByBackend =
-              ownerPrincipal.toLowerCase() === backendCanisterID.toLowerCase();
-            const isValidOwner = ownerPrincipal !== "-";
-
-            // 충전 허브 #0인 경우 소유자 검증 로직 추가 디버깅
-            if (Number(tokenId) === 0) {
-              console.log("충전 허브 #0 상태 설정 검사:", {
-                isOwnedByBackend,
-                isValidOwner,
-                backendCanisterID,
-                ownerPrincipal,
-                lowerCaseOwner: ownerPrincipal.toLowerCase(),
-                lowerCaseBackend: backendCanisterID.toLowerCase(),
-                compareResult:
-                  ownerPrincipal.toLowerCase() ===
-                  backendCanisterID.toLowerCase(),
-              });
-            }
-
-            if (isStaked) {
-              status = "staked";
-              // 스테이킹 정보 조회
-              const stakingInfo = await actor.getStakingInfo(tokenId);
-              if (stakingInfo && stakingInfo.length > 0 && stakingInfo[0]) {
-                statusChangedAt = stakingInfo[0].stakedAt;
-                currentOwner = stakingInfo[0].owner.toString();
-              }
-            } else if (
-              listing &&
-              Array.isArray(listing) &&
-              listing.length > 0 &&
-              listing[0]
-            ) {
-              status = "listed";
-              const firstListing = listing[0];
-              if (firstListing && "listedAt" in firstListing) {
-                statusChangedAt = BigInt(firstListing.listedAt);
-              }
-            } else if (isValidOwner && !isOwnedByBackend) {
-              // 소유자가 백엔드 캐니스터가 아니고 유효한 소유자가 있으면 "sold" 상태로 설정
-              status = "sold";
-
-              // sold 상태일 때 로그 추가
-              console.log("판매완료 상태로 설정:", {
-                id: Number(tokenId),
-                owner: ownerPrincipal,
-                backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-              });
-            }
-
-            console.log("NFT 상태 설정:", {
-              id: Number(tokenId),
-              status,
-              owner: currentOwner,
-              price: nftPrice,
-              statusChangedAt: statusChangedAt.toString(),
-              backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-            });
-
-            nftList.push({
-              id: Number(tokenId),
-              location,
-              chargerCount,
-              owner: currentOwner,
-              status,
-              price: nftPrice,
-              statusChangedAt,
-            });
-          }
-        } catch (batchError) {
-          console.error(
-            `배치 처리 중 오류 발생 (${batchStart}-${batchEnd}):`,
-            batchError
-          );
-          message.error(
-            `NFT 데이터 조회 중 오류가 발생했습니다 (${batchStart}-${batchEnd})`,
-            2
-          );
-        }
-      }
-
-      // 최종적으로 ID 기준으로 내림차순 정렬하여 최신 NFT가 맨 위에 표시되도록 함
-      setNfts(nftList.sort((a, b) => b.id - a.id));
-
-      // 충전 허브 #0의 상태를 특별히 확인
-      const hub0 = nftList.find((nft) => nft.id === 0);
-      if (hub0) {
-        console.log("정렬 후 충전 허브 #0 최종 상태:", {
-          id: hub0.id,
-          status: hub0.status,
-          owner: hub0.owner,
-          backendCanisterId: process.env.CANISTER_ID_PIGGYCELL_BACKEND,
-        });
-
-        const backendId = process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
-        const isNotBackendOwner =
-          hub0.owner.toLowerCase() !== backendId.toLowerCase();
-
-        // 충전 허브 #0이 백엔드 소유가 아닌데 상태가 'sold'가 아니면 강제로 'sold'로 설정
-        if (
-          isNotBackendOwner &&
-          hub0.status !== "listed" &&
-          hub0.status !== "staked" &&
-          hub0.owner !== "-"
-        ) {
-          console.log("충전 허브 #0 상태 강제 수정: 'sold'로 변경");
-
-          // 복사본 생성 후 수정
-          const updatedNfts = nftList
-            .map((nft) => {
-              if (nft.id === 0) {
-                return { ...nft, status: "sold" };
-              }
-              return nft;
-            })
-            .sort((a, b) => b.id - a.id);
-
-          setNfts(updatedNfts);
-        }
-      }
-    } catch (error) {
-      console.error("NFT 데이터 조회 중 오류 발생:", error);
-      message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.", 2);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const fetchTotalVolume = async () => {
@@ -470,7 +140,8 @@ const NFTManagement = () => {
 
     const loadData = async () => {
       try {
-        await fetchNFTs();
+        // 서버 API를 통해 페이지네이션된 NFT 데이터 로드
+        await fetchPaginatedNFTs();
         await fetchTotalVolume();
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
@@ -489,22 +160,177 @@ const NFTManagement = () => {
     });
   }, [nfts]);
 
-  // 검색 핸들러 추가
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    const searchLower = value.toLowerCase();
-    const filtered = nfts.filter(
-      (nft) =>
-        `충전 허브 #${nft.id}`.toLowerCase().includes(searchLower) ||
-        nft.location.toLowerCase().includes(searchLower) ||
-        nft.owner.toLowerCase().includes(searchLower)
-    );
-    setFilteredNfts(filtered);
+  // 페이지네이션된 NFT 데이터 가져오기
+  const fetchPaginatedNFTs = async (
+    page = pagination.current,
+    pageSize = pagination.pageSize,
+    sortBy = sortField,
+    direction = sortDirection,
+    searchValue = searchText
+  ) => {
+    try {
+      setLoading(true);
+      if (!actor) {
+        throw new Error("Actor not initialized");
+      }
+
+      console.log("서버 측 페이지네이션 호출:", {
+        page,
+        pageSize,
+        sortBy,
+        direction,
+        searchQuery: searchValue || "",
+      });
+
+      // 서버 API 단일 호출로 모든 기능 처리 (검색, 정렬, 페이지네이션)
+      const response = await (actor as any).getNFTsByPage({
+        page,
+        pageSize,
+        sortBy: sortBy || "statusChangedAt",
+        sortDirection: direction === "ascend" ? "asc" : "desc",
+        searchQuery: searchValue || "", // 서버 측 검색 기능 활성화
+      });
+
+      // 서버에서 반환된 NFT 데이터 설정
+      const nftsData = response.nfts.map((nft: any) => {
+        // 각 필드의 타입에 따라 적절하게 변환
+        const convertToNumber = (value: any): number => {
+          if (value === undefined || value === null) return 0;
+
+          if (typeof value === "bigint") {
+            return Number(value);
+          } else if (typeof value === "string") {
+            return value.includes("n")
+              ? Number(value.replace("n", ""))
+              : parseFloat(value);
+          } else {
+            return Number(value);
+          }
+        };
+
+        // statusChangedAt 변환 처리
+        let timeValue = nft.statusChangedAt;
+
+        return {
+          key: nft.id.toString(),
+          id: convertToNumber(nft.id),
+          location: nft.location || "-",
+          chargerCount: convertToNumber(nft.chargerCount),
+          status: nft.status,
+          price: nft.price ? convertToNumber(nft.price) : undefined,
+          owner: nft.owner
+            ? nft.owner.toString().substring(0, 10) + "..."
+            : "-",
+          statusChangedAt: timeValue,
+        };
+      });
+
+      // 서버에서 이미 필터링된 결과를 사용
+      setNfts(nftsData);
+      setFilteredNfts(nftsData);
+
+      // 페이지네이션 정보 업데이트
+      setPagination({
+        ...pagination,
+        current: page,
+        total: Number(response.totalCount),
+      });
+    } catch (error) {
+      console.error("NFT 데이터 조회 중 오류 발생:", error);
+      message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.", 2);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => {
-    setFilteredNfts(nfts);
-  }, [nfts]);
+  // 검색 핸들러 수정
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    // 검색어가 변경되면 1페이지부터 다시 데이터를 로드
+    fetchPaginatedNFTs(1, pagination.pageSize, sortField, sortDirection, value);
+  };
+
+  // 페이지 변경 핸들러 추가
+  const handleTableChange = (
+    pagination: any,
+    filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<NFTData> | SorterResult<NFTData>[]
+  ) => {
+    const { current = 1, pageSize = 10 } = pagination;
+    const sortInfo = Array.isArray(sorter) ? sorter[0] : sorter;
+    const sortBy = sortInfo.field ? String(sortInfo.field) : "statusChangedAt";
+    const sortDirection = sortInfo.order || "descend";
+
+    console.log(`페이지 변경: ${current}, 정렬: ${sortBy} ${sortDirection}`);
+
+    // 정렬 상태 업데이트
+    setSortField(sortBy);
+    setSortDirection(sortDirection);
+
+    // 페이지네이션 상태 업데이트
+    setPagination({
+      ...pagination,
+      current: Number(current), // 명시적으로 Number 변환
+      pageSize: Number(pageSize), // 명시적으로 Number 변환
+    });
+
+    // 서버 측 페이지네이션 사용 시 데이터 가져오기
+    fetchPaginatedNFTs(
+      Number(current),
+      Number(pageSize),
+      sortBy,
+      sortDirection
+    );
+  };
+
+  // 새로고침 핸들러 수정
+  const handleRefresh = async () => {
+    try {
+      // 로딩 메시지 키를 저장하여 나중에 이 메시지를 업데이트할 수 있도록 함
+      const messageKey = "refreshMessage";
+      message.loading({
+        content: "데이터를 새로고침 중입니다...",
+        key: messageKey,
+        duration: 0,
+      });
+
+      // actor를 다시 초기화
+      const refreshedActor = await createActor();
+      setActor(refreshedActor);
+
+      // 페이지네이션된 데이터 다시 로드 - 항상 최신순 정렬 적용
+      await fetchPaginatedNFTs(
+        1,
+        pagination.pageSize,
+        "statusChangedAt",
+        "descend",
+        searchText
+      );
+
+      // 페이지네이션 상태 업데이트
+      setPagination({
+        ...pagination,
+        current: 1,
+      });
+
+      await fetchTotalVolume();
+
+      // 로딩 메시지를 성공 메시지로 교체
+      message.success({
+        content: "새로고침 완료!",
+        key: messageKey,
+        duration: 2,
+      });
+    } catch (error) {
+      console.error("새로고침 실패:", error);
+      // 오류 발생 시 로딩 메시지를 오류 메시지로 교체
+      message.error({
+        content: "새로고침 실패!",
+        key: "refreshMessage",
+        duration: 2,
+      });
+    }
+  };
 
   // 주소 축약 함수 추가
   const shortenAddress = (address: string) => {
@@ -583,9 +409,33 @@ const NFTManagement = () => {
       title: "가격",
       dataIndex: "price",
       key: "price",
-      align: "center" as const,
-      render: (price: number | undefined, record: NFTData) => {
-        if (price) {
+      render: (
+        price: bigint | string | number | undefined,
+        record: NFTData
+      ) => {
+        try {
+          // price가 undefined인 경우 처리
+          if (price === undefined) {
+            return <span>-</span>;
+          }
+
+          // 문자열, BigInt, 숫자 모두 처리
+          let priceNum: number;
+
+          if (typeof price === "bigint") {
+            priceNum = Number(price);
+          } else if (typeof price === "string") {
+            // "n"이 포함된 BigInt 문자열 처리
+            priceNum = price.includes("n")
+              ? Number(price.replace("n", ""))
+              : parseFloat(price);
+          } else {
+            priceNum = price;
+          }
+
+          if (isNaN(priceNum)) return <span>0 PGC</span>;
+
+          // 상태에 따른 색상 결정
           let color = "#1890ff"; // 기본 색상
           switch (record.status) {
             case "listed":
@@ -601,9 +451,13 @@ const NFTManagement = () => {
               color = "#faad14"; // 주황색
               break;
           }
-          return <span style={{ color }}>{`${price} PGC`}</span>;
+
+          // 원래 값 그대로 표시
+          return <span style={{ color }}>{`${priceNum} PGC`}</span>;
+        } catch (error) {
+          console.error("가격 변환 오류:", error, price);
+          return <span>가격 오류</span>;
         }
-        return <span>-</span>;
       },
     },
     {
@@ -636,17 +490,31 @@ const NFTManagement = () => {
       title: "상태 변경 시간",
       dataIndex: "statusChangedAt",
       key: "statusChangedAt",
-      align: "center" as const,
-      render: (time: bigint) => {
-        const date = new Date(Number(time) / 1_000_000);
-        const formattedDate = date.toLocaleString("ko-KR", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        return <span>{formattedDate}</span>;
+      render: (time: bigint | string) => {
+        // 이미 문자열로 변환된 경우
+        if (typeof time === "string" && !time.toString().includes("n")) {
+          return <span>{time}</span>;
+        }
+
+        // BigInt인 경우 또는 "n"이 포함된 문자열인 경우 변환
+        try {
+          const timeNum =
+            typeof time === "bigint"
+              ? Number(time)
+              : Number(time.toString().replace("n", ""));
+          const date = new Date(timeNum / 1_000_000);
+          const formattedDate = date.toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return <span>{formattedDate}</span>;
+        } catch (error) {
+          console.error("시간 변환 오류:", error, time);
+          return <span>날짜 오류</span>;
+        }
       },
     },
     {
@@ -665,7 +533,15 @@ const NFTManagement = () => {
             <StyledButton
               customVariant="ghost"
               customSize="sm"
-              onClick={() => handleDelete(record.id)}
+              onClick={() =>
+                handleDelete(
+                  typeof record.id === "string"
+                    ? parseInt(record.id, 10)
+                    : typeof record.id === "bigint"
+                    ? Number(record.id)
+                    : record.id
+                )
+              }
               icon={<DeleteOutlined />}
             />
           )}
@@ -730,8 +606,19 @@ const NFTManagement = () => {
 
       if ("ok" in result) {
         message.success("NFT가 성공적으로 생성되었습니다.", 2);
-        // 생성 후 즉시 NFT 목록을 새로고침
-        await fetchNFTs();
+        // 생성 후 즉시 NFT 목록을 새로고침 - 첫 페이지로 돌아가고 최신순 정렬 유지
+        await fetchPaginatedNFTs(
+          1,
+          pagination.pageSize,
+          "statusChangedAt",
+          "descend",
+          searchText
+        );
+        // 페이지네이션 상태 업데이트
+        setPagination({
+          ...pagination,
+          current: 1,
+        });
       } else {
         message.error(`NFT 생성 실패: ${result.err}`, 2);
       }
@@ -756,66 +643,17 @@ const NFTManagement = () => {
     message.info("메타데이터 수정 기능은 추후 구현 예정입니다.", 2);
   };
 
-  const handleDelete = async (tokenId: number) => {
+  const handleDelete = async (tokenId: number | bigint | string) => {
+    // tokenId를 숫자로 변환
+    const numericTokenId =
+      typeof tokenId === "string"
+        ? parseInt(tokenId, 10)
+        : typeof tokenId === "bigint"
+        ? Number(tokenId)
+        : tokenId;
+
     // TODO: NFT 삭제 기능 구현
-    message.info("NFT 삭제 기능은 추후 구현 예정입니다.", 2);
-  };
-
-  const handleRefresh = async () => {
-    try {
-      // App 컴포넌트의 messageApi 사용 방식으로 변경
-      const hide = message.loading("데이터를 새로고침 중입니다...", 0);
-
-      // actor를 다시 초기화하여 최신 상태를 가져옵니다
-      const refreshedActor = await createActor();
-      setActor(refreshedActor);
-
-      // 데이터 다시 로드
-      await fetchNFTs();
-      await fetchTotalVolume();
-
-      // 데이터 로드 후 충전 허브 #0 상태 확인 및 강제 처리
-      const currentNfts = [...nfts];
-      const hub0 = currentNfts.find((nft) => nft.id === 0);
-
-      if (hub0) {
-        const backendId = process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
-        console.log("새로고침 후 충전 허브 #0 상태 확인:", {
-          id: hub0.id,
-          status: hub0.status,
-          owner: hub0.owner,
-          backendId,
-          isBackendOwner: hub0.owner.toLowerCase() === backendId.toLowerCase(),
-        });
-
-        // 백엔드가 소유자가 아니고, 상태가 listed나 staked가 아니면 sold로 설정
-        if (
-          hub0.owner.toLowerCase() !== backendId.toLowerCase() &&
-          hub0.status !== "listed" &&
-          hub0.status !== "staked" &&
-          hub0.owner !== "-"
-        ) {
-          console.log("새로고침 후 충전 허브 #0 상태 강제 수정");
-          const updatedNfts = currentNfts.map((nft) => {
-            if (nft.id === 0) {
-              return { ...nft, status: "sold" };
-            }
-            return nft;
-          });
-
-          setNfts(updatedNfts);
-        }
-      }
-
-      // 로딩 메시지 닫기
-      hide();
-
-      // 성공 메시지
-      message.success("새로고침 완료!", 2);
-    } catch (error) {
-      console.error("새로고침 실패:", error);
-      message.error("새로고침 실패!", 2);
-    }
+    message.info(`NFT #${numericTokenId} 삭제 기능은 추후 구현 예정입니다.`, 2);
   };
 
   return (
@@ -891,11 +729,19 @@ const NFTManagement = () => {
 
       <StyledTable
         columns={columns}
-        dataSource={searchText ? filteredNfts : nfts}
+        dataSource={nfts}
         loading={loading}
         rowKey="id"
         customVariant="bordered"
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50"],
+          showTotal: (total) => `총 ${total}개 NFT`,
+        }}
+        onChange={handleTableChange}
       />
 
       {/* NFT 생성 모달 */}

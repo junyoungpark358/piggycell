@@ -762,13 +762,41 @@ actor Main {
     };
 
     // 정렬된 NFT ID 목록을 반환하는 함수 추가
-    public query func getSortedNFTIds() : async [Nat] {
-        Buffer.toArray(sortedNFTIds)
+    public query func getSortedNFTs() : async [Nat] {
+        let sortedNFTs = Buffer.toArray(sortedNFTIds);
+        return sortedNFTs;
     };
 
-    // 정렬된 NFT 목록을 반환하는 함수 수정
-    public query func getSortedNFTs() : async [NFTMetadata] {
-        let result = Buffer.Buffer<NFTMetadata>(0);
+    // NFT 메타데이터 타입 정의
+    type NFTMetadata = {
+        id: Nat;
+        location: ?Text;
+        chargerCount: ?Nat;
+        owner: ?Principal;
+        status: Text;
+        price: ?Nat;
+        statusChangedAt: Int;
+    };
+
+    // 페이지네이션 요청 파라미터 타입 정의
+    public type PaginationRequest = {
+        page: Nat;
+        pageSize: Nat;
+        sortBy: Text;
+        sortDirection: Text;
+        searchQuery: Text;
+    };
+
+    // 페이지네이션 응답 타입 정의
+    public type PaginationResponse = {
+        nfts: [NFTMetadata];
+        totalCount: Nat;
+    };
+
+    // 페이지네이션된 NFT 목록을 반환하는 함수
+    public query func getNFTsByPage(req: PaginationRequest) : async PaginationResponse {
+        // 1. 모든 NFT 데이터 가져오기
+        let allNFTs = Buffer.Buffer<NFTMetadata>(0);
         let ids = Buffer.toArray(sortedNFTIds);
         
         // 모든 NFT 데이터를 먼저 수집
@@ -899,31 +927,185 @@ actor Main {
                         statusChangedAt = statusChangedAt;
                     };
                     
-                    result.add(nftData);
+                    allNFTs.add(nftData);
                 };
             };
         };
         
-        // 상태 변경 시간을 기준으로 정렬 (최신순)
-        let nftArray = Buffer.toArray(result);
-        let sortedNFTs = Array.sort<NFTMetadata>(nftArray, func(a, b) {
-            if (a.statusChangedAt > b.statusChangedAt) { #less }
-            else if (a.statusChangedAt < b.statusChangedAt) { #greater }
-            else { #equal }
-        });
+        // 2. 검색 로직 추가: 검색어가 있는 경우 필터링
+        let searchQuery = req.searchQuery;
+        let searchEnabled = searchQuery != "";
+        var filteredNFTs = Buffer.toArray(allNFTs);
         
-        sortedNFTs
-    };
-
-    // NFT 메타데이터 타입 정의
-    type NFTMetadata = {
-        id: Nat;
-        location: ?Text;
-        chargerCount: ?Nat;
-        owner: ?Principal;
-        status: Text;
-        price: ?Nat;
-        statusChangedAt: Int;
+        if (searchEnabled) {
+            // 검색어를 소문자로 변환하여 대소문자 구분 없이 검색
+            let searchLower = Text.toLowercase(searchQuery);
+            
+            filteredNFTs := Array.filter<NFTMetadata>(filteredNFTs, func(nft) {
+                // ID 검색
+                let idStr = Nat.toText(nft.id);
+                if (Text.contains(idStr, #text searchLower)) {
+                    return true;
+                };
+                
+                // 위치 검색
+                switch (nft.location) {
+                    case (?loc) {
+                        let locLower = Text.toLowercase(loc);
+                        if (Text.contains(locLower, #text searchLower)) {
+                            return true;
+                        };
+                    };
+                    case (null) {};
+                };
+                
+                // 소유자 검색
+                switch (nft.owner) {
+                    case (?ownerPrincipal) {
+                        let ownerText = Principal.toText(ownerPrincipal);
+                        if (Text.contains(ownerText, #text searchLower)) {
+                            return true;
+                        };
+                    };
+                    case (null) {};
+                };
+                
+                false
+            });
+        };
+        
+        // 3. 정렬 기준에 따라 데이터 정렬
+        var sortedNFTs = filteredNFTs;
+        
+        // 정렬 기준과 방향에 따라 정렬
+        switch (req.sortBy) {
+            case "id" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    if (req.sortDirection == "asc") {
+                        if (a.id < b.id) { #less }
+                        else if (a.id > b.id) { #greater }
+                        else { #equal }
+                    } else {
+                        if (a.id > b.id) { #less }
+                        else if (a.id < b.id) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            case "location" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    let aLoc = switch (a.location) { case (?l) { l }; case (null) { "" } };
+                    let bLoc = switch (b.location) { case (?l) { l }; case (null) { "" } };
+                    
+                    if (req.sortDirection == "asc") {
+                        if (aLoc < bLoc) { #less }
+                        else if (aLoc > bLoc) { #greater }
+                        else { #equal }
+                    } else {
+                        if (aLoc > bLoc) { #less }
+                        else if (aLoc < bLoc) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            case "chargerCount" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    let aCount = switch (a.chargerCount) { case (?c) { c }; case (null) { 0 } };
+                    let bCount = switch (b.chargerCount) { case (?c) { c }; case (null) { 0 } };
+                    
+                    if (req.sortDirection == "asc") {
+                        if (aCount < bCount) { #less }
+                        else if (aCount > bCount) { #greater }
+                        else { #equal }
+                    } else {
+                        if (aCount > bCount) { #less }
+                        else if (aCount < bCount) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            case "price" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    let aPrice = switch (a.price) { case (?p) { p }; case (null) { 0 } };
+                    let bPrice = switch (b.price) { case (?p) { p }; case (null) { 0 } };
+                    
+                    if (req.sortDirection == "asc") {
+                        if (aPrice < bPrice) { #less }
+                        else if (aPrice > bPrice) { #greater }
+                        else { #equal }
+                    } else {
+                        if (aPrice > bPrice) { #less }
+                        else if (aPrice < bPrice) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            case "status" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    if (req.sortDirection == "asc") {
+                        if (a.status < b.status) { #less }
+                        else if (a.status > b.status) { #greater }
+                        else { #equal }
+                    } else {
+                        if (a.status > b.status) { #less }
+                        else if (a.status < b.status) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            case "statusChangedAt" {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    if (req.sortDirection == "asc") {
+                        if (a.statusChangedAt < b.statusChangedAt) { #less }
+                        else if (a.statusChangedAt > b.statusChangedAt) { #greater }
+                        else { #equal }
+                    } else {
+                        if (a.statusChangedAt > b.statusChangedAt) { #less }
+                        else if (a.statusChangedAt < b.statusChangedAt) { #greater }
+                        else { #equal }
+                    }
+                });
+            };
+            // 기본 정렬은 ID 기준 내림차순
+            case _ {
+                sortedNFTs := Array.sort<NFTMetadata>(filteredNFTs, func(a, b) {
+                    if (a.id > b.id) { #less }
+                    else if (a.id < b.id) { #greater }
+                    else { #equal }
+                });
+            };
+        };
+        
+        // 3. 페이지네이션 적용
+        let totalCount = sortedNFTs.size();
+        let startIndex = Nat.max(0, Nat.min(totalCount, (req.page - 1) * req.pageSize));
+        let endIndex = Nat.min(totalCount, startIndex + req.pageSize);
+        
+        // subArray 함수 구현 (Array.subArray는 없으므로 직접 구현)
+        func subArray<T>(arr: [T], start: Nat, end: Nat) : [T] {
+            let size = arr.size();
+            if (start >= size or start >= end) {
+                return [];
+            };
+            
+            let realEnd = Nat.min(end, size);
+            let result = Buffer.Buffer<T>(realEnd - start);
+            
+            var i = start;
+            while (i < realEnd) {
+                result.add(arr[i]);
+                i += 1;
+            };
+            
+            Buffer.toArray(result)
+        };
+        
+        let paginatedNFTs = subArray(sortedNFTs, startIndex, endIndex);
+        
+        {
+            nfts = paginatedNFTs;
+            totalCount = totalCount;
+        }
     };
 
     // 단일 NFT의 메타데이터 조회 함수
