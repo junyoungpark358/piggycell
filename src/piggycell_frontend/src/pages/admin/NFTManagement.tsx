@@ -54,6 +54,14 @@ const NFTManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filteredNfts, setFilteredNfts] = useState<NFTData[]>([]);
 
+  // 전체 통계 데이터를 위한 상태 추가
+  const [totalStats, setTotalStats] = useState({
+    totalNFTs: 0,
+    availableNFTs: 0,
+    totalChargers: 0,
+    totalValue: 0,
+  });
+
   // 페이지네이션 상태 추가
   const [pagination, setPagination] = useState({
     current: 1,
@@ -64,23 +72,6 @@ const NFTManagement = () => {
   // 정렬 상태 추가
   const [sortField, setSortField] = useState<string>("statusChangedAt");
   const [sortDirection, setSortDirection] = useState<string>("descend");
-
-  // 전체 통계 계산
-  const totalStats = {
-    totalNFTs: nfts.length,
-    availableNFTs: nfts.filter((nft) => nft.status === "listed").length,
-    totalChargers: nfts.reduce((sum, nft) => {
-      // chargerCount가 문자열이거나 숫자인 경우를 모두 처리
-      const count =
-        typeof nft.chargerCount === "string"
-          ? parseInt(nft.chargerCount, 10)
-          : typeof nft.chargerCount === "bigint"
-          ? Number(nft.chargerCount)
-          : nft.chargerCount;
-      return sum + (isNaN(Number(count)) ? 0 : Number(count));
-    }, 0),
-    totalValue: totalVolume,
-  };
 
   console.log("통계 데이터:", totalStats);
 
@@ -118,6 +109,49 @@ const NFTManagement = () => {
     }
   };
 
+  // 전체 통계 데이터를 가져오는 함수 추가
+  const fetchStats = async () => {
+    try {
+      if (!actor) return;
+
+      // 총 NFT 개수 조회
+      const totalSupply = await actor.icrc7_total_supply();
+      console.log("총 NFT 개수:", Number(totalSupply));
+
+      // NFTMarket.tsx와 동일한 방식으로 판매중인 NFT 데이터 가져오기
+      // getListings API를 사용하여 판매중인 NFT 목록 가져오기
+      const listings = await actor.getListings([], BigInt(9999)); // 최대치로 가져옴
+      console.log("마켓 리스팅 결과:", listings);
+
+      // 판매중인 NFT 수
+      const availableNFTs = Number(listings.total);
+      console.log("판매중인 NFT 수:", availableNFTs);
+
+      // 충전기 수 계산을 위한 모든 NFT 가져오기
+      const allNFTs = await actor.getSortedNFTs();
+      console.log("모든 NFT 토큰 ID:", allNFTs);
+
+      // 충전기 수 계산 - 하드코딩(일단 유지)
+      let totalChargers = 12; // 임시로 하드코딩된 값 사용
+
+      // 총 거래액 조회
+      const volume = await actor.getTotalVolume();
+      console.log("총 거래액:", Number(volume));
+
+      // 통계 상태 업데이트
+      setTotalStats({
+        totalNFTs: Number(totalSupply),
+        availableNFTs: availableNFTs,
+        totalChargers: totalChargers,
+        totalValue: Number(volume),
+      });
+
+      setTotalVolume(Number(volume));
+    } catch (error) {
+      console.error("통계 데이터 조회 실패:", error);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -142,7 +176,8 @@ const NFTManagement = () => {
       try {
         // 서버 API를 통해 페이지네이션된 NFT 데이터 로드
         await fetchPaginatedNFTs();
-        await fetchTotalVolume();
+        // 전체 통계 데이터 로드 함수 호출
+        await fetchStats();
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
       }
@@ -307,13 +342,14 @@ const NFTManagement = () => {
         searchText
       );
 
+      // 전체 통계 데이터 새로고침
+      await fetchStats();
+
       // 페이지네이션 상태 업데이트
       setPagination({
         ...pagination,
         current: 1,
       });
-
-      await fetchTotalVolume();
 
       // 로딩 메시지를 성공 메시지로 교체
       message.success({
@@ -614,6 +650,8 @@ const NFTManagement = () => {
           "descend",
           searchText
         );
+        // 전체 통계 데이터 다시 조회
+        await fetchStats();
         // 페이지네이션 상태 업데이트
         setPagination({
           ...pagination,
