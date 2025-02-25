@@ -713,6 +713,29 @@ actor Main {
                 // NFT 상태를 "sold"로 변경 (언스테이킹 시 소유자에게 돌아가므로)
                 updateNFTStatus(tokenId, "sold");
                 
+                // sortedNFTIds에서 tokenId 제거 후 맨 앞에 추가하여 최신 상태로 만들기
+                // 기존 배열에서 동일한 tokenId 위치 찾기
+                var position: ?Nat = null;
+                var i = 0;
+                label findPos for (id in sortedNFTIds.vals()) {
+                    if (id == tokenId) {
+                        position := ?i;
+                        break findPos;
+                    };
+                    i := i + 1;
+                };
+                
+                // 기존 tokenId가 있으면 제거
+                switch (position) {
+                    case (?pos) {
+                        ignore sortedNFTIds.remove(pos);
+                    };
+                    case (null) {};
+                };
+                
+                // 최신 상태의 NFT를 맨 앞에 추가
+                sortedNFTIds.insert(0, tokenId);
+                
                 #ok(reward)
             };
             case (#err(error)) { #err(error) };
@@ -839,6 +862,13 @@ actor Main {
                         label l for (tx in transactions.vals()) {
                             switch(tx.txType, tx.nftId) {
                                 case (#NFTSale, ?nftId) {
+                                    if (nftId == id) {
+                                        statusChangedAt := tx.timestamp;
+                                        foundTx := true;
+                                        break l;
+                                    };
+                                };
+                                case (#Unstake, ?nftId) {
                                     if (nftId == id) {
                                         statusChangedAt := tx.timestamp;
                                         foundTx := true;
@@ -993,6 +1023,13 @@ actor Main {
             label l for (tx in transactions.vals()) {
                 switch(tx.txType, tx.nftId) {
                     case (#NFTSale, ?nftId) {
+                        if (nftId == tokenId) {
+                            statusChangedAt := tx.timestamp;
+                            foundTx := true;
+                            break l;
+                        };
+                    };
+                    case (#Unstake, ?nftId) {
                         if (nftId == tokenId) {
                             statusChangedAt := tx.timestamp;
                             foundTx := true;
