@@ -125,6 +125,8 @@ const NFTManagement = () => {
       console.log("통계 데이터 조회 완료:", stats);
     } catch (error) {
       console.error("통계 데이터 조회 실패:", error);
+    } finally {
+      setLoading(false); // 모든 데이터 로드가 완료된 후 로딩 상태 해제
     }
   };
 
@@ -150,12 +152,14 @@ const NFTManagement = () => {
 
     const loadData = async () => {
       try {
+        setLoading(true); // 데이터 로딩 시작 시 로딩 상태 설정
         // 서버 API를 통해 페이지네이션된 NFT 데이터 로드
         await fetchPaginatedNFTs();
         // 전체 통계 데이터 로드 함수 호출
         await fetchStats();
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
+        setLoading(false); // 오류 발생 시 로딩 상태 해제
       }
     };
 
@@ -249,8 +253,6 @@ const NFTManagement = () => {
     } catch (error) {
       console.error("NFT 데이터 조회 중 오류 발생:", error);
       message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.", 2);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -305,6 +307,8 @@ const NFTManagement = () => {
         duration: 0,
       });
 
+      setLoading(true); // 새로고침 시작 시 로딩 상태 설정
+
       // actor를 다시 초기화
       const refreshedActor = await createActor();
       setActor(refreshedActor);
@@ -341,6 +345,7 @@ const NFTManagement = () => {
         key: "refreshMessage",
         duration: 2,
       });
+      setLoading(false); // 오류 발생 시 로딩 상태 해제
     }
   };
 
@@ -694,6 +699,7 @@ const NFTManagement = () => {
             value={totalStats.totalNFTs}
             prefix={<ShoppingCartOutlined />}
             suffix="개"
+            loading={loading}
           />
         </Col>
         <Col xs={12} sm={6} md={6}>
@@ -711,6 +717,7 @@ const NFTManagement = () => {
             value={totalStats.totalChargers}
             prefix={<BarChartOutlined />}
             suffix="대"
+            loading={loading}
           />
         </Col>
         <Col xs={12} sm={6} md={6}>
@@ -719,6 +726,7 @@ const NFTManagement = () => {
             value={totalStats.totalValue}
             prefix={<DollarOutlined />}
             suffix="PGC"
+            loading={loading}
           />
         </Col>
       </Row>

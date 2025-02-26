@@ -1,4 +1,4 @@
-import { Statistic } from "antd";
+import { Statistic, Spin } from "antd";
 import type { StatisticProps } from "antd";
 import { StyledCard } from "./common/StyledCard";
 import styled from "@emotion/styled";
@@ -44,6 +44,13 @@ const StyledStatistic = styled(Statistic)`
   }
 `;
 
+const SpinnerContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
+`;
+
 const AnimatedCard = styled(StyledCard)`
   transition: transform 0.2s;
   &:hover {
@@ -54,7 +61,16 @@ const AnimatedCard = styled(StyledCard)`
 export const StatCard: React.FC<StatCardProps> = ({ loading, ...props }) => {
   return (
     <AnimatedCard customVariant="stats">
-      <StyledStatistic loading={loading} {...props} />
+      {loading ? (
+        <div>
+          <div className="ant-statistic-title">{props.title}</div>
+          <SpinnerContainer>
+            <Spin size="small" />
+          </SpinnerContainer>
+        </div>
+      ) : (
+        <StyledStatistic {...props} />
+      )}
     </AnimatedCard>
   );
 };
