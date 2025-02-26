@@ -35,21 +35,32 @@ export class AuthManager {
     }
 
     const identity = this.authClient.getIdentity();
+    console.log("[AuthManager] createActor - Identity 획득:", {
+      principal: identity.getPrincipal().toString(),
+    });
+
     const agent = new HttpAgent({ identity });
+    console.log("[AuthManager] createActor - HttpAgent 생성됨");
 
     if (process.env.NODE_ENV !== "production") {
       await agent.fetchRootKey();
+      console.log("[AuthManager] createActor - Root key 가져옴 (개발 환경)");
     }
 
     const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
     if (!canisterId) {
       throw new Error("Canister ID를 찾을 수 없습니다.");
     }
+    console.log("[AuthManager] createActor - Canister ID:", canisterId);
 
-    return Actor.createActor<_SERVICE>(idlFactory, {
+    // Actor 생성
+    const actor = Actor.createActor<_SERVICE>(idlFactory, {
       agent,
       canisterId,
     });
+    console.log("[AuthManager] 백엔드 Actor 생성 완료");
+
+    return actor;
   }
 
   public async init(): Promise<void> {

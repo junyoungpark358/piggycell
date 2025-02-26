@@ -19,8 +19,14 @@ module {
             Principal.equal(caller, superAdmin)
         };
 
-        // 관리자 확인
+        // 관리자 확인 - 슈퍼 관리자도 자동으로 관리자로 인식되도록 수정
         public func isAdmin(caller: Principal) : Bool {
+            // 슈퍼 관리자는 자동으로 관리자 권한을 가짐
+            if (isSuperAdmin(caller)) {
+                return true;
+            };
+            
+            // 일반 관리자 확인
             switch (admins.get(caller)) {
                 case (?isAdmin) { isAdmin };
                 case null { false };

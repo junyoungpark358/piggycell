@@ -22,16 +22,21 @@ import {
   PlusOutlined,
   DollarOutlined,
   UserOutlined,
-  WalletOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StatCard } from "../../components/StatCard";
+// 백엔드 액터 가져오기 - 이 방식으로 불러온 액터는 사용자 인증을 유지하는지 확인 필요
 import { piggycell_backend } from "../../../../declarations/piggycell_backend";
+import { idlFactory } from "../../../../declarations/piggycell_backend";
+import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
 import { AuthManager } from "../../utils/auth";
+import { Actor, HttpAgent } from "@dfinity/agent";
 import "./NFTManagement.css"; // NFT 관리 페이지의 CSS를 재사용
 import { FilterValue, SorterResult } from "antd/es/table/interface";
+import { createActor } from "../../utils/statsApi"; // 기존 createActor 함수 가져오기
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -51,11 +56,11 @@ const TokenManagement: React.FC = () => {
   const [tokenStats, setTokenStats] = useState({
     totalSupply: 0,
     totalHolders: 0,
-    averageBalance: 0,
-    totalTransactions: 0,
+    transactionCount: 0,
   });
   const [isTransferModalVisible, setIsTransferModalVisible] = useState(false);
   const [transferLoading, setTransferLoading] = useState(false);
+  const [currentPrincipal, setCurrentPrincipal] = useState<string | null>(null);
 
   // 페이지네이션 상태 추가
   const [pagination, setPagination] = useState({
@@ -63,6 +68,43 @@ const TokenManagement: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
+
+  // 현재 사용자의 Principal ID와 관리자 상태 확인
+  const checkAdminStatus = async () => {
+    try {
+      const authManager = AuthManager.getInstance();
+      const principal = await authManager.getPrincipal();
+
+      if (principal) {
+        const principalStr = principal.toString();
+        setCurrentPrincipal(principalStr);
+        console.log("현재 로그인한 사용자의 Principal ID:", principalStr);
+
+        const isAdmin = await authManager.isAdmin();
+        console.log("프론트엔드에서의 관리자 권한 여부:", isAdmin);
+
+        // 백엔드에서 관리자 여부 확인 (이 함수가 존재하는 경우)
+        try {
+          // 백엔드에 관리자 여부를 확인하는 API가 있다면 호출
+          // 예시: const backendIsAdmin = await piggycell_backend.check_is_admin(principal);
+          // console.log("백엔드에서의 관리자 권한 여부:", backendIsAdmin);
+          // 현재 백엔드에 이러한 API가 없으므로 주석 처리
+        } catch (error) {
+          console.error("백엔드 관리자 확인 중 오류:", error);
+        }
+
+        if (!isAdmin) {
+          message.warning(
+            `현재 계정(${principalStr})은 프론트엔드에서 관리자로 인식되지 않습니다.`
+          );
+        }
+      } else {
+        console.log("로그인되지 않았거나 Principal을 가져올 수 없습니다.");
+      }
+    } catch (error) {
+      console.error("관리자 상태 확인 중 오류:", error);
+    }
+  };
 
   // 가상의 데이터 생성 함수
   const generateMockData = () => {
@@ -90,8 +132,7 @@ const TokenManagement: React.FC = () => {
     setTokenStats({
       totalSupply: 425,
       totalHolders: mockOwners.length,
-      averageBalance: 425 / mockOwners.length,
-      totalTransactions: 12,
+      transactionCount: 25,
     });
 
     // 페이지네이션 총 개수 설정
@@ -138,8 +179,7 @@ const TokenManagement: React.FC = () => {
       setTokenStats({
         totalSupply,
         totalHolders: ownersData.length,
-        averageBalance: ownersData.length > 0 ? totalSupply / ownersData.length : 0,
-        totalTransactions: 0, // 이 값은 백엔드에서 가져와야 함
+        transactionCount: 0, // 이 값은 백엔드에서 가져와야 함
       });
       
       // 페이지네이션 총 개수 설정
@@ -158,7 +198,36 @@ const TokenManagement: React.FC = () => {
 
   useEffect(() => {
     fetchTokenStats();
+    checkAdminStatus(); // 관리자 상태 확인 추가
+
+    // 백엔드 액터 정보 로깅
+    console.log("[TokenManagement] 페이지 로드 시 백엔드 액터 참조:", {
+      type: typeof piggycell_backend,
+      hasMintTokens: "mint_tokens" in piggycell_backend,
+    });
   }, []);
+
+  // piggycell_backend 액터의 속성 확인 함수
+  const checkActorProperties = () => {
+    try {
+      // Actor 객체 속성 확인 (개발용)
+      const actorProps = Object.getOwnPropertyNames(piggycell_backend);
+      console.log("[Actor 디버깅] piggycell_backend 속성:", actorProps);
+
+      // Agent 직접 접근 시도
+      // 참고: 이 부분은 내부 구현이 변경될 수 있어 동작하지 않을 수 있음
+      const agent = (piggycell_backend as any)._agent || null;
+      console.log(
+        "[Actor 디버깅] agent 접근 결과:",
+        agent ? "agent 존재" : "agent 없음"
+      );
+
+      return "Actor 속성 확인 완료";
+    } catch (error) {
+      console.error("[Actor 디버깅] 에러:", error);
+      return "Actor 속성 확인 실패";
+    }
+  };
 
   const handleTransferToken = async (values: any) => {
     try {
@@ -175,8 +244,25 @@ const TokenManagement: React.FC = () => {
         return;
       }
 
+      // 금액 유효성 검사
+      if (isNaN(Number(amount)) || Number(amount) <= 0) {
+        message.error("유효한 토큰 수량을 입력해주세요.");
+        setTransferLoading(false);
+        return;
+      }
+
       const authManager = AuthManager.getInstance();
       const principal = await authManager.getPrincipal();
+
+      // 관리자 권한 검사
+      const isAdmin = await authManager.isAdmin();
+      if (!isAdmin) {
+        message.error(
+          "관리자 권한이 없습니다. 토큰 추가 기능은 관리자만 사용할 수 있습니다."
+        );
+        setTransferLoading(false);
+        return;
+      }
 
       if (!principal) {
         message.error("관리자 인증에 실패했습니다.");
@@ -184,63 +270,88 @@ const TokenManagement: React.FC = () => {
         return;
       }
 
-      // 토큰 전송 실행 (실제 환경에서 사용)
-      /*
-      const result = await piggycell_backend.mint_tokens(
-        {
-          owner: recipientPrincipal,
-          subaccount: [],
-        },
-        BigInt(amount)
+      // 디버그 로그 추가: 호출 직전 상태
+      console.log(
+        "[토큰 전송 디버그] 현재 로그인 Principal:",
+        principal.toString()
       );
-      
-      if ('ok' in result) {
-        message.success(`${amount} PGC 토큰이 성공적으로 전송되었습니다.`);
-        setIsTransferModalVisible(false);
-        form.resetFields();
-        fetchTokenStats(); // 데이터 새로고침
-      } else {
-        message.error(`토큰 전송 실패: ${result.err}`);
-      }
-      */
 
-      // 테스트용 임시 처리
-      setTimeout(() => {
-        message.success(`${amount} PGC 토큰이 성공적으로 전송되었습니다.`);
-        setIsTransferModalVisible(false);
-        form.resetFields();
+      // 진행 중임을 알리는 메시지
+      const messageKey = "transferMessage";
+      message.loading({
+        content: "토큰 전송 중입니다...",
+        key: messageKey,
+        duration: 0,
+      });
 
-        // 목데이터 업데이트
-        const newOwners = [...tokenOwners];
-        const existingOwnerIndex = newOwners.findIndex(
-          (owner) => owner.address === recipient
+      // 인증된 액터 생성 (기존 프로젝트의 createActor 함수 사용)
+      console.log("[토큰 전송 디버그] 인증된 액터 생성 시작");
+      const authenticatedActor = await createActor();
+      console.log("[토큰 전송 디버그] 인증된 액터 생성 완료");
+
+      // 토큰 전송 실행 (인증된 액터 사용)
+      try {
+        console.log("[토큰 전송 디버그] mint_tokens 호출 직전");
+        const result = await authenticatedActor.mint_tokens(
+          {
+            owner: recipientPrincipal,
+            subaccount: [],
+          },
+          BigInt(amount)
         );
+        console.log("[토큰 전송 디버그] mint_tokens 호출 결과:", result);
 
-        if (existingOwnerIndex >= 0) {
-          newOwners[existingOwnerIndex].balance += Number(amount);
+        if ("ok" in result) {
+          // 성공 메시지 표시
+          message.success({
+            content: `${amount} PGC 토큰이 성공적으로 전송되었습니다.`,
+            key: messageKey,
+            duration: 2,
+          });
+
+          setIsTransferModalVisible(false);
+          form.resetFields();
+
+          // 데이터 새로고침
+          await fetchTokenStats();
         } else {
-          newOwners.push({
-            key: recipient,
-            address: recipient,
-            balance: Number(amount),
+          // 실패 메시지 표시
+          let errorMsg = "알 수 없는 오류";
+
+          if (result.err) {
+            if (typeof result.err === "string") {
+              errorMsg = result.err;
+            } else if (typeof result.err === "object") {
+              // 객체 형태의 오류 메시지 형식에 따라 처리
+              errorMsg = JSON.stringify(result.err);
+
+              // 특정 오류 메시지에 대한 사용자 친화적 메시지 정의
+              if (errorMsg.includes("관리자")) {
+                errorMsg =
+                  "관리자 권한이 없습니다. 백엔드 관리자 설정을 확인해주세요.";
+              } else if (
+                errorMsg.includes("balance") ||
+                errorMsg.includes("잔액")
+              ) {
+                errorMsg = "잔액이 부족합니다.";
+              }
+            }
+          }
+
+          message.error({
+            content: `토큰 전송 실패: ${errorMsg}`,
+            key: messageKey,
+            duration: 3,
           });
         }
-
-        setTokenOwners(newOwners);
-        setTokenStats({
-          ...tokenStats,
-          totalSupply: tokenStats.totalSupply + Number(amount),
-          totalHolders: newOwners.length,
-          averageBalance:
-            (tokenStats.totalSupply + Number(amount)) / newOwners.length,
+      } catch (error) {
+        console.error("토큰 전송 API 호출 중 오류:", error);
+        message.error({
+          content: "토큰 전송 중 오류가 발생했습니다.",
+          key: messageKey,
+          duration: 3,
         });
-
-        // 페이지네이션 총 개수 업데이트
-        setPagination((prev) => ({
-          ...prev,
-          total: newOwners.length,
-        }));
-      }, 1000);
+      }
     } catch (error) {
       console.error("토큰 전송 중 오류 발생:", error);
       message.error("토큰 전송 중 오류가 발생했습니다.");
@@ -368,51 +479,51 @@ const TokenManagement: React.FC = () => {
     <div className="nft-management">
       <div className="page-header">
         <h1>토큰 관리</h1>
-        <StyledButton
-          customVariant="primary"
-          customSize="md"
-          onClick={handleRefresh}
-          icon={<ReloadOutlined />}
-        >
-          새로 고침
-        </StyledButton>
+        <div className="flex gap-2">
+          <StyledButton
+            customVariant="primary"
+            customSize="md"
+            onClick={handleRefresh}
+            icon={<ReloadOutlined />}
+          >
+            새로 고침
+          </StyledButton>
+          <StyledButton
+            customVariant="outline"
+            customSize="md"
+            onClick={checkAdminStatus}
+          >
+            관리자 상태 확인
+          </StyledButton>
+        </div>
       </div>
 
       {/* 통계 카드 */}
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={12} sm={6} md={6}>
+        <Col xs={24} sm={8} md={8}>
           <StatCard
-            title="총 PGC"
+            title="토큰 발행량"
             value={tokenStats.totalSupply}
             prefix={<DollarOutlined />}
-            suffix="개"
+            suffix="PGC"
             loading={loading}
           />
         </Col>
-        <Col xs={12} sm={6} md={6}>
+        <Col xs={24} sm={8} md={8}>
           <StatCard
-            title="총 보유자"
+            title="토큰 보유자"
             value={tokenStats.totalHolders}
             prefix={<UserOutlined />}
             suffix="명"
             loading={loading}
           />
         </Col>
-        <Col xs={12} sm={6} md={6}>
+        <Col xs={24} sm={8} md={8}>
           <StatCard
-            title="평균 보유량"
-            value={parseFloat(tokenStats.averageBalance.toFixed(1))}
-            prefix={<WalletOutlined />}
-            suffix="PGC"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={6}>
-          <StatCard
-            title="총 거래량"
-            value={tokenStats.totalTransactions}
-            prefix={<DollarOutlined />}
-            suffix="PGC"
+            title="거래 건수"
+            value={tokenStats.transactionCount}
+            prefix={<BarChartOutlined />}
+            suffix="건"
             loading={loading}
           />
         </Col>
@@ -468,11 +579,44 @@ const TokenManagement: React.FC = () => {
         footer={null}
         className="admin-modal"
       >
+        {currentPrincipal && (
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.5rem",
+              background: "#f0f9ff",
+              borderRadius: "4px",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: "0.9rem" }}>
+              <strong>현재 계정:</strong> {currentPrincipal}
+            </p>
+            <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9rem" }}>
+              <strong>알림:</strong> 백엔드에서 이 계정이 관리자로 등록되어
+              있어야 토큰 발행이 가능합니다.
+            </p>
+          </div>
+        )}
         <Form form={form} layout="vertical" onFinish={handleTransferToken}>
           <Form.Item
             name="recipient"
             label="수신자 주소 (Principal ID)"
-            rules={[{ required: true, message: "수신자 주소를 입력해주세요" }]}
+            rules={[
+              { required: true, message: "수신자 주소를 입력해주세요" },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve();
+                  try {
+                    Principal.fromText(value);
+                    return Promise.resolve();
+                  } catch (error) {
+                    return Promise.reject(
+                      "유효하지 않은 Principal ID 형식입니다"
+                    );
+                  }
+                },
+              },
+            ]}
           >
             <StyledInput
               customSize="md"
@@ -491,11 +635,27 @@ const TokenManagement: React.FC = () => {
                 transform: (value) => Number(value),
                 message: "1 이상의 숫자를 입력해주세요",
               },
+              {
+                validator: async (_, value) => {
+                  if (!value) return Promise.resolve();
+                  const numValue = Number(value);
+                  if (isNaN(numValue)) {
+                    return Promise.reject("유효한 숫자를 입력해주세요");
+                  }
+                  if (numValue > 1000000) {
+                    return Promise.reject(
+                      "최대 1,000,000 PGC까지 전송 가능합니다"
+                    );
+                  }
+                  return Promise.resolve();
+                },
+              },
             ]}
           >
             <StyledInput
               type="number"
               min={1}
+              max={1000000}
               customSize="md"
               placeholder="전송할 토큰 수량"
             />

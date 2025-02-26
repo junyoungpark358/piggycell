@@ -821,16 +821,34 @@ actor Main {
 
     // 관리자용 토큰 발행/소각 기능
     public shared({ caller }) func mint_tokens(to : PiggyCellToken.Account, amount : Nat) : async Result.Result<(), Text> {
+        // 관리자 권한 로깅 추가
+        Debug.print("mint_tokens 함수 호출, 호출자 Principal ID: " # Principal.toText(caller));
+        let isSuperAdmin = adminManager.isSuperAdmin(caller);
+        let isAdmin = adminManager.isAdmin(caller);
+        Debug.print("슈퍼관리자 여부: " # (if (isSuperAdmin) "true" else "false"));
+        Debug.print("일반관리자 여부: " # (if (isAdmin) "true" else "false"));
+        
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            Debug.print("권한 검증 실패: 관리자 권한이 없음");
             return #err("관리자만 토큰을 발행할 수 있습니다.");
         };
+        Debug.print("권한 검증 성공: 토큰 발행 시작");
         token.mint(to, amount)
     };
 
     public shared({ caller }) func burn_tokens(from : PiggyCellToken.Account, amount : Nat) : async Result.Result<(), Text> {
+        // 관리자 권한 로깅 추가
+        Debug.print("burn_tokens 함수 호출, 호출자 Principal ID: " # Principal.toText(caller));
+        let isSuperAdmin = adminManager.isSuperAdmin(caller);
+        let isAdmin = adminManager.isAdmin(caller);
+        Debug.print("슈퍼관리자 여부: " # (if (isSuperAdmin) "true" else "false"));
+        Debug.print("일반관리자 여부: " # (if (isAdmin) "true" else "false"));
+        
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            Debug.print("권한 검증 실패: 관리자 권한이 없음");
             return #err("관리자만 토큰을 소각할 수 있습니다.");
         };
+        Debug.print("권한 검증 성공: 토큰 소각 시작");
         token.burn(from, amount)
     };
 
