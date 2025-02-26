@@ -41,7 +41,7 @@ module {
         #GenericError : { error_code : Nat; message : Text };
     };
 
-    public class Token() {
+    public class PiggyCellToken() {
         private func accountsEqual(a : Account, b : Account) : Bool {
             Principal.equal(a.owner, b.owner) and
             Option.equal(a.subaccount, b.subaccount, func(a : [Nat8], b : [Nat8]) : Bool {

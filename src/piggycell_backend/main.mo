@@ -17,13 +17,13 @@ import TrieMap "mo:base/TrieMap";
 import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
 import Market "./Market";
-import Token "./Token";
+import PiggyCellToken "./PiggyCellToken";
 import Staking "./Staking";
 
 actor Main {
     private let nft = ChargerHubNFT.NFTCanister(Principal.fromActor(Main));
     private let adminManager = Admin.AdminManager();
-    private let token = Token.Token();
+    private let token = PiggyCellToken.PiggyCellToken();
     private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
     private let stakingManager = Staking.StakingManager(token, nft);
 
@@ -336,11 +336,11 @@ actor Main {
         token.icrc1_total_supply()
     };
 
-    public query func icrc1_balance_of(account : Token.Account) : async Nat {
+    public query func icrc1_balance_of(account : PiggyCellToken.Account) : async Nat {
         token.icrc1_balance_of(account)
     };
 
-    public shared({ caller }) func icrc1_transfer(args : Token.TransferArgs) : async Result.Result<(), Token.TransferError> {
+    public shared({ caller }) func icrc1_transfer(args : PiggyCellToken.TransferArgs) : async Result.Result<(), PiggyCellToken.TransferError> {
         token.icrc1_transfer(caller, args)
     };
 
@@ -820,14 +820,14 @@ actor Main {
     };
 
     // 관리자용 토큰 발행/소각 기능
-    public shared({ caller }) func mint_tokens(to : Token.Account, amount : Nat) : async Result.Result<(), Text> {
+    public shared({ caller }) func mint_tokens(to : PiggyCellToken.Account, amount : Nat) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 토큰을 발행할 수 있습니다.");
         };
         token.mint(to, amount)
     };
 
-    public shared({ caller }) func burn_tokens(from : Token.Account, amount : Nat) : async Result.Result<(), Text> {
+    public shared({ caller }) func burn_tokens(from : PiggyCellToken.Account, amount : Nat) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 토큰을 소각할 수 있습니다.");
         };

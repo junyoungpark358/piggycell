@@ -6,7 +6,7 @@ import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Hash "mo:base/Hash";
 import Buffer "mo:base/Buffer";
-import Token "./Token";
+import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 
 module {
@@ -25,7 +25,7 @@ module {
         #TransferError;
     };
 
-    public class StakingManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister) {
+    public class StakingManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister) {
         private let stakingInfos = TrieMap.TrieMap<Nat, StakingInfo>(Nat.equal, Hash.hash);
         
         // 스테이킹 보상 계산 (1시간당 1 PGC)
@@ -80,7 +80,7 @@ module {
 
                     // 보상 지급
                     if (reward > 0) {
-                        let transferArgs: Token.TransferArgs = {
+                        let transferArgs: PiggyCellToken.TransferArgs = {
                             from_subaccount = null;
                             to = {
                                 owner = caller;
@@ -119,7 +119,7 @@ module {
                     // 보상 계산
                     let reward = calculateReward(stakingInfo);
                     if (reward > 0) {
-                        let transferArgs: Token.TransferArgs = {
+                        let transferArgs: PiggyCellToken.TransferArgs = {
                             from_subaccount = null;
                             to = {
                                 owner = caller;

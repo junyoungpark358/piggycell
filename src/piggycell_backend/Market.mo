@@ -8,7 +8,7 @@ import Buffer "mo:base/Buffer";
 import Hash "mo:base/Hash";
 import Nat64 "mo:base/Nat64";
 import Int "mo:base/Int";
-import Token "./Token";
+import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 
 module {
@@ -35,7 +35,7 @@ module {
         nextStart: ?Nat;
     };
 
-    public class MarketManager(token: Token.Token, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal) {
+    public class MarketManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal) {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         private let listingsByTime = Buffer.Buffer<(Int, Nat)>(0); // (timestamp, tokenId) 쌍을 저장하는 버퍼
