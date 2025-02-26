@@ -12,6 +12,7 @@ import Revenue from "./pages/Revenue";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminNFTManagement from "./pages/admin/NFTManagement";
 import AdminRevenue from "./pages/admin/Revenue";
+import AdminTokenManagement from "./pages/admin/TokenManagement";
 import UserLayout from "./layouts/UserLayout";
 import { AuthManager } from "./utils/auth";
 import "./App.css";
@@ -51,6 +52,7 @@ const App: React.FC = () => {
                 element={<AdminNFTManagement />}
               />
               <Route path="/admin/revenue" element={<AdminRevenue />} />
+              <Route path="/admin/token" element={<AdminTokenManagement />} />
             </>
           )}
           <Route path="*" element={<Navigate to="/" replace />} />

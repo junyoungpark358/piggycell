@@ -10,6 +10,7 @@ import {
   CrownOutlined,
   AppstoreOutlined,
   DollarOutlined,
+  WalletOutlined,
 } from "@ant-design/icons";
 import { AuthManager } from "../utils/auth";
 import { StyledButton } from "../components/common/StyledButton";
@@ -177,6 +178,15 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
       ),
       icon: <DollarOutlined />,
     },
+    {
+      key: "/admin/token",
+      label: (
+        <Link to="/admin/token">
+          <WalletOutlined /> 토큰 관리
+        </Link>
+      ),
+      icon: <WalletOutlined />,
+    },
   ];
 
   const menuItems = [
@@ -239,6 +249,12 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
             label: "수익 관리",
             icon: <DollarOutlined />,
             onClick: () => navigate("/admin/revenue"),
+          },
+          {
+            key: "/admin/token",
+            label: "토큰 관리",
+            icon: <WalletOutlined />,
+            onClick: () => navigate("/admin/token"),
           },
         ]
       : []),

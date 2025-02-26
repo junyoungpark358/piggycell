@@ -2,9 +2,22 @@ import { Statistic, Spin } from "antd";
 import type { StatisticProps } from "antd";
 import { StyledCard } from "./common/StyledCard";
 import styled from "@emotion/styled";
+import {
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  LineChartOutlined,
+  UserOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
+
+export type TrendType = "up" | "down" | "neutral";
+export type IconType = "chart" | "user" | "token" | "wallet" | "none";
 
 interface StatCardProps extends Omit<StatisticProps, "className"> {
   loading?: boolean;
+  trend?: TrendType;
+  iconType?: IconType;
+  unit?: string;
 }
 
 const StyledStatistic = styled(Statistic)`
@@ -42,6 +55,18 @@ const StyledStatistic = styled(Statistic)`
     color: #0284c7;
     margin-right: 0.5rem;
   }
+
+  .trend-up {
+    color: #10b981;
+  }
+
+  .trend-down {
+    color: #ef4444;
+  }
+
+  .trend-neutral {
+    color: #6366f1;
+  }
 `;
 
 const SpinnerContainer = styled.div`
@@ -58,7 +83,43 @@ const AnimatedCard = styled(StyledCard)`
   }
 `;
 
-export const StatCard: React.FC<StatCardProps> = ({ loading, ...props }) => {
+const getIconByType = (iconType: IconType) => {
+  switch (iconType) {
+    case "chart":
+      return <LineChartOutlined />;
+    case "user":
+      return <UserOutlined />;
+    case "token":
+    case "wallet":
+      return <WalletOutlined />;
+    case "none":
+    default:
+      return null;
+  }
+};
+
+const getTrendIcon = (trend: TrendType) => {
+  switch (trend) {
+    case "up":
+      return <ArrowUpOutlined className="trend-up" />;
+    case "down":
+      return <ArrowDownOutlined className="trend-down" />;
+    case "neutral":
+    default:
+      return null;
+  }
+};
+
+export const StatCard: React.FC<StatCardProps> = ({
+  loading,
+  trend = "neutral",
+  iconType = "none",
+  unit,
+  ...props
+}) => {
+  const trendIcon = getTrendIcon(trend);
+  const icon = getIconByType(iconType);
+
   return (
     <AnimatedCard customVariant="stats">
       {loading ? (
@@ -69,8 +130,14 @@ export const StatCard: React.FC<StatCardProps> = ({ loading, ...props }) => {
           </SpinnerContainer>
         </div>
       ) : (
-        <StyledStatistic {...props} />
+        <StyledStatistic
+          {...props}
+          prefix={icon}
+          suffix={unit || props.suffix}
+        />
       )}
     </AnimatedCard>
   );
 };
+
+export type { StatCardProps };

@@ -2,6 +2,7 @@ import { AuthClient } from "@dfinity/auth-client";
 import { Identity, Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
+import { Principal } from "@dfinity/principal";
 
 // 브라우저 종류에 따라 적절한 URL 형식을 반환하는 함수
 const getAuthUrl = (canisterId: string): string => {
@@ -88,6 +89,16 @@ export class AuthManager {
 
   public async getIdentity(): Promise<Identity | undefined> {
     return this.authClient?.getIdentity();
+  }
+
+  public async getPrincipal(): Promise<Principal | undefined> {
+    try {
+      const identity = await this.getIdentity();
+      return identity?.getPrincipal();
+    } catch (error) {
+      console.error("Principal 가져오기 오류:", error);
+      return undefined;
+    }
   }
 
   public async isAuthenticated(): Promise<boolean> {
