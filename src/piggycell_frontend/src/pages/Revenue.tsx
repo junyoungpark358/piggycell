@@ -5,14 +5,20 @@ import {
   LineChartOutlined,
   RiseOutlined,
   CheckCircleOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
 import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
+import { message } from "antd";
+import { useEffect, useState } from "react";
 
 const Revenue = () => {
+  // 로딩 상태 추가
+  const [loading, setLoading] = useState(false);
+
   // 임시 수익 데이터
   const revenueData = [
     {
@@ -188,10 +194,66 @@ const Revenue = () => {
     averageRate: "+11%",
   };
 
+  const handleRefresh = (showMessage = false) => {
+    try {
+      // 로딩 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        const messageKey = "refreshMessage";
+        message.loading({
+          content: "데이터를 새로고침 중입니다...",
+          key: messageKey,
+          duration: 0,
+        });
+      }
+
+      setLoading(true);
+
+      // 데이터 새로고침 로직 (모의 구현)
+      // 실제 구현에서는 서버에서 데이터를 가져오는 로직이 추가되어야 함
+      setTimeout(() => {
+        // 성공 메시지도 showMessage가 true일 때만 표시
+        if (showMessage) {
+          message.success({
+            content: "새로고침 완료!",
+            key: "refreshMessage",
+            duration: 2,
+          });
+        }
+        setLoading(false);
+      }, 1000);
+    } catch (error) {
+      console.error("새로고침 실패:", error);
+
+      // 실패 메시지도 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.error({
+          content: "데이터를 불러오는데 실패했습니다.",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
+      setLoading(false);
+    }
+  };
+
+  // 초기 로딩 시 메시지 없이 데이터 가져오기
+  useEffect(() => {
+    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
+    handleRefresh(false);
+  }, []);
+
   return (
     <div className="revenue-page">
       <div className="page-header">
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">수익 관리</h1>
+        <StyledButton
+          customVariant="primary"
+          customSize="md"
+          onClick={() => handleRefresh(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">

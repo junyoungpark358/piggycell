@@ -9,6 +9,7 @@ import {
   DollarOutlined,
   SearchOutlined,
   CopyOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
@@ -120,13 +121,16 @@ const NFTManagement = () => {
     try {
       // statsApi의 getNFTManagementStats 함수 사용
       const stats = await getNFTManagementStats();
+
+      // 데이터가 준비된 후에 상태를 업데이트
       setTotalStats(stats);
-      setTotalVolume(stats.totalValue); // 총 거래액 설정
+      setTotalVolume(stats.totalValue);
       console.log("통계 데이터 조회 완료:", stats);
+
+      return stats; // 데이터 반환
     } catch (error) {
       console.error("통계 데이터 조회 실패:", error);
-    } finally {
-      setLoading(false); // 모든 데이터 로드가 완료된 후 로딩 상태 해제
+      throw error; // 에러를 상위로 전파하여 loadData에서 처리하도록 함
     }
   };
 
@@ -153,13 +157,20 @@ const NFTManagement = () => {
     const loadData = async () => {
       try {
         setLoading(true); // 데이터 로딩 시작 시 로딩 상태 설정
-        // 서버 API를 통해 페이지네이션된 NFT 데이터 로드
-        await fetchPaginatedNFTs();
-        // 전체 통계 데이터 로드 함수 호출
-        await fetchStats();
+
+        // Promise.all을 사용하여 두 데이터 로딩 작업을 병렬로 처리
+        const [nftData, statsData] = await Promise.all([
+          fetchPaginatedNFTs(),
+          fetchStats(),
+        ]);
+
+        // 모든 데이터가 로드된 후에 로딩 상태 해제
+        console.log("모든 데이터 로딩 완료:", { nftData, statsData });
       } catch (error) {
         console.error("데이터 로딩 실패:", error);
-        setLoading(false); // 오류 발생 시 로딩 상태 해제
+        message.error("데이터를 불러오는데 실패했습니다.");
+      } finally {
+        setLoading(false); // 성공/실패 여부와 관계없이 로딩 상태 해제
       }
     };
 
@@ -175,6 +186,16 @@ const NFTManagement = () => {
     });
   }, [nfts]);
 
+  // pagination.total 값이 변경될 때마다 로그 출력
+  useEffect(() => {
+    console.log("Pagination 상태 변경됨:", {
+      현재페이지: pagination.current,
+      페이지크기: pagination.pageSize,
+      총항목수: pagination.total,
+      계산된페이지수: Math.ceil(pagination.total / pagination.pageSize),
+    });
+  }, [pagination.total, pagination.current, pagination.pageSize]);
+
   // 페이지네이션된 NFT 데이터 가져오기
   const fetchPaginatedNFTs = async (
     page = pagination.current,
@@ -184,7 +205,7 @@ const NFTManagement = () => {
     searchValue = searchText
   ) => {
     try {
-      setLoading(true);
+      // loadData에서 setLoading(true)가 호출되므로 여기서는 필요 없음
       if (!actor) {
         throw new Error("Actor not initialized");
       }
@@ -244,15 +265,47 @@ const NFTManagement = () => {
       setNfts(nftsData);
       setFilteredNfts(nftsData);
 
+      // 총 항목 수 저장
+      const totalCount = Number(response.totalCount);
+      console.log(
+        "fetchPaginatedNFTs - 서버에서 받은 총 NFT 개수:",
+        totalCount
+      );
+
       // 페이지네이션 정보 업데이트
-      setPagination({
-        ...pagination,
-        current: page,
-        total: Number(response.totalCount),
+      console.log("페이지네이션 업데이트 전:", {
+        현재페이지: page,
+        페이지크기: pageSize,
+        총항목수: pagination.total,
+        응답총개수: totalCount,
+        데이터길이: nftsData.length,
       });
+
+      // 콜백 패턴을 사용하여 업데이트
+      setPagination((prevState) => {
+        const updatedPagination = {
+          ...prevState,
+          current: page,
+          total: totalCount,
+        };
+
+        console.log("페이지네이션 업데이트 중:", updatedPagination);
+        return updatedPagination;
+      });
+
+      // 예상 결과 로깅
+      console.log("페이지네이션 예상 업데이트 값:", {
+        현재페이지: page,
+        페이지크기: pageSize,
+        총항목수: totalCount,
+        예상페이지수: Math.ceil(totalCount / pageSize),
+      });
+
+      return nftsData; // 데이터 반환
     } catch (error) {
       console.error("NFT 데이터 조회 중 오류 발생:", error);
       message.error("NFT 데이터를 불러오는 중 오류가 발생했습니다.", 2);
+      throw error; // 에러를 상위로 전파
     }
   };
 
@@ -260,7 +313,14 @@ const NFTManagement = () => {
   const handleSearch = (value: string) => {
     setSearchText(value);
     // 검색어가 변경되면 1페이지부터 다시 데이터를 로드
-    fetchPaginatedNFTs(1, pagination.pageSize, sortField, sortDirection, value);
+    setLoading(true);
+    fetchPaginatedNFTs(1, pagination.pageSize, sortField, sortDirection, value)
+      .catch((error) => {
+        console.error("검색 중 오류 발생:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   // 페이지 변경 핸들러 추가
@@ -287,13 +347,17 @@ const NFTManagement = () => {
       pageSize: Number(pageSize), // 명시적으로 Number 변환
     });
 
+    // 데이터 로딩 시작
+    setLoading(true);
+
     // 서버 측 페이지네이션 사용 시 데이터 가져오기
-    fetchPaginatedNFTs(
-      Number(current),
-      Number(pageSize),
-      sortBy,
-      sortDirection
-    );
+    fetchPaginatedNFTs(Number(current), Number(pageSize), sortBy, sortDirection)
+      .catch((error) => {
+        console.error("테이블 변경 중 오류 발생:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   // 새로고침 핸들러 수정
@@ -313,23 +377,94 @@ const NFTManagement = () => {
       const refreshedActor = await createActor();
       setActor(refreshedActor);
 
-      // 페이지네이션된 데이터 다시 로드 - 항상 최신순 정렬 적용
-      await fetchPaginatedNFTs(
-        1,
-        pagination.pageSize,
-        "statusChangedAt",
-        "descend",
-        searchText
-      );
+      // 현재 페이지 및 페이지 크기 유지
+      const currentPage = pagination.current;
+      const currentPageSize = pagination.pageSize;
 
-      // 전체 통계 데이터 새로고침
-      await fetchStats();
+      // 통계 데이터 새로고침
+      const statsData = await fetchStats();
 
-      // 페이지네이션 상태 업데이트
-      setPagination({
-        ...pagination,
-        current: 1,
+      // 페이지네이션된 데이터 다시 로드 - 현재 페이지 유지
+      const response = await (refreshedActor as any).getNFTsByPage({
+        page: currentPage,
+        pageSize: currentPageSize,
+        sortBy: sortField || "statusChangedAt",
+        sortDirection: sortDirection === "ascend" ? "asc" : "desc",
+        searchQuery: searchText || "",
       });
+
+      // 서버에서 반환된 NFT 데이터 설정
+      const nftsData = response.nfts.map((nft: any) => {
+        // 각 필드의 타입에 따라 적절하게 변환
+        const convertToNumber = (value: any): number => {
+          if (value === undefined || value === null) return 0;
+
+          if (typeof value === "bigint") {
+            return Number(value);
+          } else if (typeof value === "string") {
+            return value.includes("n")
+              ? Number(value.replace("n", ""))
+              : parseFloat(value);
+          } else {
+            return Number(value);
+          }
+        };
+
+        // statusChangedAt 변환 처리
+        let timeValue = nft.statusChangedAt;
+
+        return {
+          key: nft.id.toString(),
+          id: convertToNumber(nft.id),
+          location: nft.location || "-",
+          chargerCount: convertToNumber(nft.chargerCount),
+          status: nft.status,
+          price: nft.price ? convertToNumber(nft.price) : undefined,
+          owner: nft.owner
+            ? nft.owner.toString().substring(0, 10) + "..."
+            : "-",
+          statusChangedAt: timeValue,
+        };
+      });
+
+      // 서버에서 이미 필터링된 결과를 사용
+      setNfts(nftsData);
+      setFilteredNfts(nftsData);
+
+      // 총 개수 확인
+      const totalCount = Number(response.totalCount);
+      console.log("새로고침 - 서버에서 받은 총 NFT 개수:", totalCount);
+
+      // 페이지네이션 상태 업데이트 - 현재 페이지 유지하면서 total 값 업데이트
+      console.log("새로고침 - 페이지네이션 업데이트 전:", {
+        현재페이지: currentPage,
+        페이지크기: currentPageSize,
+        총항목수: pagination.total,
+        응답총개수: totalCount,
+        데이터길이: nftsData.length,
+      });
+
+      // 페이지네이션 업데이트를 콜백 함수로 처리하여 최신 값 보장
+      setPagination((prevState) => {
+        const updatedPagination = {
+          ...prevState,
+          current: currentPage,
+          total: totalCount,
+        };
+
+        console.log("새로고침 - 페이지네이션 업데이트 중:", updatedPagination);
+        return updatedPagination;
+      });
+
+      // 상태가 실제로 업데이트되기 전이므로 업데이트될 값 미리 로깅
+      console.log("새로고침 - 페이지네이션 예상 업데이트 값:", {
+        현재페이지: currentPage,
+        페이지크기: pagination.pageSize,
+        총항목수: totalCount,
+        예상페이지수: Math.ceil(totalCount / pagination.pageSize),
+      });
+
+      console.log("새로고침 완료: 전체 NFT 개수 = ", totalCount);
 
       // 로딩 메시지를 성공 메시지로 교체
       message.success({
@@ -345,7 +480,8 @@ const NFTManagement = () => {
         key: "refreshMessage",
         duration: 2,
       });
-      setLoading(false); // 오류 발생 시 로딩 상태 해제
+    } finally {
+      setLoading(false); // 성공/실패 여부와 관계없이 로딩 상태 해제
     }
   };
 
@@ -526,6 +662,7 @@ const NFTManagement = () => {
             day: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+            hour12: false,
           });
           return <span>{formattedDate}</span>;
         } catch (error) {
@@ -569,6 +706,8 @@ const NFTManagement = () => {
 
   const handleAddNFT = () => {
     form.resetFields();
+    // 전송 유형의 기본값을 '마켓에 등록'으로 설정
+    form.setFieldsValue({ transferType: "market" });
     setIsModalVisible(true);
   };
 
@@ -678,17 +817,15 @@ const NFTManagement = () => {
   return (
     <div className="nft-management">
       <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">NFT 관리</h1>
-        <div className="flex justify-end mb-4">
-          <StyledButton
-            customVariant="primary"
-            customSize="md"
-            onClick={handleAddNFT}
-            icon={<PlusOutlined />}
-          >
-            NFT 추가
-          </StyledButton>
-        </div>
+        <h1>NFT 관리</h1>
+        <StyledButton
+          customVariant="primary"
+          customSize="md"
+          onClick={handleRefresh}
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       {/* 전체 통계 */}
@@ -740,14 +877,16 @@ const NFTManagement = () => {
             onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
-        <StyledButton
-          customVariant="primary"
-          customColor="primary"
-          onClick={handleRefresh}
-          icon={<SearchOutlined />}
-        >
-          새로고침
-        </StyledButton>
+        <div className="flex gap-2">
+          <StyledButton
+            customVariant="primary"
+            customSize="md"
+            onClick={handleAddNFT}
+            icon={<PlusOutlined />}
+          >
+            NFT 추가
+          </StyledButton>
+        </div>
       </div>
 
       <StyledTable
@@ -759,7 +898,7 @@ const NFTManagement = () => {
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
-          total: pagination.total,
+          total: Math.max(totalStats.totalNFTs, nfts.length, pagination.total),
           showSizeChanger: true,
           pageSizeOptions: ["10", "20", "50"],
           showTotal: (total) => `총 ${total}개 NFT`,
@@ -821,6 +960,7 @@ const NFTManagement = () => {
             name="transferType"
             label="전송 유형"
             rules={[{ required: true, message: "전송 유형을 선택해주세요" }]}
+            initialValue="market"
           >
             <Select>
               <Select.Option value="market">마켓에 등록</Select.Option>

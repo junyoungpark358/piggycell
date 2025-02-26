@@ -6,6 +6,7 @@ import {
   DollarOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AuthManager } from "../utils/auth";
@@ -226,127 +227,160 @@ const NFTMarket = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchInitialNFTs = async () => {
-      try {
-        setLoading(true);
-        const actor = await createActor();
-
-        // 통계 데이터 가져오기
-        const stats = await getMarketStats();
-        setMarketStats(stats);
-
-        // 리스팅 데이터 가져오기
-        console.log("초기 NFT 데이터 로딩 시작");
-        console.log("Actor 생성 완료");
-
-        // 페이지 크기를 5에서 8로 증가
-        const result = await actor.getListings([], BigInt(8));
-        console.log("마켓 리스팅 결과:", result);
-        console.log("마켓 리스팅 항목 수:", result.items.length);
-        console.log(
-          "마켓 리스팅 항목 세부 정보:",
-          JSON.stringify(
-            result.items,
-            (_, v) => (typeof v === "bigint" ? v.toString() : v),
-            2
-          )
-        );
-
-        // 전체 NFT 수 조회
-        const totalSupply = await actor.icrc7_total_supply();
-        console.log("전체 NFT 발행량:", Number(totalSupply));
-
-        // 총 거래량 조회
-        const totalVolume = await actor.getTotalVolume();
-        console.log("총 거래량:", Number(totalVolume));
-
-        if (result.items.length === 0) {
-          console.log("판매 중인 NFT가 없음");
-          setNfts([]);
-          setMarketStats({
-            totalSupply: Number(totalSupply),
-            availableNFTs: 0,
-            soldNFTs: Number(totalSupply),
-            totalVolume: Number(totalVolume),
-            stakedCount: 0,
-            activeUsers: 0,
-          });
-          setHasMore(false);
-          setLoading(false);
-          return;
-        }
-
-        const nftDataPromises = result.items.map(async (listing) => {
-          const tokenId = listing.tokenId;
-          const metadata = await actor.icrc7_token_metadata([tokenId]);
-
-          let location = "위치 정보 없음";
-          let chargerCount = 0;
-
-          if (
-            metadata &&
-            metadata.length > 0 &&
-            metadata[0] &&
-            metadata[0][0]
-          ) {
-            const metadataFields = metadata[0][0] as Array<
-              [string, { Text?: string; Nat?: bigint }]
-            >;
-            metadataFields.forEach(([key, value]) => {
-              if (key === "location" && value.Text) {
-                location = value.Text;
-              } else if (key === "chargerCount" && value.Nat) {
-                chargerCount = Number(value.Nat);
-              }
-            });
-          }
-
-          return {
-            id: tokenId,
-            name: `충전 허브 #${tokenId.toString()}`,
-            location,
-            price: listing.price,
-            status: "available",
-            chargerCount,
-          };
+  const fetchInitialNFTs = async (showMessage = false) => {
+    try {
+      // 로딩 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        const messageKey = "refreshMessage";
+        message.loading({
+          content: "데이터를 새로고침 중입니다...",
+          key: messageKey,
+          duration: 0,
         });
+      }
 
-        const nftData = await Promise.all(nftDataPromises);
-        setNfts(nftData);
-        setNextStart(result.nextStart ? Number(result.nextStart) : null);
-        setHasMore(!!result.nextStart);
+      setLoading(true);
+      const actor = await createActor();
 
-        // 통계 업데이트
-        const avail = Number(result.total);
-        const total = Number(totalSupply);
-        const sold = total - avail;
+      // 통계 데이터 가져오기
+      const stats = await getMarketStats();
+      setMarketStats(stats);
 
-        console.log("통계 계산 상세:", {
-          "전체 NFT (totalSupply)": total,
-          "판매중 NFT (result.total)": avail,
-          "계산된 판매완료 NFT (totalSupply - result.total)": sold,
-          "현재 페이지 NFT 개수": nftData.length,
-          "모든 NFT 정보": nftData,
-        });
+      // 리스팅 데이터 가져오기
+      console.log("초기 NFT 데이터 로딩 시작");
+      console.log("Actor 생성 완료");
 
+      // 페이지 크기를 5에서 8로 증가
+      const result = await actor.getListings([], BigInt(8));
+      console.log("마켓 리스팅 결과:", result);
+      console.log("마켓 리스팅 항목 수:", result.items.length);
+      console.log(
+        "마켓 리스팅 항목 세부 정보:",
+        JSON.stringify(
+          result.items,
+          (_, v) => (typeof v === "bigint" ? v.toString() : v),
+          2
+        )
+      );
+
+      // 전체 NFT 수 조회
+      const totalSupply = await actor.icrc7_total_supply();
+      console.log("전체 NFT 발행량:", Number(totalSupply));
+
+      // 총 거래량 조회
+      const totalVolume = await actor.getTotalVolume();
+      console.log("총 거래량:", Number(totalVolume));
+
+      if (result.items.length === 0) {
+        console.log("판매 중인 NFT가 없음");
+        setNfts([]);
         setMarketStats({
-          totalSupply: total,
-          availableNFTs: avail,
-          soldNFTs: sold,
+          totalSupply: Number(totalSupply),
+          availableNFTs: 0,
+          soldNFTs: Number(totalSupply),
           totalVolume: Number(totalVolume),
           stakedCount: 0,
           activeUsers: 0,
         });
-      } catch (error) {
-        console.error("NFT 데이터 로딩 실패:", error);
-        message.error("NFT 데이터를 불러오는데 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
+        setHasMore(false);
 
-    fetchInitialNFTs();
+        // 성공 메시지는 showMessage가 true일 때만 표시
+        if (showMessage) {
+          message.success({
+            content: "새로고침 완료!",
+            key: "refreshMessage",
+            duration: 2,
+          });
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      const nftDataPromises = result.items.map(async (listing) => {
+        const tokenId = listing.tokenId;
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
+
+        let location = "위치 정보 없음";
+        let chargerCount = 0;
+
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+          metadataFields.forEach(([key, value]) => {
+            if (key === "location" && value.Text) {
+              location = value.Text;
+            } else if (key === "chargerCount" && value.Nat) {
+              chargerCount = Number(value.Nat);
+            }
+          });
+        }
+
+        return {
+          id: tokenId,
+          name: `충전 허브 #${tokenId.toString()}`,
+          location,
+          price: listing.price,
+          status: "available",
+          chargerCount,
+        };
+      });
+
+      const nftData = await Promise.all(nftDataPromises);
+      setNfts(nftData);
+      setNextStart(result.nextStart ? Number(result.nextStart) : null);
+      setHasMore(!!result.nextStart);
+
+      // 통계 업데이트
+      const avail = Number(result.total);
+      const total = Number(totalSupply);
+      const sold = total - avail;
+
+      console.log("통계 계산 상세:", {
+        "전체 NFT (totalSupply)": total,
+        "판매중 NFT (result.total)": avail,
+        "계산된 판매완료 NFT (totalSupply - result.total)": sold,
+        "현재 페이지 NFT 개수": nftData.length,
+        "모든 NFT 정보": nftData,
+      });
+
+      setMarketStats({
+        totalSupply: total,
+        availableNFTs: avail,
+        soldNFTs: sold,
+        totalVolume: Number(totalVolume),
+        stakedCount: 0,
+        activeUsers: 0,
+      });
+
+      // 성공 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.success({
+          content: "새로고침 완료!",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
+    } catch (error) {
+      console.error("NFT 데이터 로딩 실패:", error);
+
+      // 실패 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.error({
+          content: "NFT 데이터를 불러오는데 실패했습니다.",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
+    fetchInitialNFTs(false);
   }, []);
 
   useEffect(() => {
@@ -397,6 +431,14 @@ const NFTMarket = () => {
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">
           마켓플레이스
         </h1>
+        <StyledButton
+          customVariant="primary"
+          customSize="md"
+          onClick={() => fetchInitialNFTs(true)}
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
@@ -507,6 +549,16 @@ const NFTMarket = () => {
                     />
                   </Col>
                 ))}
+                {loading && (
+                  <Col span={24} className="my-5 text-center">
+                    <Spin size="large" />
+                  </Col>
+                )}
+                {!loading && soldNfts.length === 0 && (
+                  <Col span={24} className="my-5 text-center">
+                    <Empty description="판매 완료된 NFT가 없습니다" />
+                  </Col>
+                )}
               </Row>
             ),
           },

@@ -1,30 +1,33 @@
-import { Row, Col, message, Tooltip } from "antd";
+import { Col, Row, Tag, message, Tooltip } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { useEffect, useState } from "react";
 import {
+  CopyOutlined,
+  ReloadOutlined,
+  SearchOutlined,
   ShoppingCartOutlined,
   BankOutlined,
   UserOutlined,
   LineChartOutlined,
-  SearchOutlined,
-  CopyOutlined,
 } from "@ant-design/icons";
+import type { FilterValue, SorterResult } from "antd/es/table/interface";
 import "./Dashboard.css";
-import { useEffect, useState } from "react";
-import { Actor, HttpAgent } from "@dfinity/agent";
-import { AuthManager } from "../../utils/auth";
-import { idlFactory } from "../../../../declarations/piggycell_backend";
-import type { _SERVICE } from "../../../../declarations/piggycell_backend/piggycell_backend.did";
-import { Principal } from "@dfinity/principal";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
+
 import {
+  getBasicNFTStats,
+  getMarketStats,
+  getStakingStats,
   getAdminDashboardStats,
-  NFTStats,
   getTransactions,
-  TransactionDisplay,
-  TransactionFilter,
+  ICRC3Transaction,
   ICRC3Account,
+  TransactionFilter,
+  TransactionDisplay,
+  NFTStats,
 } from "../../utils/statsApi";
 
 // ICRC-3 트랜잭션 관련 타입 정의
@@ -58,121 +61,311 @@ const AdminDashboard = () => {
     type: [],
   });
   const [searchText, setSearchText] = useState("");
+  const [searchTimer, setSearchTimer] = useState<any>(null);
 
-  const fetchTransactions = async (page: number) => {
+  // 검색 핸들러 수정 - 타이머 추가
+  const handleSearch = async (value: string) => {
     try {
-      // statsApi의 getTransactions 함수 사용
-      const result = await getTransactions(page, PAGE_SIZE, filter, searchText);
-      setTransactions(result.transactions);
-      setTotal(result.total);
+      console.log(`[DEBUG] 검색 시작: 검색어 = "${value}"`);
+      setLoading(true); // 로딩 시작
+      setCurrentPage(1); // 첫 페이지로 이동
+      setSearchText(value); // 검색어 상태 업데이트
+
+      // 직접 value를 전달하여 API 호출 - searchText 상태에 의존하지 않음
+      console.log(`[DEBUG] fetchTransactions 호출 준비: value="${value}"`);
+      await fetchTransactions(1, filter, value, false);
+      console.log(`[DEBUG] 검색 완료: 검색어 = "${value}"`);
     } catch (error) {
-      console.error("거래 내역 조회 중 오류 발생:", error);
-      message.error("거래 내역을 불러오는데 실패했습니다.");
+      console.error("[ERROR] 검색 중 오류 발생:", error);
+      message.error("검색 중 오류가 발생했습니다.");
+    } finally {
+      setLoading(false); // 로딩 종료
     }
   };
 
+  // 검색어 입력 처리 함수 추가
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    console.log(`[DEBUG] 검색어 입력 변경: "${value}"`);
+
+    // 기존 타이머가 있으면 취소
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+    }
+
+    // 검색 텍스트 상태 즉시 업데이트 (UI 반영용)
+    setSearchText(value);
+
+    // 300ms 후에 검색 실행 (디바운스)
+    const timer = setTimeout(() => {
+      console.log(`[DEBUG] 디바운스 후 검색 실행: "${value}"`);
+      handleSearch(value);
+    }, 300);
+
+    setSearchTimer(timer);
+  };
+
+  const fetchTransactions = async (
+    newPage?: number,
+    newFilter?: TransactionFilter,
+    newSearchText?: string,
+    showMessage: boolean = true
+  ) => {
+    try {
+      const pageToFetch = newPage ?? currentPage;
+      const filterToUse = newFilter ?? filter;
+      const searchToUse =
+        newSearchText !== undefined ? newSearchText : searchText;
+
+      // 검색어 로그 형식 개선 - 따옴표 없이 실제 값 표시
+      console.log(`[DEBUG] fetchTransactions 실행:`, {
+        pageToFetch,
+        filterToUse,
+        searchToUse,
+        showMessage,
+      });
+
+      // 로딩 상태 표시
+      const messageKey = "loadingTransactions";
+      if (showMessage) {
+        message.loading({
+          content: "거래 내역을 불러오는 중...",
+          key: messageKey,
+          duration: 0,
+        });
+      }
+
+      // 개선된 getTransactions 함수 사용 (정렬은 기본값으로 고정)
+      console.log(`[DEBUG] getTransactions API 호출 직전:`, {
+        page: pageToFetch,
+        pageSize: PAGE_SIZE,
+        filter: filterToUse,
+        searchText: searchToUse,
+      });
+
+      const result = await getTransactions(
+        pageToFetch,
+        PAGE_SIZE,
+        filterToUse,
+        searchToUse,
+        "date", // 항상 날짜 기준
+        "descend" // 항상 내림차순
+      );
+
+      console.log(`[DEBUG] API 응답 결과:`, {
+        total: result.total,
+        transactionsCount: result.transactions.length,
+        firstTransaction:
+          result.transactions.length > 0 ? result.transactions[0] : "없음",
+      });
+
+      // 데이터 업데이트
+      setTransactions(result.transactions);
+      setTotal(result.total);
+
+      // 성공 메시지 (showMessage가 true일 때만 표시)
+      if (showMessage) {
+        message.success({
+          content: "거래 내역을 불러왔습니다.",
+          key: messageKey,
+          duration: 1,
+        });
+      }
+    } catch (error) {
+      console.error("[ERROR] 거래 내역 불러오기 오류:", error);
+
+      // 오류 메시지
+      message.error({
+        content: "거래 내역을 불러오는 중 오류가 발생했습니다.",
+        key: "loadingTransactions",
+        duration: 3,
+      });
+    }
+  };
+
+  // 첫 로딩 시 데이터 가져오기
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log("[DEBUG] 초기 데이터 로딩 시작");
         setLoading(true);
 
         // 새로운 모듈화된 API 사용
         const stats = await getAdminDashboardStats();
         setNftStats(stats);
 
-        // 거래 내역 조회
-        await fetchTransactions(currentPage);
+        // 거래 내역 조회 (showMessage=false로 설정하여 초기 로딩 메시지 숨김)
+        await fetchTransactions(1, filter, "", false);
+        console.log("[DEBUG] 초기 데이터 로딩 완료");
       } catch (error) {
-        console.error("데이터 조회 중 오류 발생:", error);
-        message.error("데이터를 불러오는데 실패했습니다.");
+        console.error("[ERROR] 초기 데이터 로딩 오류:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [currentPage]);
+  }, []);
+
+  // 페이지 변경 시 데이터 다시 로드 (검색어 의존성 명시적으로 제거)
+  useEffect(() => {
+    // 첫 로딩 시에는 이미 데이터를 가져오므로 스킵
+    if (loading && transactions.length === 0) {
+      console.log("[DEBUG] 초기 로딩 중이므로 페이지 변경 효과 무시");
+      return;
+    }
+
+    console.log(`[DEBUG] 페이지 변경: ${currentPage} - 데이터 다시 로드`);
+
+    setLoading(true);
+    // 페이지 변경 시 현재 검색어와 필터 유지하면서 데이터 로드
+    fetchTransactions(currentPage, filter, searchText, false)
+      .catch((error) => {
+        console.error("[ERROR] 페이지 변경 중 오류 발생:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [currentPage]); // 페이지 변경 시에만 실행, filter와 searchText 의존성 제거
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  // 검색 핸들러
-  const handleSearch = (value: string) => {
-    setSearchText(value);
-    setCurrentPage(1);
+  // 테이블 변경 핸들러 - 페이지네이션만 처리
+  const handleTableChange = (
+    pagination: any,
+    filters: Record<string, FilterValue | null>,
+    sorter:
+      | SorterResult<TransactionDisplay>
+      | SorterResult<TransactionDisplay>[]
+  ) => {
+    console.log(
+      `[DEBUG] 테이블 변경: 현재 페이지 ${currentPage}, 새 페이지 ${pagination.current}`
+    );
+
+    // 페이지 변경
+    if (pagination.current !== currentPage) {
+      console.log(
+        `[DEBUG] 페이지 변경: ${currentPage} → ${pagination.current}`
+      );
+      setCurrentPage(pagination.current);
+    }
   };
 
-  // 테이블 컬럼 정의
-  const columns = [
+  // 새로고침 핸들러 개선
+  const handleRefresh = async () => {
+    const messageKey = "refreshing";
+    try {
+      console.log("[DEBUG] 새로고침 시작");
+      message.loading({
+        content: "데이터를 새로고침 중입니다...",
+        key: messageKey,
+        duration: 0,
+      });
+
+      setLoading(true);
+
+      // 검색어 초기화
+      if (searchText) {
+        console.log("[DEBUG] 검색어 초기화");
+        setSearchText("");
+      }
+
+      // 첫 페이지로 리셋
+      setCurrentPage(1);
+
+      // 모든 상태를 초기화하고 데이터 다시 로드 (검색어 null로 전달)
+      console.log("[DEBUG] 트랜잭션 새로고침 (검색어 없음)");
+      await fetchTransactions(1, filter, "", false);
+
+      // NFT 통계 새로고침
+      console.log("[DEBUG] 통계 데이터 새로고침");
+      const stats = await getAdminDashboardStats();
+      setNftStats(stats);
+
+      // 성공 메시지
+      message.success({
+        content: "새로고침 완료!",
+        key: messageKey,
+        duration: 2,
+      });
+      console.log("[DEBUG] 새로고침 완료");
+    } catch (error) {
+      console.error("[ERROR] 새로고침 중 오류 발생:", error);
+      message.error({
+        content: "새로고침 실패!",
+        key: messageKey,
+        duration: 2,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 테이블 정의
+  const columns: ColumnsType<TransactionDisplay> = [
     {
       title: "거래 유형",
       dataIndex: "type",
       key: "type",
-      align: "center" as const,
-      render: (text: string) => <span>{text}</span>,
+      render: (text) => {
+        let color = "default";
+        if (text === "NFT 발행") color = "blue";
+        else if (text === "NFT 전송") color = "green";
+        else if (text === "NFT 스테이킹") color = "purple";
+        else if (text === "NFT 언스테이킹") color = "volcano";
+        else if (text === "스테이킹 보상") color = "gold";
+        return <Tag color={color}>{text}</Tag>;
+      },
     },
     {
       title: "NFT ID",
       dataIndex: "nftId",
       key: "nftId",
-      align: "center" as const,
-      render: (text: string) => <span>{text}</span>,
     },
     {
-      title: "보내는 주소",
+      title: "발신자",
       dataIndex: "from",
       key: "from",
-      align: "center" as const,
-      render: (text: string) => renderAddress(text, "보내는 주소"),
+      render: (text) => renderAddress(text),
     },
     {
-      title: "받는 주소",
+      title: "수신자",
       dataIndex: "to",
       key: "to",
-      align: "center" as const,
-      render: (text: string) => renderAddress(text, "받는 주소"),
+      render: (text) => renderAddress(text),
     },
     {
-      title: "날짜",
+      title: "일시",
       dataIndex: "date",
       key: "date",
-      align: "center" as const,
-      render: (text: string) => <span>{text}</span>,
     },
   ];
 
-  const handleRefresh = async () => {
-    await fetchTransactions(currentPage);
-  };
+  // 주소를 표시하고 복사하는 함수
+  const renderAddress = (address: string, label?: string) => {
+    if (!address || address === "-") return <span>-</span>;
 
-  // 타임스탬프를 한국 시간 문자열로 변환하는 함수
-  const formatTimestamp = (timestamp: bigint): string => {
-    // 나노초를 밀리초로 변환 (1 밀리초 = 1,000,000 나노초)
-    const milliseconds = Number(timestamp) / 1_000_000;
-    const date = new Date(milliseconds);
-    return new Intl.DateTimeFormat("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Seoul",
-    }).format(date);
-  };
+    const truncatedAddress = `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
 
-  // Principal을 문자열로 변환하고 축약하는 함수
-  const formatPrincipal = (principal: Principal | undefined): string => {
-    if (!principal) return "-";
-    const text = principal.toString();
-    return text.length > 10 ? `${text.slice(0, 5)}...${text.slice(-5)}` : text;
-  };
-
-  // 주소 축약 함수 추가
-  const shortenAddress = (address: string) => {
-    if (address === "-") return "-";
-    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+    return (
+      <div className="address-display">
+        <Tooltip title={`${label ? label : "주소"}: ${address}`}>
+          <span>{truncatedAddress}</span>
+        </Tooltip>
+        <Tooltip title="주소 복사">
+          <StyledButton
+            customVariant="ghost"
+            customSize="sm"
+            icon={<CopyOutlined />}
+            onClick={() => copyToClipboard(address)}
+          />
+        </Tooltip>
+      </div>
+    );
   };
 
   // 클립보드 복사 함수 추가
@@ -188,30 +381,18 @@ const AdminDashboard = () => {
     );
   };
 
-  // 주소 렌더링 컴포넌트 수정
-  const renderAddress = (text: string, label: string) => {
-    if (text === "-") return "-";
-    return (
-      <div className="address-display">
-        <Tooltip title={text}>
-          <span>{shortenAddress(text)}</span>
-        </Tooltip>
-        <Tooltip title={`${label} 복사`}>
-          <StyledButton
-            customVariant="ghost"
-            customSize="xs"
-            icon={<CopyOutlined />}
-            onClick={() => copyToClipboard(text)}
-          />
-        </Tooltip>
-      </div>
-    );
-  };
-
   return (
     <div className="admin-dashboard">
       <div className="page-header">
-        <h1 className="mb-6 text-4xl font-bold">관리자 대시보드</h1>
+        <h1>대시보드</h1>
+        <StyledButton
+          customVariant="primary"
+          customColor="primary"
+          onClick={handleRefresh}
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
@@ -253,36 +434,33 @@ const AdminDashboard = () => {
         </Col>
       </Row>
 
-      <div className="mb-4 search-box">
+      <div className="search-box">
         <div className="search-input-wrapper">
           <StyledInput
-            placeholder="검색..."
+            placeholder="NFT ID 또는 주소로 검색"
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
-            onChange={(e) => handleSearch(e.target.value)}
+            value={searchText}
+            onChange={handleSearchInputChange}
           />
         </div>
-        <StyledButton
-          customVariant="primary"
-          customColor="primary"
-          onClick={handleRefresh}
-          icon={<SearchOutlined />}
-        >
-          새로고침
-        </StyledButton>
       </div>
 
       <StyledTable
         columns={columns}
         dataSource={transactions}
         loading={loading}
-        customVariant="compact"
+        rowKey="key"
+        customVariant="bordered"
         pagination={{
           current: currentPage,
           pageSize: PAGE_SIZE,
           total: total,
-          onChange: handlePageChange,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50"],
+          showTotal: (total) => `총 ${total}개 거래`,
         }}
+        onChange={handleTableChange}
       />
     </div>
   );

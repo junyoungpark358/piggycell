@@ -7,6 +7,7 @@ import {
   LineChartOutlined,
   DollarOutlined,
   EnvironmentOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -55,8 +56,18 @@ const Staking = () => {
   const [processingNFT, setProcessingNFT] = useState<bigint | null>(null);
   const [highlightedNFT, setHighlightedNFT] = useState<string | null>(null);
 
-  const fetchStakedNFTs = async () => {
+  const fetchStakedNFTs = async (showMessage = false) => {
     try {
+      // 로딩 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        const messageKey = "refreshMessage";
+        message.loading({
+          content: "스테이킹 데이터를 새로고침 중입니다...",
+          key: messageKey,
+          duration: 0,
+        });
+      }
+
       setLoading(true);
       const actor = await createActor();
       const authManager = AuthManager.getInstance();
@@ -126,9 +137,26 @@ const Staking = () => {
 
       const nftData = await Promise.all(nftDataPromises);
       setStakedNFTs(nftData);
+
+      // 성공 메시지도 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.success({
+          content: "새로고침 완료!",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
     } catch (error) {
       console.error("스테이킹 데이터 로딩 실패:", error);
-      message.error("스테이킹 데이터를 불러오는데 실패했습니다.");
+
+      // 실패 메시지도 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.error({
+          content: "스테이킹 데이터를 불러오는데 실패했습니다.",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -188,7 +216,8 @@ const Staking = () => {
   };
 
   useEffect(() => {
-    fetchStakedNFTs();
+    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
+    fetchStakedNFTs(false);
 
     // URL에서 하이라이트할 NFT ID 가져오기
     const params = new URLSearchParams(location.search);
@@ -202,18 +231,18 @@ const Staking = () => {
     }
   }, [location]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Spin size="large" />
-      </div>
-    );
-  }
-
   return (
     <div className="staking-page">
       <div className="page-header">
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">스테이킹</h1>
+        <StyledButton
+          customVariant="primary"
+          customSize="md"
+          onClick={() => fetchStakedNFTs(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
@@ -255,8 +284,8 @@ const Staking = () => {
       </div>
 
       {/* 스테이킹된 NFT 목록 */}
-      {loading ? (
-        <div className="flex justify-center items-center h-screen">
+      {loading && stakedNFTs.length === 0 ? (
+        <div className="flex justify-center items-center py-12">
           <Spin size="large" />
         </div>
       ) : stakedNFTs.length === 0 ? (

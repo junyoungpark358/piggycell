@@ -3,6 +3,7 @@ import { Principal } from "@dfinity/principal";
 import { idlFactory } from "../../../declarations/piggycell_backend";
 import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import { AuthManager } from "./auth";
+import { SortOrder } from "antd/es/table/interface";
 
 // 통계 데이터 타입 정의
 export interface NFTStats {
@@ -59,10 +60,16 @@ export interface TransactionFilter {
   type: [] | [string[]];
 }
 
+// 확장된 GetTransactionsArgs 인터페이스
 export interface GetTransactionsArgs {
   start: [] | [bigint];
   length: [] | [bigint];
   account: [] | [ICRC3Account];
+  // 확장 필드
+  search_query: [] | [string];
+  sort_by: [] | [string];
+  sort_direction: [] | [string];
+  type_filter: [] | [string[]];
 }
 
 export interface TransactionResult {
@@ -428,99 +435,162 @@ export const getUserNFTs = async (): Promise<UserNFTData> => {
 };
 
 /**
- * NFT 거래 내역을 조회하는 함수 (Dashboard.tsx에서 사용)
- * @param page 페이지 번호
+ * 트랜잭션 데이터 가져오기 (페이지네이션, 필터링, 검색, 정렬 지원)
+ * @param page 페이지 번호 (1부터 시작)
  * @param pageSize 페이지당 항목 수
  * @param filter 필터 옵션
  * @param searchText 검색어
- * @returns 포맷팅된 거래 내역 및 총 개수
+ * @param sortField 정렬 필드
+ * @param sortDirection 정렬 방향
+ * @returns 거래 내역 및 전체 항목 수
  */
 export const getTransactions = async (
   page: number,
   pageSize: number,
-  filter: TransactionFilter = { date_range: [], account: [], type: [] },
-  searchText: string = ""
+  filter?: TransactionFilter,
+  searchText?: string,
+  sortField?: string,
+  sortDirection?: SortOrder
 ): Promise<{ transactions: TransactionDisplay[]; total: number }> => {
   try {
+    // 검색어에 따옴표가 있는 경우 제거 (예: '"검색어"' -> '검색어')
+    let cleanSearchText = searchText;
+    if (searchText && searchText.startsWith('"') && searchText.endsWith('"')) {
+      cleanSearchText = searchText.slice(1, -1);
+    }
+
+    console.log("[STATS_API] 거래 내역 조회 요청:", {
+      page,
+      pageSize,
+      filter,
+      searchText: cleanSearchText ? `"${cleanSearchText}"` : "undefined",
+      sortField,
+      sortDirection,
+    });
+
     const actor = await createActor();
     const start = (page - 1) * pageSize;
 
-    const result = await actor.icrc3_get_transactions({
+    // ICRC3 트랜잭션 요청 준비
+    const request: GetTransactionsArgs = {
       start: [BigInt(start)],
       length: [BigInt(pageSize)],
-      account: filter.account,
-    });
+      account: filter?.account || [],
+      // 항상 필수 필드 포함
+      sort_by: sortField
+        ? [sortField === "date" ? "timestamp" : sortField]
+        : ["timestamp"],
+      sort_direction: sortDirection
+        ? [sortDirection === "ascend" ? "asc" : "desc"]
+        : ["desc"],
+      type_filter: filter?.type && filter.type.length > 0 ? filter.type : [],
+      // 검색어 설정: 검색어를 사용하지만 '거래 유형'에는 적용되지 않는다는 백엔드 메모
+      search_query:
+        cleanSearchText && cleanSearchText.trim() !== ""
+          ? [cleanSearchText.trim() + "|exclude_type"]
+          : [],
+    };
 
-    const formattedTransactions = (
-      result.transactions as unknown as ICRC3Transaction[]
-    )
-      .filter((tx) => {
-        if (searchText) {
-          const searchLower = searchText.toLowerCase();
-          return (
-            tx.token_ids.some((id) => id.toString().includes(searchLower)) ||
-            (tx.from?.[0]?.owner
-              ?.toString()
-              .toLowerCase()
-              .includes(searchLower) ??
-              false) ||
-            (tx.to?.[0]?.owner
-              ?.toString()
-              .toLowerCase()
-              .includes(searchLower) ??
-              false)
-          );
+    // 검색어 로깅
+    if (cleanSearchText && cleanSearchText.trim() !== "") {
+      console.log(
+        `[STATS_API] 검색어 설정 (유형 검색 제외): "${cleanSearchText.trim()}"`
+      );
+    } else {
+      console.log(`[STATS_API] 검색어 없음`);
+    }
+
+    // 백엔드 API 요청 정보 출력
+    console.log(
+      "[STATS_API] 백엔드 요청 객체:",
+      JSON.stringify(
+        request,
+        (key, value) => {
+          if (typeof value === "bigint") {
+            return value.toString();
+          }
+          return value;
+        },
+        2
+      )
+    );
+
+    // 백엔드 호출
+    console.log("[STATS_API] icrc3_get_transactions 호출 시작");
+    const response = await actor.icrc3_get_transactions(request);
+    console.log(
+      `[STATS_API] 백엔드 응답: 총 ${response.total} 건, 트랜잭션 ${response.transactions.length}개 반환`
+    );
+
+    // 응답 변환
+    const transactions: TransactionDisplay[] = response.transactions.map(
+      (tx, index) => {
+        // 트랜잭션 유형 매핑
+        let type = "";
+        switch (tx.kind) {
+          case "mint":
+            type = "NFT 발행";
+            break;
+          case "transfer":
+            type = "NFT 전송";
+            break;
+          case "stake":
+            type = "NFT 스테이킹";
+            break;
+          case "unstake":
+            type = "NFT 언스테이킹";
+            break;
+          case "reward":
+            type = "스테이킹 보상";
+            break;
+          default:
+            type = tx.kind;
         }
-        return true;
-      })
-      .map((tx) => {
-        const typeMap: { [key: string]: string } = {
-          mint: "NFT 발행",
-          transfer: "NFT 전송",
-          stake: "NFT 스테이킹",
-          unstake: "NFT 언스테이킹",
-          reward: "스테이킹 보상",
-        };
 
-        const backendCanisterId =
-          process.env.CANISTER_ID_PIGGYCELL_BACKEND || "";
-        let fromAddress = tx.from?.[0]?.owner
-          ? tx.from[0].owner.toString()
-          : "-";
-        let toAddress = tx.to?.[0]?.owner ? tx.to[0].owner.toString() : "-";
+        // NFT ID 획득 (첫 번째 ID 사용)
+        const nftId =
+          tx.token_ids && tx.token_ids.length > 0
+            ? tx.token_ids[0].toString()
+            : "-";
 
-        // 거래 유형에 따른 주소 처리
-        if (tx.kind === "stake") {
-          toAddress = backendCanisterId;
-        } else if (tx.kind === "unstake") {
-          // 언스테이킹의 경우 보내는 주소를 백엔드 컨트랙트로 설정
-          const temp = fromAddress;
-          fromAddress = backendCanisterId;
-          toAddress = temp;
-        } else if (tx.kind === "mint") {
-          toAddress = backendCanisterId;
-        } else if (tx.kind === "transfer") {
-          // NFT 구매의 경우 보내는 주소를 백엔드 컨트랙트로 설정
-          fromAddress = backendCanisterId;
-        }
+        // 주소 변환
+        const from =
+          tx.from && tx.from.length > 0
+            ? tx.from[0]?.owner?.toString() || "-"
+            : "-";
+
+        const to =
+          tx.to && tx.to.length > 0 ? tx.to[0]?.owner?.toString() || "-" : "-";
+
+        // 마켓에서의 거래 여부 확인
+        const isFromMarket = from === process.env.BACKEND_CANISTER_ID;
+
+        // 타임스탬프를 가독성 있는 날짜로 변환
+        const formattedDate = formatTimestamp(tx.timestamp);
 
         return {
-          key: `${tx.timestamp.toString()}`,
-          type: typeMap[tx.kind] || tx.kind,
-          nftId: tx.token_ids.map((id) => `#${id.toString()}`).join(", "),
-          from: fromAddress,
-          to: toAddress,
-          isFromMarket: fromAddress === backendCanisterId,
-          date: formatTimestamp(tx.timestamp),
+          key: `${tx.timestamp.toString()}-${index}`,
+          type,
+          nftId,
+          from,
+          to,
+          isFromMarket,
+          date: formattedDate,
         };
-      });
+      }
+    );
+
+    console.log(`[STATS_API] 변환 완료: ${transactions.length}개 트랜잭션`);
+    if (transactions.length > 0) {
+      console.log(`[STATS_API] 첫 번째 트랜잭션 샘플:`, transactions[0]);
+    }
 
     return {
-      transactions: formattedTransactions,
-      total: Number(result.total),
+      transactions,
+      total: Number(response.total),
     };
   } catch (error) {
-    console.error("거래 내역 조회 중 오류 발생:", error);
+    console.error("[STATS_API] 거래 내역 조회 중 오류 발생:", error);
     throw error;
   }
 };

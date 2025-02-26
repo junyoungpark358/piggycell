@@ -72,10 +72,18 @@
   margin-right: 8px;
 }
 
+/* 검색 박스 스타일 - NFTManagement.css와 일치하도록 수정 */
 .search-box {
+  display: flex;
+  justify-content: space-between;
   margin: 24px 0;
-  width: 100%;
+  gap: 16px;
+  align-items: center;
+}
+
+.search-input-wrapper {
   max-width: 600px;
+  width: 100%;
 }
 
 .search-box .ant-input-affix-wrapper {
@@ -100,6 +108,14 @@
 
   .page-header {
     margin-bottom: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    margin-bottom: 8px;
   }
 
   .stats-row {
@@ -116,44 +132,39 @@
 
   .search-box {
     margin: 16px 0;
+    flex-direction: column;
+  }
+
+  .search-input-wrapper {
+    width: 100%;
   }
 }
 
-/* 테이블 스타일 */
-.transaction-table .ant-table-thead > tr > th {
-  font-size: 15px !important;
+/* StyledTable 컴포넌트를 위한 추가 스타일 */
+.ant-table-wrapper {
+  margin-top: 16px;
+}
+
+.ant-table-thead > tr > th {
+  background: linear-gradient(
+    to right,
+    rgba(255, 99, 132, 0.6),
+    rgba(54, 162, 235, 0.6)
+  ) !important;
+  color: white !important;
   font-weight: 600 !important;
   padding: 12px 8px !important;
-  background-color: #f8fafc !important;
+  text-align: center !important;
+  border-bottom: none !important;
 }
 
-.transaction-table .ant-table-tbody > tr > td {
+.ant-table-tbody > tr > td {
   padding: 12px 8px !important;
+  text-align: center !important;
 }
 
-.transaction-table .ant-table-tbody > tr:hover > td {
+.ant-table-tbody > tr:hover > td {
   background-color: #f1f5f9 !important;
-}
-
-/* 테이블 내 버튼 스타일 */
-.transaction-table .ant-btn-link {
-  padding: 2px !important;
-  height: auto !important;
-  min-width: auto !important;
-}
-
-.transaction-table .ant-btn-link:hover {
-  background-color: #e2e8f0 !important;
-  border-radius: 4px !important;
-}
-
-/* 테이블 내 텍스트 스타일 */
-.transaction-table .ant-table {
-  font-size: 14px !important;
-}
-
-.transaction-table .ant-table-row {
-  line-height: 1.5 !important;
 }
 
 /* 주소 표시 스타일 */
@@ -161,7 +172,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
 }
 
 .address-display .anticon-copy {
@@ -174,44 +185,60 @@
 }
 
 /* 테이블 내 아이콘 크기 조정 */
-.transaction-table .anticon {
+.ant-table .anticon {
   font-size: 14px;
 }
 
 /* 테이블 내 버튼 스타일 추가 */
-.transaction-table .ant-btn-link {
+.ant-btn-link {
   border: none;
   transition: all 0.2s;
 }
 
-.transaction-table .ant-btn-link:hover {
+.ant-btn-link:hover {
   transform: scale(1.1);
 }
 
 /* 테이블 행 간격 조정 */
-.transaction-table .ant-table-tbody > tr > td {
+.ant-table-tbody > tr > td {
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.transaction-table .ant-table-tbody > tr:last-child > td {
+.ant-table-tbody > tr:last-child > td {
   border-bottom: none !important;
 }
 
 /* 테이블 페이지네이션 스타일 */
-.transaction-table .ant-pagination {
+.ant-pagination {
   margin-top: 16px !important;
   padding: 0 8px !important;
 }
 
-.transaction-table .ant-pagination-item {
+.ant-pagination-item {
   border-radius: 6px !important;
 }
 
-.transaction-table .ant-pagination-item-active {
+.ant-pagination-item-active {
   background-color: #0284c7 !important;
   border-color: #0284c7 !important;
 }
 
-.transaction-table .ant-pagination-item-active a {
+.ant-pagination-item-active a {
   color: white !important;
+}
+
+/* 빈 데이터 상태 스타일 */
+.ant-empty {
+  margin: 32px 0;
+}
+
+.ant-empty-image {
+  height: 80px;
+}
+
+/* 그라데이션 테이블 테마 적용 */
+.ant-tag {
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-weight: 500;
 }

@@ -8,6 +8,7 @@ import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat64 "mo:base/Nat64";
 import Option "mo:base/Option";
+import Order "mo:base/Order";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import Text "mo:base/Text";
@@ -343,8 +344,39 @@ actor Main {
         token.icrc1_transfer(caller, args)
     };
 
-    // ICRC-3 인터페이스 구현
-    // ICRC3Transaction 변환 함수
+    // ICRC-3 인터페이스 타입
+    type ICRC3Account = {
+        owner : Principal;
+        subaccount : ?Blob;
+    };
+
+    type ICRC3Transaction = {
+        kind : Text;
+        timestamp : Int;
+        from : ?ICRC3Account;
+        to : ?ICRC3Account;
+        token_ids : [Nat];
+        memo : ?Blob;
+        amount : ?Nat;  // 거래 금액 추가
+    };
+
+    type GetTransactionsRequest = {
+        start : ?Nat;
+        length : ?Nat;
+        account : ?ICRC3Account;
+        // ICRC-3 표준 확장 - 내부 처리용 필드
+        sort_by : ?Text;  // 정렬 필드 (timestamp, kind 등)
+        sort_direction : ?Text;  // 정렬 방향 (asc, desc)
+        search_query : ?Text;  // 검색어
+        type_filter : ?[Text];  // 거래 유형 필터 (mint, transfer, stake 등)
+    };
+
+    type GetTransactionsResponse = {
+        transactions : [ICRC3Transaction];
+        total : Nat;
+    };
+
+    // 트랜잭션을 ICRC3Transaction 형식으로 변환하는 헬퍼 함수
     private func convertToICRC3Transaction(tx: Transaction) : ICRC3Transaction {
         {
             kind = switch (tx.txType) {
@@ -372,63 +404,204 @@ actor Main {
         }
     };
 
+    // 검색어로 트랜잭션을 필터링하는 함수
+    private func filterBySearchQuery(tx: ICRC3Transaction, queryText: Text) : Bool {
+        // |exclude_type 플래그 확인
+        let (actualQuery, excludeType) = if (Text.contains(queryText, #text "|exclude_type")) {
+            let parts = Iter.toArray(Text.split(queryText, #text "|"));
+            (parts[0], true)
+        } else {
+            (queryText, false)
+        };
+        
+        let queryLower = Text.toLowercase(actualQuery);
+        
+        Debug.print("필터링 검사 시작: 쿼리='" # actualQuery # "', 트랜잭션 종류='" # tx.kind # "', 유형 검색 제외=" # (if (excludeType) "true" else "false"));
+        
+        // 거래 유형 검색 (트랜잭션 종류)
+        if (not excludeType and Text.contains(Text.toLowercase(tx.kind), #text queryLower)) {
+            Debug.print(">> 거래 유형 일치: " # tx.kind);
+            return true;
+        };
+        
+        // 토큰 ID 검색
+        for (id in tx.token_ids.vals()) {
+            let idText = Int.toText(id);
+            Debug.print(">> 토큰 ID 검사: " # idText);
+            if (Text.contains(idText, #text queryLower)) {
+                Debug.print(">>> 토큰 ID 일치: " # idText);
+                return true;
+            };
+        };
+        
+        // 주소 검색 (보내는 주소 / 받는 주소)
+        switch (tx.from) {
+            case (null) { Debug.print(">> 보내는 주소 없음"); };
+            case (?account) {
+                let principalText = Principal.toText(account.owner);
+                Debug.print(">> 보내는 주소 검사: " # principalText);
+                if (Text.contains(Text.toLowercase(principalText), #text queryLower)) {
+                    Debug.print(">>> 보내는 주소 일치");
+                    return true;
+                };
+            };
+        };
+        
+        switch (tx.to) {
+            case (null) { Debug.print(">> 받는 주소 없음"); };
+            case (?account) {
+                let principalText = Principal.toText(account.owner);
+                Debug.print(">> 받는 주소 검사: " # principalText);
+                if (Text.contains(Text.toLowercase(principalText), #text queryLower)) {
+                    Debug.print(">>> 받는 주소 일치");
+                    return true;
+                };
+            };
+        };
+        
+        Debug.print(">> 필터링 검사 결과: 일치하는 항목 없음");
+        false
+    };
+
+    // 거래 유형 필터링 함수
+    private func filterByType(tx: ICRC3Transaction, typeFilters: [Text]) : Bool {
+        if (typeFilters.size() == 0) {
+            return true;  // 필터가 없으면 모든 유형 포함
+        };
+        
+        for (typeFilter in typeFilters.vals()) {
+            if (typeFilter == tx.kind) {
+                return true;
+            };
+        };
+        
+        false
+    };
+
+    // ICRC3Transaction 정렬 함수
+    private func sortICRC3Transactions(
+        transactions: [ICRC3Transaction], 
+        sortBy: Text,
+        sortDirection: Text
+    ) : [ICRC3Transaction] {
+        let sorted = Array.thaw<ICRC3Transaction>(transactions);
+        
+        // 정렬 로직
+        if (sortBy == "timestamp") {
+            if (sortDirection == "asc") {
+                Array.sortInPlace(sorted, func(a: ICRC3Transaction, b: ICRC3Transaction) : Order.Order {
+                    if (a.timestamp < b.timestamp) { #less } 
+                    else if (a.timestamp > b.timestamp) { #greater } 
+                    else { #equal }
+                });
+            } else {
+                Array.sortInPlace(sorted, func(a: ICRC3Transaction, b: ICRC3Transaction) : Order.Order {
+                    if (a.timestamp > b.timestamp) { #less } 
+                    else if (a.timestamp < b.timestamp) { #greater } 
+                    else { #equal }
+                });
+            };
+        } else if (sortBy == "kind") {
+            if (sortDirection == "asc") {
+                Array.sortInPlace(sorted, func(a: ICRC3Transaction, b: ICRC3Transaction) : Order.Order {
+                    Text.compare(a.kind, b.kind)
+                });
+            } else {
+                Array.sortInPlace(sorted, func(a: ICRC3Transaction, b: ICRC3Transaction) : Order.Order {
+                    switch (Text.compare(a.kind, b.kind)) {
+                        case (#less) { #greater };
+                        case (#equal) { #equal };
+                        case (#greater) { #less };
+                    }
+                });
+            };
+        };
+        // 기본적으로 timestamp 내림차순 적용 (명시적으로 지정되지 않은 필드)
+        
+        Array.freeze<ICRC3Transaction>(sorted)
+    };
+
+    // ICRC-3 표준 트랜잭션 조회 함수 (개선된 버전)
     public query func icrc3_get_transactions(request : GetTransactionsRequest) : async GetTransactionsResponse {
         let start = Option.get(request.start, 0);
         let length = Option.get(request.length, 10);
         let account = request.account;
-
+        let searchQuery = request.search_query;
+        let typeFilter = request.type_filter;
+        let sortBy = Option.get(request.sort_by, "timestamp");
+        let sortDirection = Option.get(request.sort_direction, "desc");
+        
+        // Step 1: 기본 트랜잭션을 ICRC3 형식으로 변환
+        let allICRC3Txs = Buffer.Buffer<ICRC3Transaction>(transactions.size());
+        for (tx in transactions.vals()) {
+            allICRC3Txs.add(convertToICRC3Transaction(tx));
+        };
+        
+        // Step 2: 필터링 적용
         let filteredTxs = Buffer.Buffer<ICRC3Transaction>(0);
         
-        // 이미 정렬된 트랜잭션에서 필터링만 수행
-        for (tx in transactions.vals()) {
-            let icrc3Tx : ICRC3Transaction = {
-                kind = switch (tx.txType) {
-                    case (#Mint) "mint";
-                    case (#NFTSale) "transfer";
-                    case (#Stake) "stake";
-                    case (#Unstake) "unstake";
-                    case (#StakingReward) "reward";
-                };
-                timestamp = tx.timestamp;
-                from = ?{ owner = tx.user; subaccount = null };
-                to = switch (tx.txType) {
-                    case (#Mint) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
-                    case (#NFTSale) { ?{ owner = tx.user; subaccount = null } };
-                    case (#Stake) { ?{ owner = Principal.fromActor(Main); subaccount = null } };
-                    case (#Unstake) { ?{ owner = tx.user; subaccount = null } };
-                    case (#StakingReward) { ?{ owner = tx.user; subaccount = null } };
-                };
-                token_ids = switch (tx.nftId) {
-                    case (null) [];
-                    case (?id) [id];
-                };
-                memo = null;
-                amount = ?tx.amount;
-            };
-
+        for (tx in allICRC3Txs.vals()) {
+            var shouldInclude = true;
+            
             // 계정 필터링
             switch (account) {
-                case (null) {
-                    filteredTxs.add(icrc3Tx);
-                };
+                case (null) { /* 계정 필터가 없으면 모든 거래 포함 */ };
                 case (?acc) {
-                    if (tx.user == acc.owner) {
-                        filteredTxs.add(icrc3Tx);
+                    let fromMatch = switch (tx.from) {
+                        case (null) false;
+                        case (?from) from.owner == acc.owner;
+                    };
+                    
+                    let toMatch = switch (tx.to) {
+                        case (null) false;
+                        case (?to) to.owner == acc.owner;
+                    };
+                    
+                    if (not fromMatch and not toMatch) {
+                        shouldInclude := false;
                     };
                 };
             };
+            
+            // 검색어 필터링
+            switch (searchQuery) {
+                case (null) { /* 검색어가 없으면 모든 거래 포함 */ };
+                case (?queryText) {
+                    if (not filterBySearchQuery(tx, queryText)) {
+                        shouldInclude := false;
+                    };
+                };
+            };
+            
+            // 거래 유형 필터링
+            switch (typeFilter) {
+                case (null) { /* 유형 필터가 없으면 모든 거래 포함 */ };
+                case (?types) {
+                    if (not filterByType(tx, types)) {
+                        shouldInclude := false;
+                    };
+                };
+            };
+            
+            if (shouldInclude) {
+                filteredTxs.add(tx);
+            };
         };
-
-        let total = filteredTxs.size();
+        
+        // Step 3: 정렬 적용
+        let sortedTxs = sortICRC3Transactions(Buffer.toArray(filteredTxs), sortBy, sortDirection);
+        
+        // Step 4: 페이지네이션 적용
+        let total = sortedTxs.size();
         let end = Nat.min(start + length, total);
         let pageItems = Buffer.Buffer<ICRC3Transaction>(0);
-
+        
         var j = start;
         while (j < end) {
-            pageItems.add(filteredTxs.get(j));
+            pageItems.add(sortedTxs[j]);
             j += 1;
         };
-
+        
         {
             transactions = Buffer.toArray(pageItems);
             total = total;
@@ -644,33 +817,6 @@ actor Main {
 
     public query func getEstimatedStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
         stakingManager.getEstimatedReward(tokenId)
-    };
-
-    // ICRC-3 인터페이스 타입
-    type ICRC3Account = {
-        owner : Principal;
-        subaccount : ?Blob;
-    };
-
-    type ICRC3Transaction = {
-        kind : Text;
-        timestamp : Int;
-        from : ?ICRC3Account;
-        to : ?ICRC3Account;
-        token_ids : [Nat];
-        memo : ?Blob;
-        amount : ?Nat;  // 거래 금액 추가
-    };
-
-    type GetTransactionsRequest = {
-        start : ?Nat;
-        length : ?Nat;
-        account : ?ICRC3Account;
-    };
-
-    type GetTransactionsResponse = {
-        transactions : [ICRC3Transaction];
-        total : Nat;
     };
 
     // 관리자용 토큰 발행/소각 기능

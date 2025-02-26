@@ -6,6 +6,7 @@ import {
   BankOutlined,
   EnvironmentOutlined,
   DollarOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -43,8 +44,18 @@ const Home = () => {
     estimatedMonthlyRevenue: 0,
   });
 
-  const fetchNFTs = async () => {
+  const fetchNFTs = async (showMessage = false) => {
     try {
+      // 로딩 메시지는 showMessage가 true일 때만 표시
+      if (showMessage) {
+        const messageKey = "refreshMessage";
+        message.loading({
+          content: "데이터를 새로고침 중입니다...",
+          key: messageKey,
+          duration: 0,
+        });
+      }
+
       setLoading(true);
 
       // statsApi의 getUserNFTs 함수 사용
@@ -53,9 +64,26 @@ const Home = () => {
       setOwnedNFTs(userData.ownedNFTs);
       setStakedNFTs(userData.stakedNFTs);
       setStats(userData.stats);
+
+      // 성공 메시지도 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.success({
+          content: "새로고침 완료!",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
     } catch (error) {
       console.error("NFT 데이터 로딩 실패:", error);
-      message.error("NFT 데이터를 불러오는데 실패했습니다.");
+
+      // 실패 메시지도 showMessage가 true일 때만 표시
+      if (showMessage) {
+        message.error({
+          content: "NFT 데이터를 불러오는데 실패했습니다.",
+          key: "refreshMessage",
+          duration: 2,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +98,7 @@ const Home = () => {
       if ("ok" in result) {
         message.success("NFT 스테이킹이 완료되었습니다.");
         // NFT 목록 새로고침
-        fetchNFTs();
+        fetchNFTs(true);
       } else {
         message.error(`스테이킹 실패: ${getErrorMessage(result.err)}`);
       }
@@ -94,7 +122,7 @@ const Home = () => {
           `NFT 언스테이킹이 완료되었습니다. 받은 보상: ${reward} PGC`
         );
         // NFT 목록 새로고침
-        fetchNFTs();
+        fetchNFTs(true);
       } else {
         message.error(`언스테이킹 실패: ${getErrorMessage(result.err)}`);
       }
@@ -117,13 +145,22 @@ const Home = () => {
   };
 
   useEffect(() => {
-    fetchNFTs();
+    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
+    fetchNFTs(false);
   }, []);
 
   return (
     <div className="home-page">
       <div className="page-header">
         <h1 className="mb-6 text-5xl font-extrabold text-sky-600">PiggyCell</h1>
+        <StyledButton
+          customVariant="primary"
+          customSize="md"
+          onClick={() => fetchNFTs(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
+          icon={<ReloadOutlined />}
+        >
+          새로 고침
+        </StyledButton>
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
