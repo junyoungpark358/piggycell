@@ -1493,4 +1493,21 @@ actor Main {
         updateNFTStatus(tokenId, status);
         #ok()
     };
+
+    // 새로운 토큰 보유자 및 거래 관련 조회 함수 추가
+    public query func get_token_holders() : async [(Principal, Nat)] {
+        token.get_token_holders()
+    };
+
+    public query func get_token_holders_count() : async Nat {
+        token.get_token_holders_count()
+    };
+
+    public query func get_transaction_count() : async Nat {
+        token.get_transaction_count()
+    };
+
+    public query func get_recent_transactions(count : Nat) : async [PiggyCellToken.Transaction] {
+        token.get_recent_transactions(count)
+    };
 };

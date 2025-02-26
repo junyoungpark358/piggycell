@@ -14,6 +14,7 @@ import Result "mo:base/Result";
 import Text "mo:base/Text";
 import Time "mo:base/Time";
 import TrieMap "mo:base/TrieMap";
+import List "mo:base/List";
 
 module {
     public type Account = {
@@ -39,6 +40,17 @@ module {
         #Duplicate : { duplicate_of : Nat };
         #TemporarilyUnavailable;
         #GenericError : { error_code : Nat; message : Text };
+    };
+
+    // 거래 이력을 위한 타입 추가
+    public type Transaction = {
+        id : Nat;
+        from : Account;
+        to : Account;
+        amount : Nat;
+        fee : Nat;
+        timestamp : Time.Time;
+        memo : ?[Nat8];
     };
 
     public class PiggyCellToken() {
@@ -80,6 +92,11 @@ module {
         private let symbol : Text = "PGC";
         private let name : Text = "PiggyCell Token";
         private let fee : Nat = 1;
+        
+        // 거래 이력을 위한 변수들
+        private var nextTxId : Nat = 0;
+        private var transactions = Buffer.Buffer<Transaction>(0);
+        private var transactionCount : Nat = 0;
 
         public func icrc1_name() : Text {
             name
@@ -108,6 +125,80 @@ module {
             }
         };
 
+        // 새로운 함수: 토큰 보유자 목록 반환
+        public func get_token_holders() : [(Principal, Nat)] {
+            var holders = Buffer.Buffer<(Principal, Nat)>(0);
+            for ((account, balance) in ledger.entries()) {
+                if (balance > 0) {
+                    holders.add((account.owner, balance));
+                };
+            };
+            Buffer.toArray(holders)
+        };
+
+        // 새로운 함수: 토큰 보유자 수 반환
+        public func get_token_holders_count() : Nat {
+            var count : Nat = 0;
+            for ((account, balance) in ledger.entries()) {
+                if (balance > 0) {
+                    count += 1;
+                };
+            };
+            count
+        };
+
+        // 새로운 함수: 총 거래 건수 반환
+        public func get_transaction_count() : Nat {
+            transactionCount
+        };
+
+        // 새로운 함수: 최근 거래 내역 반환 (최대 count개)
+        public func get_recent_transactions(count : Nat) : [Transaction] {
+            let size = transactions.size();
+            let actualCount = if (size < count) { size } else { count };
+            
+            let result = Buffer.Buffer<Transaction>(actualCount);
+            var i = 0;
+            
+            // 가장 최근 거래부터 (버퍼의 마지막부터) 가져옴
+            while (i < actualCount) {
+                let index = size - i - 1;
+                result.add(transactions.get(index));
+                i += 1;
+            };
+            
+            Buffer.toArray(result)
+        };
+
+        // 트랜잭션 기록 함수
+        private func recordTransaction(from : Account, to : Account, amount : Nat, memo : ?[Nat8]) {
+            let txn : Transaction = {
+                id = nextTxId;
+                from = from;
+                to = to;
+                amount = amount;
+                fee = fee;
+                timestamp = Time.now();
+                memo = memo;
+            };
+            
+            nextTxId += 1;
+            transactionCount += 1;
+            
+            // 최대 100개 거래 내역만 저장 (제한을 두어 메모리 사용량 관리)
+            if (transactions.size() >= 100) {
+                // 가장 오래된 거래(버퍼의 처음) 제거
+                let temp = Buffer.Buffer<Transaction>(99);
+                for (i in Iter.range(1, 99)) {
+                    temp.add(transactions.get(i));
+                };
+                transactions := temp;
+            };
+            
+            // 새 거래 추가
+            transactions.add(txn);
+        };
+
         public func mint(to : Account, amount : Nat) : Result.Result<(), Text> {
             switch (ledger.get(to)) {
                 case (?balance) {
@@ -118,6 +209,14 @@ module {
                 };
             };
             totalSupply += amount;
+            
+            // 가상의 시스템 계정으로부터 민팅 기록
+            let systemAccount : Account = {
+                owner = Principal.fromText("aaaaa-aa");
+                subaccount = null;
+            };
+            recordTransaction(systemAccount, to, amount, null);
+            
             #ok(())
         };
 
@@ -129,6 +228,14 @@ module {
                     };
                     ledger.put(from, balance - amount);
                     totalSupply -= amount;
+                    
+                    // 가상의 시스템 계정으로 소각 기록
+                    let systemAccount : Account = {
+                        owner = Principal.fromText("aaaaa-aa");
+                        subaccount = null;
+                    };
+                    recordTransaction(from, systemAccount, amount, null);
+                    
                     #ok(())
                 };
                 case null {
@@ -184,6 +291,9 @@ module {
                     ledger.put(args.to, args.amount);
                 };
             };
+            
+            // 거래 기록
+            recordTransaction(from, args.to, args.amount, args.memo);
 
             #ok(())
         };

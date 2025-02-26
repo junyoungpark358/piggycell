@@ -146,51 +146,44 @@ const TokenManagement: React.FC = () => {
     try {
       setLoading(true);
 
-      // 실제 환경에서는 백엔드에서 데이터를 가져오는 코드로 대체
-      // 현재는 mock 데이터로 대체
-      generateMockData();
+      // 실제 환경에서 백엔드에서 데이터를 가져오기
+      const actor = await createActor();
 
-      // 백엔드 API를 활용한 실제 구현 예시
-      /*
-      const totalSupply = Number(await piggycell_backend.icrc1_total_supply());
-      
-      // 관리자 계정 포함
-      const authManager = AuthManager.getInstance();
-      const principal = await authManager.getPrincipal();
-      const ownersData: TokenOwner[] = [];
-      
-      if (principal) {
-        const adminBalance = Number(
-          await piggycell_backend.icrc1_balance_of({
-            owner: principal,
-            subaccount: [],
-          })
-        );
-        ownersData.push({
-          key: principal.toString(),
-          address: principal.toString(),
-          balance: adminBalance,
-        });
-      }
-      
-      // 토큰 소유자 목록과 잔액 가져오기 (실제 구현 필요)
-      
+      // 1. 총 토큰 공급량 가져오기
+      const totalSupply = Number(await actor.icrc1_total_supply());
+
+      // 2. 토큰 보유자 수 가져오기
+      const holdersCount = Number(await actor.get_token_holders_count());
+
+      // 3. 거래 건수 가져오기
+      const txCount = Number(await actor.get_transaction_count());
+
+      // 4. 토큰 보유자 목록 가져오기
+      const holders = await actor.get_token_holders();
+      const ownersData: TokenOwner[] = holders.map(([principal, balance]) => ({
+        key: principal.toString(),
+        address: principal.toString(),
+        balance: Number(balance),
+      }));
+
       setTokenOwners(ownersData);
       setTokenStats({
         totalSupply,
-        totalHolders: ownersData.length,
-        transactionCount: 0, // 이 값은 백엔드에서 가져와야 함
+        totalHolders: holdersCount,
+        transactionCount: txCount,
       });
-      
+
       // 페이지네이션 총 개수 설정
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
-        total: ownersData.length
+        total: ownersData.length,
       }));
-      */
     } catch (error) {
       console.error("토큰 통계 데이터를 가져오는 중 오류 발생:", error);
       message.error("토큰 통계 데이터를 가져오는 중 오류가 발생했습니다.");
+
+      // 오류 발생 시 백업으로 가상 데이터 생성
+      generateMockData();
     } finally {
       setLoading(false);
     }
@@ -431,7 +424,7 @@ const TokenManagement: React.FC = () => {
       title: "지갑 ID",
       dataIndex: "address",
       key: "address",
-      width: "60%",
+      width: "70%",
       render: (address: string) => (
         <div className="address-display">
           <span>{address}</span>
@@ -451,26 +444,9 @@ const TokenManagement: React.FC = () => {
       title: "잔액",
       dataIndex: "balance",
       key: "balance",
-      width: "25%",
+      width: "30%",
       render: (balance: number) => (
         <span style={{ color: "#1890ff" }}>{`${balance} PGC`}</span>
-      ),
-      sorter: (a: TokenOwner, b: TokenOwner) => a.balance - b.balance,
-    },
-    {
-      title: "작업",
-      key: "action",
-      width: "15%",
-      align: "center" as const,
-      render: () => (
-        <Space size="middle">
-          <StyledButton
-            customVariant="ghost"
-            customSize="sm"
-            onClick={() => message.info("편집 기능은 추후 구현 예정입니다.")}
-            icon={<EditOutlined />}
-          />
-        </Space>
       ),
     },
   ];
@@ -568,7 +544,6 @@ const TokenManagement: React.FC = () => {
           showTotal: (total) => `총 ${total}개 지갑`,
         }}
         onChange={handleTableChange}
-        scroll={{ x: true }}
       />
 
       {/* 토큰 전송 모달 */}
