@@ -1,8 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@300;400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@300;400;600;700&display=swap");
 
 :root {
-  font-family: "Comic Neue", cursive;
-  line-height: 1.5;
+  font-family: "Nunito", "Arial", sans-serif;
+  line-height: 1.6;
   font-weight: 400;
 
   color-scheme: light;
@@ -37,7 +37,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  font-family: "Comic Neue", cursive;
+  font-family: "Nunito", "Arial", sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
 }
@@ -84,7 +84,7 @@ button:focus-visible {
 input,
 select,
 textarea {
-  font-family: "Comic Neue", cursive;
+  font-family: "Nunito", "Arial", sans-serif;
   border: 3px solid var(--border-color);
   border-radius: var(--border-radius);
   background-color: var(--paper-color);

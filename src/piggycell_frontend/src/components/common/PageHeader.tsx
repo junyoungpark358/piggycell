@@ -5,12 +5,14 @@ import {
   ReloadOutlined,
   CopyOutlined,
   CheckOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { StyledButton } from "./StyledButton";
 import { getUserBalance } from "../../utils/statsApi";
 import "../common/UserBalanceInfo.css";
 import { AuthManager } from "../../utils/auth";
 import styled from "@emotion/styled";
+import { formatPGCBalance } from "../../utils/tokenUtils";
 
 // 모바일에서 높이를 일관되게 유지하기 위한 스타일 추가
 const HeaderButtonsContainer = styled(Space)`
@@ -35,8 +37,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
   const [pgcBalance, setPgcBalance] = useState<number | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
+  const [isCopied, setIsCopied] = useState({
+    balance: false,
+    principal: false,
+  });
   const [isBalanceModalVisible, setIsBalanceModalVisible] = useState(false);
+  const [principalId, setPrincipalId] = useState<string | null>(null);
 
   // PGC 잔액 조회 함수
   const fetchBalance = async () => {
@@ -63,15 +69,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
     setIsBalanceModalVisible(true);
   };
 
-  // 복사 핸들러
-  const handleCopy = () => {
+  // 복사 핸들러 - 잔액
+  const handleCopyBalance = () => {
     if (pgcBalance !== null) {
-      // 정확한 전체 값을 클립보드에 복사
-      const fullBalance = pgcBalance.toString();
+      // 정확한 전체 값을 클립보드에 복사 (지수 표기법 없이)
+      const fullBalance = formatPGCBalance(pgcBalance, 8);
       navigator.clipboard
         .writeText(fullBalance)
         .then(() => {
-          setIsCopied(true);
+          setIsCopied({ ...isCopied, balance: true });
           message.success({
             content: "잔액이 클립보드에 복사되었습니다!",
             icon: <CheckOutlined style={{ color: "#52c41a" }} />,
@@ -80,7 +86,31 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
 
           // 2초 후 복사 상태 초기화
           setTimeout(() => {
-            setIsCopied(false);
+            setIsCopied({ ...isCopied, balance: false });
+          }, 2000);
+        })
+        .catch((err) => {
+          message.error("복사에 실패했습니다: " + err);
+        });
+    }
+  };
+
+  // 복사 핸들러 - Principal ID
+  const handleCopyPrincipal = () => {
+    if (principalId) {
+      navigator.clipboard
+        .writeText(principalId)
+        .then(() => {
+          setIsCopied({ ...isCopied, principal: true });
+          message.success({
+            content: "Principal ID가 클립보드에 복사되었습니다!",
+            icon: <CheckOutlined style={{ color: "#52c41a" }} />,
+            duration: 2,
+          });
+
+          // 2초 후 복사 상태 초기화
+          setTimeout(() => {
+            setIsCopied({ ...isCopied, principal: false });
           }, 2000);
         })
         .catch((err) => {
@@ -90,7 +120,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
   };
 
   useEffect(() => {
-    // 인증 상태 확인
+    // 인증 상태 확인 및 Principal ID 가져오기
     const checkAuth = async () => {
       const authManager = AuthManager.getInstance();
       const authenticated = await authManager.isAuthenticated();
@@ -98,6 +128,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
 
       if (authenticated) {
         fetchBalance();
+        try {
+          // Principal ID 가져오기
+          const principal = await authManager.getPrincipal();
+          if (principal) {
+            setPrincipalId(principal.toString());
+          }
+        } catch (error) {
+          console.error("Principal ID 가져오기 오류:", error);
+        }
       }
     };
 
@@ -118,13 +157,13 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
   // 전체 잔액 값(소수점 모두 표시)
   const getFullBalanceDisplay = () => {
     if (pgcBalance === null) return "- PGC";
-    return `${pgcBalance} PGC`;
+    return `${formatPGCBalance(pgcBalance, 8)} PGC`;
   };
 
   // 축약된 잔액 값(소수점 2자리)
   const getShortBalanceDisplay = () => {
     if (pgcBalance === null) return "- PGC";
-    return `${pgcBalance.toFixed(2)} PGC`;
+    return `${formatPGCBalance(pgcBalance, 2)} PGC`;
   };
 
   return (
@@ -135,7 +174,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
           <>
             <Tooltip title="클릭하여 전체 잔액 보기">
               <div
-                className={`user-balance-badge ${isCopied ? "copied" : ""}`}
+                className={`user-balance-badge ${
+                  isCopied.balance ? "copied" : ""
+                }`}
                 onClick={handleBalanceClick}
               >
                 <WalletOutlined className="wallet-icon-badge" />
@@ -157,26 +198,69 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
                 >
                   닫기
                 </StyledButton>,
-                <StyledButton
-                  key="copy"
-                  customVariant="primary"
-                  onClick={handleCopy}
-                  icon={isCopied ? <CheckOutlined /> : <CopyOutlined />}
-                >
-                  {isCopied ? "복사됨" : "복사하기"}
-                </StyledButton>,
               ]}
             >
               <div className="balance-modal-content">
+                {/* Principal ID 정보 */}
                 <div className="balance-detail">
-                  <div className="balance-label">현재 PGC 잔액:</div>
-                  <div className="balance-value-full">
-                    {balanceLoading ? "로딩 중..." : getFullBalanceDisplay()}
+                  <div className="balance-label">
+                    <UserOutlined /> Principal ID:
+                  </div>
+                  <div
+                    className="principal-value"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <span
+                      style={{ wordBreak: "break-all", marginRight: "8px" }}
+                    >
+                      {principalId || "로딩 중..."}
+                    </span>
+                    <StyledButton
+                      customVariant="primary"
+                      customSize="sm"
+                      onClick={handleCopyPrincipal}
+                      icon={
+                        isCopied.principal ? (
+                          <CheckOutlined />
+                        ) : (
+                          <CopyOutlined />
+                        )
+                      }
+                    >
+                      {isCopied.principal ? "복사됨" : "복사"}
+                    </StyledButton>
+                  </div>
+
+                  {/* 잔액 정보 */}
+                  <div className="balance-label">
+                    <WalletOutlined /> 현재 PGC 잔액:
+                  </div>
+                  <div
+                    className="balance-value-full"
+                    style={{ display: "flex", alignItems: "center" }}
+                  >
+                    <span style={{ marginRight: "8px" }}>
+                      {balanceLoading ? "로딩 중..." : getFullBalanceDisplay()}
+                    </span>
+                    <StyledButton
+                      customVariant="primary"
+                      customSize="sm"
+                      onClick={handleCopyBalance}
+                      icon={
+                        isCopied.balance ? <CheckOutlined /> : <CopyOutlined />
+                      }
+                    >
+                      {isCopied.balance ? "복사됨" : "복사"}
+                    </StyledButton>
                   </div>
                 </div>
+
                 <div className="balance-info-text">
-                  이 값을 복사하여 정확한 토큰 잔액을 다른 곳에서 사용할 수
-                  있습니다.
+                  위 정보를 복사하여 다른 곳에서 사용할 수 있습니다.
                 </div>
               </div>
             </Modal>

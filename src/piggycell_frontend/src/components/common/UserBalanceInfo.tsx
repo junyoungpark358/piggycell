@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Typography, Tooltip, Spin } from "antd";
 import { WalletOutlined, ReloadOutlined } from "@ant-design/icons";
 import { getUserBalance } from "../../utils/statsApi";
+import { formatPGCBalance } from "../../utils/tokenUtils";
 import "./UserBalanceInfo.css";
 
 const { Text } = Typography;
@@ -49,7 +50,7 @@ const UserBalanceInfo: React.FC<UserBalanceInfoProps> = ({
           <Spin size="small" />
         ) : (
           <Text strong style={{ fontSize: "18px", color: "#000" }}>
-            {balance !== null ? `${balance.toFixed(2)} PGC` : "- PGC"}
+            {balance !== null ? `${formatPGCBalance(balance, 2)} PGC` : "- PGC"}
           </Text>
         )}
       </div>
