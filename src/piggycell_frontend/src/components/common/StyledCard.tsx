@@ -39,7 +39,7 @@ const getCardStyles = ({
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border: 3px solid #000;
     background: ${theme.colors.background.paper};
-    transform: ${customVariant === "stats" ? "rotate(-1deg)" : "none"};
+    transform: none;
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
     position: relative;
     overflow: visible;
@@ -133,6 +133,11 @@ const getCardStyles = ({
       );
       &::before {
         background: ${theme.colors.success.main};
+      }
+      transform: none;
+      &:hover {
+        transform: none;
+        box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
       }
       .ant-statistic-title {
         font-family: "Bangers", cursive;

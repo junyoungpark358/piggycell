@@ -79,7 +79,7 @@ const SpinnerContainer = styled.div`
 const AnimatedCard = styled(StyledCard)`
   transition: transform 0.2s;
   &:hover {
-    transform: translateY(-0.25rem);
+    transform: none;
   }
 `;
 

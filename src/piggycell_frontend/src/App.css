@@ -456,12 +456,12 @@ body {
   text-transform: uppercase;
   padding: 8px 20px !important;
   height: auto !important;
-  transform: rotate(-1deg);
+  transform: none !important;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 
 .ant-btn:hover {
-  transform: translateY(-3px) rotate(1deg) !important;
+  transform: none !important;
   box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8) !important;
   background: linear-gradient(
     135deg,
@@ -568,19 +568,20 @@ h6 {
 
 .page-header h1 {
   font-family: "Bangers", cursive !important;
-  font-size: 1.8rem !important;
+  font-size: 3.5rem !important;
   color: var(--primary-color) !important;
-  text-shadow: 2px 2px 0 #000, 4px 4px 0 #fff !important;
+  text-shadow: 3px 3px 0 #000, 6px 6px 0 #fff !important;
   letter-spacing: 2px;
-  transform: rotate(-2deg);
-  margin: 0;
-  line-height: 1;
+  transform: none !important;
+  margin-bottom: 1rem;
 }
 
 .page-header p {
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0;
+  font-family: "Comic Neue", cursive !important;
+  font-size: 1.4rem !important;
+  color: #000 !important;
+  transform: none !important;
+  text-shadow: 1px 1px 0 #fff;
 }
 
 .stats-row {
@@ -597,12 +598,12 @@ h6 {
   position: relative;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-  transform: rotate(-1deg) translateY(0);
+  transform: none;
 }
 
 .stats-row .ant-card:hover {
-  transform: translateY(-8px) rotate(0deg) !important;
-  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.8) !important;
+  transform: none !important;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.8) !important;
 }
 
 .stats-row .ant-card::before {
@@ -1023,7 +1024,7 @@ h6 {
   color: var(--primary-color) !important;
   text-shadow: 3px 3px 0 #000, 6px 6px 0 #fff !important;
   letter-spacing: 2px;
-  transform: rotate(-2deg);
+  transform: none !important;
   margin-bottom: 1rem;
 }
 
@@ -1031,7 +1032,7 @@ h6 {
   font-family: "Comic Neue", cursive !important;
   font-size: 1.4rem !important;
   color: #000 !important;
-  transform: rotate(1deg);
+  transform: none !important;
   text-shadow: 1px 1px 0 #fff;
 }
 
@@ -1162,19 +1163,19 @@ h6 {
 }
 
 .stats-row .ant-card {
-  animation: float 6s ease-in-out infinite;
+  animation: none !important;
 }
 
 .stats-row .ant-card:nth-child(2) {
-  animation-delay: -1s;
+  animation: none !important;
 }
 
 .stats-row .ant-card:nth-child(3) {
-  animation-delay: -2s;
+  animation: none !important;
 }
 
 .stats-row .ant-card:nth-child(4) {
-  animation-delay: -3s;
+  animation: none !important;
 }
 
 /* 그림자 효과 개선 */
@@ -1216,38 +1217,22 @@ h6 {
 
 @keyframes wiggle {
   0% {
-    transform: rotate(-1deg);
+    transform: none;
   }
   50% {
-    transform: rotate(1deg);
+    transform: none;
   }
   100% {
-    transform: rotate(-1deg);
+    transform: none;
   }
-}
-
-.stats-row .ant-card {
-  animation: float 6s ease-in-out infinite;
-}
-
-.stats-row .ant-card:nth-child(2) {
-  animation-delay: 0.5s;
-}
-
-.stats-row .ant-card:nth-child(3) {
-  animation-delay: 1s;
-}
-
-.stats-row .ant-card:nth-child(4) {
-  animation-delay: 1.5s;
 }
 
 .ant-btn:not(:disabled) {
-  animation: wiggle 3s ease-in-out infinite;
+  animation: none !important;
 }
 
 .ant-card-head-title {
-  animation: pulse 3s ease-in-out infinite;
+  animation: none !important;
 }
 
 /* 말풍선 효과 */
@@ -1335,33 +1320,30 @@ h6 {
 
 /* 호버 효과 강화 */
 .ant-card:hover::before {
-  animation: spin 1s linear infinite;
+  animation: none !important;
 }
 
 @keyframes spin {
   from {
-    transform: rotate(15deg);
+    transform: none;
   }
   to {
-    transform: rotate(375deg);
+    transform: none;
   }
 }
 
 .ant-btn:hover::after {
-  content: "★";
-  position: absolute;
-  font-size: 1.2rem;
-  color: var(--paper-color);
-  animation: star 0.5s ease-out forwards;
+  content: none;
+  animation: none !important;
 }
 
 @keyframes star {
   0% {
-    transform: translate(-50%, -50%) scale(0) rotate(0deg);
-    opacity: 1;
+    transform: none;
+    opacity: 0;
   }
   100% {
-    transform: translate(-50%, -50%) scale(2) rotate(180deg);
+    transform: none;
     opacity: 0;
   }
 }
