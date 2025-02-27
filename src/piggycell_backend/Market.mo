@@ -10,6 +10,7 @@ import Nat64 "mo:base/Nat64";
 import Int "mo:base/Int";
 import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
+import Debug "mo:base/Debug";
 
 module {
     // 리스팅 정보 타입
@@ -86,17 +87,23 @@ module {
 
         // NFT 구매
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
+            Debug.print("buyNFT 시작: caller=" # Principal.toText(caller) # ", tokenId=" # Nat.toText(tokenId));
+            
             switch (listings.get(tokenId)) {
                 case (?listing) {
+                    Debug.print("Listing 정보: 판매자=" # Principal.toText(listing.seller) # ", 가격=" # Nat.toText(listing.price));
+                    
                     // 1. 구매자의 PGC 잔액 확인
                     let buyerAccount: PiggyCellToken.Account = {
                         owner = caller;
                         subaccount = null;
                     };
                     let balance = token.icrc1_balance_of(buyerAccount);
+                    Debug.print("구매자 잔액: " # Nat.toText(balance));
                     
                     // 잔액이 부족한 경우 오류 반환
                     if (balance < listing.price) {
+                        Debug.print("잔액 부족: 필요=" # Nat.toText(listing.price) # ", 보유=" # Nat.toText(balance));
                         return #err(#InsufficientBalance);
                     };
                     
@@ -116,18 +123,31 @@ module {
                         created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
                     };
                     
+                    Debug.print("토큰 전송 시도: 금액=" # Nat.toText(listing.price) # ", 수수료=" # Nat.toText(token.icrc1_fee()));
+                    
                     // PGC 토큰 전송 시도
                     let tokenTransferResult = token.icrc1_transfer(caller, transferArgs);
                     
                     switch(tokenTransferResult) {
                         case (#err(transferError)) {
-                            // 토큰 전송 실패 시 오류 반환
+                            // 토큰 전송 실패 시 오류 정보 상세 로깅
                             switch(transferError) {
-                                case (#InsufficientFunds(_)) { return #err(#InsufficientBalance) };
-                                case (_) { return #err(#TransferError) };
+                                case (#InsufficientFunds({ balance })) { 
+                                    Debug.print("토큰 전송 실패: 잔액 부족 - 잔액=" # Nat.toText(balance));
+                                    return #err(#InsufficientBalance) 
+                                };
+                                case (#BadFee({ expected_fee })) {
+                                    Debug.print("토큰 전송 실패: 잘못된 수수료 - 예상 수수료=" # Nat.toText(expected_fee));
+                                    return #err(#TransferError) 
+                                };
+                                case (_) { 
+                                    Debug.print("토큰 전송 실패: 기타 오류");
+                                    return #err(#TransferError) 
+                                };
                             };
                         };
                         case (#ok(_)) {
+                            Debug.print("토큰 전송 성공. NFT 전송 시작");
                             // 토큰 전송 성공 시 NFT 전송 진행
                             let nftTransferArg: ChargerHubNFT.TransferArg = {
                                 token_id = tokenId;
@@ -142,11 +162,17 @@ module {
 
                             // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
                             let transferResult = nft.icrc7_transfer(marketCanister, [nftTransferArg]);
+                            Debug.print("NFT 전송 시도 결과: " # debug_show(transferResult));
+                            
                             switch(transferResult[0]) {
-                                case (null) { #err(#TransferError) };
+                                case (null) { 
+                                    Debug.print("NFT 전송 실패: 결과가 null");
+                                    #err(#TransferError) 
+                                };
                                 case (?result) {
                                     switch(result) {
                                         case (#Ok(_)) {
+                                            Debug.print("NFT 전송 성공. 리스팅 삭제 중");
                                             listings.delete(tokenId);
                                             // listingsByTime에서도 제거
                                             var i = 0;
@@ -154,13 +180,17 @@ module {
                                                 let (_, tid) = listingsByTime.get(i);
                                                 if (tid == tokenId) {
                                                     let _ = listingsByTime.remove(i);
+                                                    Debug.print("리스팅 삭제 완료. 구매 성공!");
                                                     break l;
                                                 };
                                                 i += 1;
                                             };
                                             #ok(listing)
                                         };
-                                        case (#Err(_)) { #err(#TransferError) };
+                                        case (#Err(nftError)) { 
+                                            Debug.print("NFT 전송 실패: " # debug_show(nftError));
+                                            #err(#TransferError) 
+                                        };
                                     }
                                 };
                             }

@@ -13,6 +13,7 @@ import { StyledInput } from "../components/common/StyledInput";
 import { message } from "antd";
 import { useEffect, useState } from "react";
 import PageHeader from "../components/common/PageHeader";
+import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 
 const Revenue = () => {
   // 로딩 상태 추가
@@ -249,15 +250,16 @@ const Revenue = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="일일 수익"
-            value={totalStats.dailyRevenue}
+            value={formatTokenDisplayForUI(totalStats.dailyRevenue)}
             prefix={<DollarOutlined />}
             suffix="PGC"
+            loading={loading}
           />
         </Col>
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="월간 수익"
-            value={totalStats.monthlyRevenue}
+            value={formatTokenDisplayForUI(totalStats.monthlyRevenue)}
             prefix={<LineChartOutlined />}
             suffix="PGC"
           />
@@ -265,7 +267,7 @@ const Revenue = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="누적 수익"
-            value={totalStats.totalRevenue}
+            value={formatTokenDisplayForUI(totalStats.totalRevenue)}
             prefix={<RiseOutlined />}
             suffix="PGC"
           />
@@ -293,7 +295,9 @@ const Revenue = () => {
           <Col key={revenue.id} xs={24} sm={12} md={8} lg={6}>
             <NFTCard
               name={revenue.nftId}
-              location={`일일 수익: ${revenue.dailyRevenue} PGC`}
+              location={`일일 수익: ${formatTokenDisplayForUI(
+                revenue.dailyRevenue
+              ).toFixed(2)} PGC`}
               chargerCount={revenue.monthlyRevenue}
               price={revenue.totalRevenue}
               status="available"

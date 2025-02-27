@@ -17,6 +17,7 @@ import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
 import PageHeader from "../components/common/PageHeader";
 import { getUserNFTs, NFTData, createActor } from "../utils/statsApi";
+import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 
 interface MetadataValue {
   Text?: string;
@@ -181,7 +182,7 @@ const Home = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="예상 월 수익"
-            value={stats.estimatedMonthlyRevenue}
+            value={formatTokenDisplayForUI(stats.estimatedMonthlyRevenue)}
             prefix={<DollarOutlined />}
             suffix="PGC"
             loading={loading}
@@ -203,7 +204,7 @@ const Home = () => {
                         name={nft.name}
                         location={nft.location}
                         chargerCount={nft.chargerCount}
-                        price={Number(nft.price)}
+                        price={nft.price}
                         status="available"
                         onBuy={() => handleStake(nft.id)}
                         loading={stakingInProgress === nft.id}
@@ -231,7 +232,7 @@ const Home = () => {
                         name={nft.name}
                         location={nft.location}
                         chargerCount={nft.chargerCount}
-                        price={Number(nft.price)}
+                        price={nft.price}
                         status="available"
                         onBuy={() => handleUnstake(nft.id)}
                         loading={stakingInProgress === nft.id}

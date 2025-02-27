@@ -5,13 +5,26 @@
 const DECIMALS = 8;
 
 /**
- * raw 단위의 토큰 값을 화면 표시용 형식으로 변환합니다.
+ * raw 단위의 토큰 값을 내부 처리용으로 반환합니다.
+ * 이제 변환 없이 raw 값을 그대로 반환합니다.
+ *
+ * @param rawBalance - raw 단위의 토큰 값 (BigInt, number 또는 string)
+ * @returns raw 단위의 값 (number로 변환)
+ */
+export const formatTokenDisplay = (
+  rawBalance: number | bigint | string
+): number => {
+  return Number(rawBalance);
+};
+
+/**
+ * raw 단위의 토큰 값을 UI 표시용 형식으로 변환합니다.
  * 예: 100000000 -> 1.00000000
  *
  * @param rawBalance - 변환할 raw 단위의 토큰 값 (BigInt, number 또는 string)
  * @returns 화면 표시용으로 변환된 숫자 값
  */
-export const formatTokenDisplay = (
+export const formatTokenDisplayForUI = (
   rawBalance: number | bigint | string
 ): number => {
   const balance = Number(rawBalance);
@@ -43,7 +56,7 @@ export const formatTokenString = (
 ): string => {
   // toFixed()는 때때로 지수 표기법을 사용할 수 있으므로,
   // Number.prototype.toLocaleString()를 사용하여 강제로 소수점 표기법을 사용합니다.
-  const balance = formatTokenDisplay(rawBalance);
+  const balance = formatTokenDisplayForUI(rawBalance);
 
   // 소수점 표기법 강제 적용
   return balance.toLocaleString("fullwide", {

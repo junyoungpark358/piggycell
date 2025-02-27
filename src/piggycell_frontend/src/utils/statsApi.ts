@@ -672,7 +672,7 @@ const formatTimestamp = (timestamp: bigint): string => {
 
 /**
  * 현재 로그인한 사용자의 PGC 토큰 잔액을 조회하는 함수
- * @returns Promise<number> - 사용자의 PGC 토큰 잔액
+ * @returns Promise<number> - 사용자의 PGC 토큰 잔액 (raw 단위)
  */
 export const getUserBalance = async (): Promise<number> => {
   try {
@@ -690,12 +690,8 @@ export const getUserBalance = async (): Promise<number> => {
     };
 
     const balance = await actor.icrc1_balance_of(account);
-    // 토큰의 decimals 값을 가져와서 적절히 변환
-    const decimals = await actor.icrc1_decimals();
-    // Nat를 JavaScript의 Number로 변환
-    const balanceNumber = Number(balance) / Math.pow(10, Number(decimals));
-
-    return balanceNumber;
+    // raw 단위 그대로 반환 (변환하지 않음)
+    return Number(balance);
   } catch (error) {
     console.error("토큰 잔액 조회 오류:", error);
     return 0;

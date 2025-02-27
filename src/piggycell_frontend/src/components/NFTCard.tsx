@@ -7,6 +7,9 @@ import { StyledCard } from "./common/StyledCard";
 import { StyledButton } from "./common/StyledButton";
 import styled from "@emotion/styled";
 import { css } from "@emotion/react";
+import { formatTokenDisplayForUI } from "../utils/tokenUtils";
+import { formatPGCBalance } from "../utils/tokenUtils";
+import pgcLogo from "../assets/pgc.png";
 
 const CardContent = styled.div`
   display: flex;
@@ -83,12 +86,12 @@ const ButtonContainer = styled.div<ButtonContainerProps>`
     `}
 `;
 
-interface NFTCardProps {
+export interface NFTCardProps {
   name: string;
   location: string;
   chargerCount: number;
-  price: number;
-  status: "available" | "sold";
+  price: number | string | bigint;
+  status?: "selling" | "sold" | "available";
   onBuy?: () => void;
   onSecondaryAction?: () => void;
   loading?: boolean;
@@ -123,7 +126,7 @@ export const NFTCard: React.FC<NFTCardProps> = ({
           </InfoItem>
           <InfoItem>
             <DollarOutlined />
-            {price.toFixed(2)} PGC
+            {formatPGCBalance(price, 8)} PGC
           </InfoItem>
         </InfoContainer>
         <ButtonContainer

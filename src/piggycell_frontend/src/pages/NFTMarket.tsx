@@ -23,6 +23,7 @@ import { StatCard } from "../components/StatCard";
 import { StyledInput } from "../components/common/StyledInput";
 import { getMarketStats, NFTStats, createActor } from "../utils/statsApi";
 import PageHeader from "../components/common/PageHeader";
+import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 
 interface MetadataValue {
   Text?: string;
@@ -400,8 +401,10 @@ const NFTMarket = () => {
 
   const handleBuyNFT = async (nftId: bigint) => {
     try {
+      console.log(`NFT 구매 시작 - NFT ID: ${nftId.toString()}`);
       setBuyingNFT(nftId);
       const actor = await createActor();
+      console.log("백엔드 액터 생성 완료");
 
       // 먼저 사용자의 PGC 잔액 확인
       const authManager = AuthManager.getInstance();
@@ -410,6 +413,7 @@ const NFTMarket = () => {
         message.error("로그인이 필요합니다.");
         return;
       }
+      console.log(`구매자 Principal: ${userPrincipal.toString()}`);
 
       // 현재 NFT 가격 확인
       const nftInfo = nfts.find((nft) => nft.id === nftId);
@@ -417,18 +421,28 @@ const NFTMarket = () => {
         message.error("NFT 정보를 찾을 수 없습니다.");
         return;
       }
+      console.log(
+        `NFT 정보: ID=${nftId.toString()}, 가격=${nftInfo.price.toString()}, 위치=${
+          nftInfo.location
+        }`
+      );
 
       // 사용자의 PGC 잔액 확인
       const account = {
         owner: userPrincipal,
         subaccount: [] as [] | [Uint8Array],
       };
+      console.log("잔액 확인 요청 중...");
       const balance = await actor.icrc1_balance_of(account);
+      console.log(`구매 전 잔액: ${balance.toString()}`);
 
       // 잔액이 부족한 경우
       if (balance < nftInfo.price) {
-        const formattedBalance = Number(balance) / Math.pow(10, 8); // 8 decimal places for PGC
-        const formattedPrice = Number(nftInfo.price) / Math.pow(10, 8);
+        const formattedBalance = formatTokenDisplayForUI(balance);
+        const formattedPrice = formatTokenDisplayForUI(nftInfo.price);
+        console.log(
+          `잔액 부족: 현재=${formattedBalance}, 필요=${formattedPrice}`
+        );
         message.error(
           `잔액이 부족합니다. 현재 잔액: ${formattedBalance.toFixed(
             2
@@ -438,9 +452,25 @@ const NFTMarket = () => {
       }
 
       // NFT 구매 시도
+      console.log(`NFT 구매 요청 시작 - 가격: ${nftInfo.price.toString()} PGC`);
       const result = await actor.buyNFT(nftId);
+      console.log(
+        "NFT 구매 응답 받음:",
+        JSON.stringify(result, (_, v) =>
+          typeof v === "bigint" ? v.toString() : v
+        )
+      );
 
       if ("ok" in result) {
+        console.log("NFT 구매 성공");
+
+        // 구매 후 잔액 재확인
+        const newBalance = await actor.icrc1_balance_of(account);
+        console.log(`구매 후 잔액: ${newBalance.toString()}`);
+        console.log(
+          `잔액 차이: ${(Number(balance) - Number(newBalance)).toString()} PGC`
+        );
+
         message.success("NFT 구매가 완료되었습니다.");
         setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
         setMarketStats((prev) => ({
@@ -449,12 +479,27 @@ const NFTMarket = () => {
           soldNFTs: (prev.soldNFTs || 0) + 1,
         }));
       } else {
+        console.error("NFT 구매 실패:", result.err);
+
+        // 에러 타입별 로그 기록
+        if (result.err && typeof result.err === "object") {
+          if ("InsufficientBalance" in result.err) {
+            console.error("구매 실패 사유: 잔액 부족");
+          } else if ("TransferError" in result.err) {
+            console.error("구매 실패 사유: 토큰 전송 오류");
+          } else if ("NotListed" in result.err) {
+            console.error("구매 실패 사유: 리스팅 없음");
+          }
+        }
+
+        // 기존 에러 메시지 처리 함수 사용
         message.error(`구매 실패: ${getErrorMessage(result.err)}`);
       }
     } catch (error) {
-      console.error("NFT 구매 실패:", error);
+      console.error("NFT 구매 중 예외 발생:", error);
       message.error("NFT 구매 중 오류가 발생했습니다.");
     } finally {
+      console.log("NFT 구매 프로세스 종료");
       setBuyingNFT(null);
     }
   };
@@ -536,7 +581,7 @@ const NFTMarket = () => {
                       name={nft.name}
                       location={nft.location}
                       chargerCount={nft.chargerCount}
-                      price={Number(nft.price)}
+                      price={nft.price}
                       status="available"
                       onBuy={() => handleBuyNFT(nft.id)}
                       loading={buyingNFT === nft.id}
@@ -568,7 +613,7 @@ const NFTMarket = () => {
                       name={nft.name}
                       location={nft.location}
                       chargerCount={nft.chargerCount}
-                      price={Number(nft.price)}
+                      price={nft.price}
                       status="sold"
                       primaryButtonText="판매 완료"
                     />

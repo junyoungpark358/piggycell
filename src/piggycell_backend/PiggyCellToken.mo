@@ -15,6 +15,7 @@ import Text "mo:base/Text";
 import Time "mo:base/Time";
 import TrieMap "mo:base/TrieMap";
 import List "mo:base/List";
+import Debug "mo:base/Debug";
 
 module {
     public type Account = {
@@ -51,6 +52,14 @@ module {
         fee : Nat;
         timestamp : Time.Time;
         memo : ?[Nat8];
+    };
+
+    public type TransactionRecord = {
+        from : Account;
+        to : Account;
+        amount : Nat;
+        timestamp : Int;
+        memo : ?Blob;
     };
 
     public class PiggyCellToken() {
@@ -91,7 +100,7 @@ module {
         private let decimals : Nat8 = 8;
         private let symbol : Text = "PGC";
         private let name : Text = "PiggyCell Token";
-        private let fee : Nat = 1;
+        private let fee : Nat = 0;
         
         // 거래 이력을 위한 변수들
         private var nextTxId : Nat = 0;
@@ -245,19 +254,25 @@ module {
         };
 
         public func icrc1_transfer(caller : Principal, args : TransferArgs) : Result.Result<(), TransferError> {
+            Debug.print("icrc1_transfer 시작: caller=" # Principal.toText(caller));
+            
             let from : Account = {
                 owner = caller;
                 subaccount = args.from_subaccount;
             };
 
             let balance = icrc1_balance_of(from);
+            Debug.print("보내는 계정 잔액: " # Nat.toText(balance) # ", 필요 금액: " # Nat.toText(args.amount + fee));
+            
             if (balance < args.amount + fee) {
+                Debug.print("잔액 부족 오류: 보유=" # Nat.toText(balance) # ", 필요=" # Nat.toText(args.amount + fee));
                 return #err(#InsufficientFunds { balance = balance });
             };
 
             switch (args.fee) {
                 case (?requested_fee) {
                     if (requested_fee != fee) {
+                        Debug.print("수수료 오류: 요청=" # Nat.toText(requested_fee) # ", 필요=" # Nat.toText(fee));
                         return #err(#BadFee { expected_fee = fee });
                     };
                 };
@@ -276,24 +291,31 @@ module {
 
             switch (ledger.get(from)) {
                 case (?from_balance) {
+                    Debug.print("송금 전 잔액 상태: 보내는 계정=" # Nat.toText(from_balance) # ", 차감액=" # Nat.toText(args.amount + fee));
                     ledger.put(from, from_balance - args.amount - fee);
+                    Debug.print("송금 후 잔액 상태: 보내는 계정=" # Nat.toText(from_balance - args.amount - fee));
                 };
                 case null {
+                    Debug.print("송금 계정을 찾을 수 없음");
                     return #err(#InsufficientFunds { balance = 0 });
                 };
             };
 
             switch (ledger.get(args.to)) {
                 case (?to_balance) {
+                    Debug.print("수신 계정 이전 잔액: " # Nat.toText(to_balance) # ", 추가액=" # Nat.toText(args.amount));
                     ledger.put(args.to, to_balance + args.amount);
+                    Debug.print("수신 계정 이후 잔액: " # Nat.toText(to_balance + args.amount));
                 };
                 case null {
+                    Debug.print("새 수신 계정 생성: 금액=" # Nat.toText(args.amount));
                     ledger.put(args.to, args.amount);
                 };
             };
             
             // 거래 기록
             recordTransaction(from, args.to, args.amount, args.memo);
+            Debug.print("토큰 전송 완료");
 
             #ok(())
         };

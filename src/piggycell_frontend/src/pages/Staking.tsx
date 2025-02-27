@@ -20,6 +20,7 @@ import { NFTCard } from "../components/NFTCard";
 import { StyledInput } from "../components/common/StyledInput";
 import { getStakingStats, NFTStats, createActor } from "../utils/statsApi";
 import PageHeader from "../components/common/PageHeader";
+import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 
 interface MetadataValue {
   Text?: string;
@@ -256,7 +257,11 @@ const Staking = () => {
         <Col xs={24} sm={8} md={8}>
           <StatCard
             title="예상 보상"
-            value={Number(stakingStats.totalEstimatedRewards || 0)}
+            value={
+              stakingStats.totalEstimatedRewards
+                ? formatTokenDisplayForUI(stakingStats.totalEstimatedRewards)
+                : 0
+            }
             prefix={<DollarOutlined />}
             suffix="PGC"
             loading={loading}
@@ -289,7 +294,7 @@ const Staking = () => {
                 name={nft.name}
                 location={nft.location}
                 chargerCount={nft.chargerCount}
-                price={Number(nft.price)}
+                price={nft.price}
                 status="available"
                 onBuy={() => handleUnstake(nft.id)}
                 onSecondaryAction={() => handleClaimReward(nft.id)}

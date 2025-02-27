@@ -34,6 +34,7 @@ import {
   getNFTManagementStats,
   NFTManagementStats,
 } from "../../utils/statsApi";
+import { formatPGCBalance } from "../../utils/tokenUtils";
 
 // NFT 데이터 타입 정의
 interface NFTData {
@@ -586,7 +587,7 @@ const NFTManagement = () => {
             priceNum = price;
           }
 
-          if (isNaN(priceNum)) return <span>0 raw units</span>;
+          if (isNaN(priceNum)) return <span>0 PGC</span>;
 
           // 상태에 따른 색상 결정
           let color = "#1890ff"; // 기본 색상
@@ -605,8 +606,13 @@ const NFTManagement = () => {
               break;
           }
 
-          // raw units 값으로 표시
-          return <span style={{ color }}>{`${priceNum} raw units`}</span>;
+          // PGC 단위로 표시 (formatPGCBalance 함수 사용)
+          return (
+            <span style={{ color }}>{`${formatPGCBalance(
+              priceNum,
+              8
+            )} PGC`}</span>
+          );
         } catch (error) {
           console.error("가격 변환 오류:", error, price);
           return <span>가격 오류</span>;
@@ -991,7 +997,7 @@ const NFTManagement = () => {
                   <StyledInput
                     type="number"
                     min={0}
-                    placeholder="예: 100000000 (= 1 PGC)"
+                    placeholder="전송할 PGC 수량 (raw units)"
                     customSize="md"
                   />
                 </Form.Item>
