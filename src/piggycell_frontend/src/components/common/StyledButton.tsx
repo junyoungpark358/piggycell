@@ -199,6 +199,14 @@ const getButtonStyles = ({
         background: transparent !important;
       }
     }
+
+    /* 모바일 환경에서 버튼 높이 일관성 유지 */
+    @media (max-width: 768px) {
+      height: 40px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      font-size: ${theme.typography.fontSize.sm};
+    }
   `;
 };
 

@@ -10,6 +10,21 @@ import { StyledButton } from "./StyledButton";
 import { getUserBalance } from "../../utils/statsApi";
 import "../common/UserBalanceInfo.css";
 import { AuthManager } from "../../utils/auth";
+import styled from "@emotion/styled";
+
+// 모바일에서 높이를 일관되게 유지하기 위한 스타일 추가
+const HeaderButtonsContainer = styled(Space)`
+  display: flex;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    .user-balance-badge,
+    .ant-btn {
+      height: 40px !important;
+      line-height: 34px !important;
+    }
+  }
+`;
 
 interface PageHeaderProps {
   title: string;
@@ -115,7 +130,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
   return (
     <div className="page-header">
       <h1 className="mb-6 text-5xl font-extrabold text-sky-600">{title}</h1>
-      <Space>
+      <HeaderButtonsContainer>
         {isAuthenticated && (
           <>
             <Tooltip title="클릭하여 전체 잔액 보기">
@@ -175,7 +190,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
         >
           새로 고침
         </StyledButton>
-      </Space>
+      </HeaderButtonsContainer>
     </div>
   );
 };

@@ -248,7 +248,11 @@
 /* 모바일 대응 */
 @media (max-width: 576px) {
   .user-balance-badge {
-    padding: 6px 12px;
+    padding: 4px 10px;
+    min-width: 120px;
+    height: 40px;
+    display: flex;
+    align-items: center;
   }
 
   .wallet-icon-badge {
