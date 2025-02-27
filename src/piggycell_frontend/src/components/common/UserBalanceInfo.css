@@ -1,0 +1,200 @@
+.user-balance-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.user-balance-card .ant-card-body {
+  padding: 12px;
+}
+
+.balance-container {
+  display: flex;
+  align-items: center;
+}
+
+.balance-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: rgba(240, 165, 0, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.balance-icon .anticon {
+  font-size: 18px;
+  color: #f0a500;
+}
+
+.balance-info {
+  flex-grow: 1;
+}
+
+.balance-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 2px;
+}
+
+.balance-amount {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.refresh-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 12px;
+}
+
+.refresh-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.refresh-button .anticon {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 모바일 대응 스타일 */
+@media (max-width: 576px) {
+  .user-balance-card {
+    margin-bottom: 12px;
+  }
+
+  .user-balance-card .ant-card-body {
+    padding: 10px;
+  }
+
+  .balance-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+  }
+
+  .balance-icon .anticon {
+    font-size: 16px;
+  }
+
+  .balance-amount {
+    font-size: 14px;
+  }
+
+  .refresh-button {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.user-balance-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background-color: #f0a500;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+  width: auto;
+  min-width: 180px;
+}
+
+.balance-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wallet-icon {
+  color: #000;
+  font-size: 18px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 6px;
+  border-radius: 50%;
+}
+
+.refresh-icon {
+  color: #000;
+  cursor: pointer;
+  font-size: 16px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.refresh-icon:hover {
+  transform: rotate(180deg);
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* 모바일 대응 스타일 */
+@media (max-width: 576px) {
+  .user-balance-info {
+    padding: 6px 12px;
+    min-width: 140px;
+  }
+
+  .wallet-icon {
+    font-size: 16px;
+    padding: 4px;
+  }
+
+  .refresh-icon {
+    font-size: 14px;
+    padding: 4px;
+  }
+}
+
+/* 잔액 배지 스타일 */
+.user-balance-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #f0a500;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.wallet-icon-badge {
+  color: #000;
+  font-size: 16px;
+}
+
+.balance-text {
+  font-weight: 600;
+  color: #000;
+  font-size: 16px;
+}
+
+/* 모바일 대응 */
+@media (max-width: 576px) {
+  .user-balance-badge {
+    padding: 6px 12px;
+  }
+
+  .wallet-icon-badge {
+    font-size: 14px;
+  }
+
+  .balance-text {
+    font-size: 14px;
+  }
+}

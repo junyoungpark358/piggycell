@@ -669,3 +669,35 @@ const formatTimestamp = (timestamp: bigint): string => {
     timeZone: "Asia/Seoul",
   }).format(date);
 };
+
+/**
+ * 현재 로그인한 사용자의 PGC 토큰 잔액을 조회하는 함수
+ * @returns Promise<number> - 사용자의 PGC 토큰 잔액
+ */
+export const getUserBalance = async (): Promise<number> => {
+  try {
+    const actor = await createActor();
+    const authManager = AuthManager.getInstance();
+    const principal = await authManager.getPrincipal();
+
+    if (!principal) {
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    const account = {
+      owner: principal,
+      subaccount: [] as [] | [Uint8Array],
+    };
+
+    const balance = await actor.icrc1_balance_of(account);
+    // 토큰의 decimals 값을 가져와서 적절히 변환
+    const decimals = await actor.icrc1_decimals();
+    // Nat를 JavaScript의 Number로 변환
+    const balanceNumber = Number(balance) / Math.pow(10, Number(decimals));
+
+    return balanceNumber;
+  } catch (error) {
+    console.error("토큰 잔액 조회 오류:", error);
+    return 0;
+  }
+};

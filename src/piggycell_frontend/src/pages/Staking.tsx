@@ -7,7 +7,6 @@ import {
   LineChartOutlined,
   DollarOutlined,
   EnvironmentOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -18,9 +17,9 @@ import type { _SERVICE } from "../../../declarations/piggycell_backend/piggycell
 import "./Staking.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
-import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
 import { getStakingStats, NFTStats, createActor } from "../utils/statsApi";
+import PageHeader from "../components/common/PageHeader";
 
 interface MetadataValue {
   Text?: string;
@@ -233,17 +232,7 @@ const Staking = () => {
 
   return (
     <div className="staking-page">
-      <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">스테이킹</h1>
-        <StyledButton
-          customVariant="primary"
-          customSize="md"
-          onClick={() => fetchStakedNFTs(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
-          icon={<ReloadOutlined />}
-        >
-          새로 고침
-        </StyledButton>
-      </div>
+      <PageHeader title="스테이킹" onRefresh={() => fetchStakedNFTs(true)} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={24} sm={8} md={8}>

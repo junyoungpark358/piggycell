@@ -2,11 +2,8 @@ import { Row, Col, Tabs, Empty } from "antd";
 import {
   ThunderboltOutlined,
   ShoppingCartOutlined,
-  UserOutlined,
   BankOutlined,
-  EnvironmentOutlined,
   DollarOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -18,7 +15,7 @@ import "./Home.css";
 import { message } from "antd";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
-import { StyledButton } from "../components/common/StyledButton";
+import PageHeader from "../components/common/PageHeader";
 import { getUserNFTs, NFTData, createActor } from "../utils/statsApi";
 
 interface MetadataValue {
@@ -145,23 +142,13 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
-    fetchNFTs(false);
+    // 초기 데이터 로딩
+    fetchNFTs();
   }, []);
 
   return (
     <div className="home-page">
-      <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">PiggyCell</h1>
-        <StyledButton
-          customVariant="primary"
-          customSize="md"
-          onClick={() => fetchNFTs(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
-          icon={<ReloadOutlined />}
-        >
-          새로 고침
-        </StyledButton>
-      </div>
+      <PageHeader title="PiggyCell" onRefresh={() => fetchNFTs(true)} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>

@@ -431,3 +431,11 @@
     padding: 12px;
   }
 }
+
+/* 오른쪽 섹션 스타일 */
+.desktop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}

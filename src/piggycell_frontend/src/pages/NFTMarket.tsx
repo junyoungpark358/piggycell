@@ -6,7 +6,6 @@ import {
   DollarOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AuthManager } from "../utils/auth";
@@ -21,9 +20,9 @@ import type {
 import "./NFTMarket.css";
 import { NFTCard } from "../components/NFTCard";
 import { StatCard } from "../components/StatCard";
-import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
 import { getMarketStats, NFTStats, createActor } from "../utils/statsApi";
+import PageHeader from "../components/common/PageHeader";
 
 interface MetadataValue {
   Text?: string;
@@ -427,19 +426,10 @@ const NFTMarket = () => {
 
   return (
     <div className="nft-market-page">
-      <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">
-          마켓플레이스
-        </h1>
-        <StyledButton
-          customVariant="primary"
-          customSize="md"
-          onClick={() => fetchInitialNFTs(true)}
-          icon={<ReloadOutlined />}
-        >
-          새로 고침
-        </StyledButton>
-      </div>
+      <PageHeader
+        title="마켓플레이스"
+        onRefresh={() => fetchInitialNFTs(true)}
+      />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>

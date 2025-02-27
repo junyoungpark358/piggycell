@@ -5,15 +5,14 @@ import {
   LineChartOutlined,
   RiseOutlined,
   CheckCircleOutlined,
-  ReloadOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../components/StatCard";
 import { NFTCard } from "../components/NFTCard";
-import { StyledButton } from "../components/common/StyledButton";
 import { StyledInput } from "../components/common/StyledInput";
 import { message } from "antd";
 import { useEffect, useState } from "react";
+import PageHeader from "../components/common/PageHeader";
 
 const Revenue = () => {
   // 로딩 상태 추가
@@ -244,17 +243,7 @@ const Revenue = () => {
 
   return (
     <div className="revenue-page">
-      <div className="page-header">
-        <h1 className="mb-6 text-5xl font-extrabold text-sky-600">수익 관리</h1>
-        <StyledButton
-          customVariant="primary"
-          customSize="md"
-          onClick={() => handleRefresh(true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
-          icon={<ReloadOutlined />}
-        >
-          새로 고침
-        </StyledButton>
-      </div>
+      <PageHeader title="수익 관리" onRefresh={() => handleRefresh(true)} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
