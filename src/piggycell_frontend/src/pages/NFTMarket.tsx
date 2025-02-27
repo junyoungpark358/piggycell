@@ -403,6 +403,41 @@ const NFTMarket = () => {
       setBuyingNFT(nftId);
       const actor = await createActor();
 
+      // 먼저 사용자의 PGC 잔액 확인
+      const authManager = AuthManager.getInstance();
+      const userPrincipal = await authManager.getPrincipal();
+      if (!userPrincipal) {
+        message.error("로그인이 필요합니다.");
+        return;
+      }
+
+      // 현재 NFT 가격 확인
+      const nftInfo = nfts.find((nft) => nft.id === nftId);
+      if (!nftInfo) {
+        message.error("NFT 정보를 찾을 수 없습니다.");
+        return;
+      }
+
+      // 사용자의 PGC 잔액 확인
+      const account = {
+        owner: userPrincipal,
+        subaccount: [] as [] | [Uint8Array],
+      };
+      const balance = await actor.icrc1_balance_of(account);
+
+      // 잔액이 부족한 경우
+      if (balance < nftInfo.price) {
+        const formattedBalance = Number(balance) / Math.pow(10, 8); // 8 decimal places for PGC
+        const formattedPrice = Number(nftInfo.price) / Math.pow(10, 8);
+        message.error(
+          `잔액이 부족합니다. 현재 잔액: ${formattedBalance.toFixed(
+            2
+          )} PGC, 필요한 금액: ${formattedPrice.toFixed(2)} PGC`
+        );
+        return;
+      }
+
+      // NFT 구매 시도
       const result = await actor.buyNFT(nftId);
 
       if ("ok" in result) {

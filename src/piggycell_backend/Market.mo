@@ -88,41 +88,84 @@ module {
         public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             switch (listings.get(tokenId)) {
                 case (?listing) {
-                    let nftTransferArg: ChargerHubNFT.TransferArg = {
-                        token_id = tokenId;
+                    // 1. 구매자의 PGC 잔액 확인
+                    let buyerAccount: PiggyCellToken.Account = {
+                        owner = caller;
+                        subaccount = null;
+                    };
+                    let balance = token.icrc1_balance_of(buyerAccount);
+                    
+                    // 잔액이 부족한 경우 오류 반환
+                    if (balance < listing.price) {
+                        return #err(#InsufficientBalance);
+                    };
+                    
+                    // 2. 판매자 계정 생성
+                    let sellerAccount: PiggyCellToken.Account = {
+                        owner = listing.seller;
+                        subaccount = null;
+                    };
+                    
+                    // 3. 토큰 전송 (구매자 -> 판매자)
+                    let transferArgs: PiggyCellToken.TransferArgs = {
                         from_subaccount = null;
-                        to = {
-                            owner = caller;
-                            subaccount = null;
-                        };
+                        to = sellerAccount;
+                        amount = listing.price;
+                        fee = ?token.icrc1_fee();
                         memo = null;
                         created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
                     };
-
-                    // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
-                    let transferResult = nft.icrc7_transfer(marketCanister, [nftTransferArg]);
-                    switch(transferResult[0]) {
-                        case (null) { #err(#TransferError) };
-                        case (?result) {
-                            switch(result) {
-                                case (#Ok(_)) {
-                                    listings.delete(tokenId);
-                                    // listingsByTime에서도 제거
-                                    var i = 0;
-                                    label l while (i < listingsByTime.size()) {
-                                        let (_, tid) = listingsByTime.get(i);
-                                        if (tid == tokenId) {
-                                            let _ = listingsByTime.remove(i);
-                                            break l;
-                                        };
-                                        i += 1;
-                                    };
-                                    #ok(listing)
+                    
+                    // PGC 토큰 전송 시도
+                    let tokenTransferResult = token.icrc1_transfer(caller, transferArgs);
+                    
+                    switch(tokenTransferResult) {
+                        case (#err(transferError)) {
+                            // 토큰 전송 실패 시 오류 반환
+                            switch(transferError) {
+                                case (#InsufficientFunds(_)) { return #err(#InsufficientBalance) };
+                                case (_) { return #err(#TransferError) };
+                            };
+                        };
+                        case (#ok(_)) {
+                            // 토큰 전송 성공 시 NFT 전송 진행
+                            let nftTransferArg: ChargerHubNFT.TransferArg = {
+                                token_id = tokenId;
+                                from_subaccount = null;
+                                to = {
+                                    owner = caller;
+                                    subaccount = null;
                                 };
-                                case (#Err(_)) { #err(#TransferError) };
+                                memo = null;
+                                created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
+                            };
+
+                            // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
+                            let transferResult = nft.icrc7_transfer(marketCanister, [nftTransferArg]);
+                            switch(transferResult[0]) {
+                                case (null) { #err(#TransferError) };
+                                case (?result) {
+                                    switch(result) {
+                                        case (#Ok(_)) {
+                                            listings.delete(tokenId);
+                                            // listingsByTime에서도 제거
+                                            var i = 0;
+                                            label l while (i < listingsByTime.size()) {
+                                                let (_, tid) = listingsByTime.get(i);
+                                                if (tid == tokenId) {
+                                                    let _ = listingsByTime.remove(i);
+                                                    break l;
+                                                };
+                                                i += 1;
+                                            };
+                                            #ok(listing)
+                                        };
+                                        case (#Err(_)) { #err(#TransferError) };
+                                    }
+                                };
                             }
                         };
-                    }
+                    };
                 };
                 case null { #err(#NotListed) };
             }

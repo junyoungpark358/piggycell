@@ -586,7 +586,7 @@ const NFTManagement = () => {
             priceNum = price;
           }
 
-          if (isNaN(priceNum)) return <span>0 PGC</span>;
+          if (isNaN(priceNum)) return <span>0 raw units</span>;
 
           // 상태에 따른 색상 결정
           let color = "#1890ff"; // 기본 색상
@@ -605,8 +605,8 @@ const NFTManagement = () => {
               break;
           }
 
-          // 원래 값 그대로 표시
-          return <span style={{ color }}>{`${priceNum} PGC`}</span>;
+          // raw units 값으로 표시
+          return <span style={{ color }}>{`${priceNum} raw units`}</span>;
         } catch (error) {
           console.error("가격 변환 오류:", error, price);
           return <span>가격 오류</span>;
@@ -745,17 +745,22 @@ const NFTManagement = () => {
         metadata: metadata,
       };
 
+      // 사용자가 입력한 raw units 가격을 그대로 사용
+      const price =
+        values.transferType === "market" ? BigInt(values.price) : BigInt(0);
+
       console.log("민팅 인자:", {
         mintArgs,
         transferType: values.transferType === "market" ? "market" : "direct",
-        price: values.transferType === "market" ? [BigInt(values.price)] : [],
+        price: values.transferType === "market" ? [price] : [],
+        rawUnits: values.price,
       });
 
       // NFT 민팅 및 마켓 등록
       const result = await actor.mint(
         mintArgs,
         values.transferType === "market" ? "market" : "direct",
-        values.transferType === "market" ? [BigInt(values.price)] : []
+        values.transferType === "market" ? [price] : []
       );
 
       console.log("민팅 결과:", result);
@@ -978,7 +983,7 @@ const NFTManagement = () => {
               getFieldValue("transferType") === "market" ? (
                 <Form.Item
                   name="price"
-                  label="판매 가격 (PGC)"
+                  label="판매 가격 (raw units, 100,000,000 = 1 PGC)"
                   rules={[
                     { required: true, message: "판매 가격을 입력해주세요" },
                   ]}
@@ -986,7 +991,7 @@ const NFTManagement = () => {
                   <StyledInput
                     type="number"
                     min={0}
-                    placeholder="예: 100"
+                    placeholder="예: 100000000 (= 1 PGC)"
                     customSize="md"
                   />
                 </Form.Item>
