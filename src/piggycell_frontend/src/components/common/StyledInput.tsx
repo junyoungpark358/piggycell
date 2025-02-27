@@ -13,6 +13,7 @@ interface CustomInputProps {
   customSize?: Size;
   fullWidth?: boolean;
   error?: boolean;
+  noRotate?: boolean;
 }
 
 type StyledInputProps = Omit<AntInputProps, "size" | "variant"> &
@@ -23,23 +24,28 @@ const getInputStyles = ({
   customSize = "md",
   fullWidth = false,
   error = false,
+  noRotate = false,
   theme,
 }: CustomInputProps & { theme: any }) => {
   const baseStyles = css`
     border-radius: ${theme.borderRadius.md};
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     font-family: ${theme.typography.fontFamily.primary};
-    transform: rotate(-1deg);
+    ${!noRotate && `transform: rotate(-1deg);`}
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
     ${fullWidth && "width: 100%;"}
 
     &:hover {
-      transform: translateY(-2px) rotate(1deg);
+      ${!noRotate
+        ? `transform: translateY(-2px) rotate(1deg);`
+        : `transform: translateY(-2px);`}
       box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
     }
 
     &:focus {
-      transform: translateY(-2px) rotate(0deg);
+      ${!noRotate
+        ? `transform: translateY(-2px) rotate(0deg);`
+        : `transform: translateY(-2px);`}
       box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
       border-color: ${theme.colors.primary.main};
       outline: none;
@@ -62,7 +68,7 @@ const getInputStyles = ({
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: ${theme.typography.fontFamily.display};
+        font-family: ${theme?.typography?.fontFamily?.display || "sans-serif"};
         font-size: 14px;
         transform: rotate(15deg);
       }
@@ -197,6 +203,7 @@ export const StyledInput = ({
   customSize = "md",
   fullWidth = false,
   error = false,
+  noRotate = false,
   ...props
 }: StyledInputProps) => {
   const { theme } = useTheme();
@@ -207,6 +214,7 @@ export const StyledInput = ({
       customSize={customSize}
       fullWidth={fullWidth}
       error={error}
+      noRotate={noRotate}
       size={sizeMap[customSize]}
       theme={theme}
       {...props}

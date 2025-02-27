@@ -532,6 +532,7 @@ const TokenManagement: React.FC = () => {
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
             onChange={(e) => handleSearch(e.target.value)}
+            noRotate={true}
           />
         </div>
         <div className="flex gap-2">
@@ -634,6 +635,7 @@ const TokenManagement: React.FC = () => {
             <StyledInput
               customSize="md"
               placeholder="Principal ID를 입력하세요"
+              noRotate={true}
             />
           </Form.Item>
 
@@ -671,6 +673,7 @@ const TokenManagement: React.FC = () => {
               max={100000000000000}
               customSize="md"
               placeholder="전송할 PGC 수량 (raw units)"
+              noRotate={true}
             />
           </Form.Item>
         </Form>

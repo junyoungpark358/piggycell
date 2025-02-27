@@ -886,6 +886,7 @@ const NFTManagement = () => {
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
             onChange={(e) => handleSearch(e.target.value)}
+            noRotate={true}
           />
         </div>
         <div className="flex gap-2">
@@ -951,6 +952,7 @@ const NFTManagement = () => {
             <StyledInput
               placeholder="예: 서울시 강남구 역삼동"
               customSize="md"
+              noRotate={true}
             />
           </Form.Item>
 
@@ -964,6 +966,7 @@ const NFTManagement = () => {
               min={1}
               placeholder="예: 8"
               customSize="md"
+              noRotate={true}
             />
           </Form.Item>
 
@@ -999,6 +1002,7 @@ const NFTManagement = () => {
                     min={0}
                     placeholder="전송할 PGC 수량 (raw units)"
                     customSize="md"
+                    noRotate={true}
                   />
                 </Form.Item>
               ) : getFieldValue("transferType") === "address" ? (
@@ -1012,6 +1016,7 @@ const NFTManagement = () => {
                   <StyledInput
                     placeholder="Principal ID를 입력하세요"
                     customSize="md"
+                    noRotate={true}
                   />
                 </Form.Item>
               ) : null
