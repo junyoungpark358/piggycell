@@ -171,6 +171,67 @@
   border: 2px solid #000;
   border-radius: 8px;
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.user-balance-badge:hover {
+  background-color: #ffb20d;
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.user-balance-badge:active {
+  transform: translateY(0);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+  background-color: #e09500;
+}
+
+/* 클릭 시 파동 효과 추가 */
+.user-balance-badge:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.user-balance-badge:active:after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* 복사 성공 스타일 */
+.user-balance-badge.copied {
+  background-color: #52c41a;
+  color: white;
+}
+
+.user-balance-badge.copied .wallet-icon-badge,
+.user-balance-badge.copied .balance-text {
+  color: white;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
 }
 
 .wallet-icon-badge {
@@ -197,4 +258,45 @@
   .balance-text {
     font-size: 14px;
   }
+}
+
+/* 모달 관련 스타일 */
+.balance-modal-content {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.balance-detail {
+  margin-bottom: 16px;
+}
+
+.balance-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.balance-value-full {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000;
+  padding: 12px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  text-align: center;
+  word-break: break-all;
+  border: 1px dashed #ccc;
+}
+
+.balance-info-text {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+/* 스피너 스타일 */
+.ant-spin-dot-item {
+  background-color: #f0a500;
 }
