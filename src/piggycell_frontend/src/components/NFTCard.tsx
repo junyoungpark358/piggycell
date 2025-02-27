@@ -10,6 +10,7 @@ import { css } from "@emotion/react";
 import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 import { formatPGCBalance } from "../utils/tokenUtils";
 import pgcLogo from "../assets/pgc.png";
+import { useTheme } from "../contexts/ThemeContext";
 
 const CardContent = styled.div`
   display: flex;
@@ -18,14 +19,19 @@ const CardContent = styled.div`
   padding: 0.5rem;
 `;
 
-const Title = styled.h3`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1f2937;
+const Title = styled.h3(
+  ({ theme }) => `
+  font-family: ${
+    theme?.typography?.fontFamily?.display || "var(--font-display)"
+  };
+  font-size: ${theme?.typography?.fontSize?.lg || "1.25rem"};
+  font-weight: ${theme?.typography?.fontWeight?.semibold || 600};
+  color: ${theme?.colors?.text?.primary || "#202124"};
   margin: 0;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e5e7eb;
-`;
+  border-bottom: 1px solid ${theme?.colors?.border?.default || "#E2E8F0"};
+`
+);
 
 const InfoContainer = styled.div`
   display: flex;
@@ -36,12 +42,16 @@ const InfoContainer = styled.div`
   border-radius: 0.5rem;
 `;
 
-const InfoItem = styled.p`
+const InfoItem = styled.p(
+  ({ theme }) => `
   display: flex;
   align-items: center;
-  color: #4b5563;
+  font-family: ${
+    theme?.typography?.fontFamily?.primary || "var(--font-primary)"
+  };
+  color: ${theme?.colors?.text?.secondary || "#5F6368"};
   margin: 0;
-  font-size: 1rem;
+  font-size: ${theme?.typography?.fontSize?.md || "1rem"};
   padding: 0.5rem;
   transition: all 0.2s ease-in-out;
 
@@ -55,36 +65,21 @@ const InfoItem = styled.p`
     color: #0ea5e9;
     font-size: 1.25rem;
   }
-`;
+`
+);
 
 interface ButtonContainerProps {
   hasSecondaryButton?: boolean;
 }
 
-const ButtonContainer = styled.div<ButtonContainerProps>`
+const ButtonContainer = styled.div<ButtonContainerProps>(
+  ({ hasSecondaryButton, theme }) => `
   display: flex;
-  flex-direction: ${(props) => (props.hasSecondaryButton ? "row" : "column")};
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  width: 100%;
-  overflow: hidden;
-  padding: 0.5rem;
-
-  > button {
-    width: 100%;
-    min-width: 0;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-
-  ${(props) =>
-    props.hasSecondaryButton &&
-    css`
-      > button {
-        flex: 1;
-      }
-    `}
-`;
+  justify-content: ${hasSecondaryButton ? "space-between" : "flex-end"};
+  gap: 0.5rem;
+  margin-top: 1rem;
+`
+);
 
 export interface NFTCardProps {
   name: string;
@@ -111,6 +106,8 @@ export const NFTCard: React.FC<NFTCardProps> = ({
   primaryButtonText = "구매하기",
   secondaryButtonText,
 }) => {
+  const { theme } = useTheme();
+
   return (
     <StyledCard customVariant="nft">
       <CardContent>

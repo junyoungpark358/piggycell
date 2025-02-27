@@ -63,7 +63,7 @@ const getTableStyles = ({
       border-radius: ${theme.borderRadius.lg};
       border: 3px solid #000;
       box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
-      font-family: "Comic Neue", cursive;
+      font-family: ${theme.typography.fontFamily.primary};
       transform: none;
       overflow: hidden;
       position: relative;
@@ -76,7 +76,7 @@ const getTableStyles = ({
         ${theme.colors.secondary.main} 100%
       );
       color: #fff;
-      font-family: "Bangers", cursive;
+      font-family: ${theme.typography.fontFamily.display};
       font-weight: normal;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -119,7 +119,7 @@ const getTableStyles = ({
           position: absolute;
           left: -20px;
           color: ${theme.colors.primary.main};
-          font-family: "Bangers", cursive;
+          font-family: ${theme.typography.fontFamily.display};
           font-size: 1.2em;
         }
       }
@@ -127,12 +127,12 @@ const getTableStyles = ({
 
     .ant-table-pagination {
       margin: ${theme.spacing.md} 0;
-      font-family: "Comic Neue", cursive;
+      font-family: ${theme.typography.fontFamily.primary};
 
       .ant-pagination-item {
         border: 2px solid #000;
         border-radius: ${theme.borderRadius.md};
-        font-family: "Bangers", cursive;
+        font-family: ${theme.typography.fontFamily.display};
         transform: rotate(-2deg);
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
@@ -159,7 +159,7 @@ const getTableStyles = ({
         .ant-pagination-item-link {
           border: 2px solid #000;
           border-radius: ${theme.borderRadius.md};
-          font-family: "Bangers", cursive;
+          font-family: ${theme.typography.fontFamily.display};
           transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
           &:hover {
@@ -204,7 +204,28 @@ const getTableStyles = ({
       }
     `,
     default: css`
-      ${sizeStyles[customSize]}
+      .ant-table {
+        background: ${theme.colors.background.paper};
+        border-radius: ${theme.borderRadius.md};
+      }
+
+      .ant-table-thead > tr > th {
+        background: linear-gradient(
+          135deg,
+          ${theme.colors.primary.main} 0%,
+          ${theme.colors.secondary.main} 100%
+        );
+        border-bottom: 3px solid #000;
+        color: ${theme.colors.neutral.white};
+        font-family: ${theme.typography.fontFamily.display};
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .ant-table-tbody > tr > td {
+        border-bottom: 2px solid ${theme.colors.border.default};
+        font-family: ${theme.typography.fontFamily.primary};
+      }
     `,
   };
 

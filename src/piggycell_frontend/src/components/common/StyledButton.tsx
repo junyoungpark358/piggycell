@@ -24,6 +24,17 @@ const getButtonStyles = ({
 }: CustomButtonProps & { theme: any }) => {
   const colorToken = theme.colors[customColor];
 
+  const baseStyles = css`
+    font-family: ${theme.typography.fontFamily.display};
+    font-weight: ${theme.typography.fontWeight.medium};
+    letter-spacing: 0.5px;
+    border-radius: ${theme.borderRadius.md};
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    width: ${fullWidth ? "100%" : "auto"};
+    cursor: pointer;
+  `;
+
   const sizeStyles = {
     xs: css`
       font-size: ${theme.typography.fontSize.xs};
@@ -54,7 +65,8 @@ const getButtonStyles = ({
       border: 3px solid #000 !important;
       box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8) !important;
       transform: rotate(-1deg);
-      font-family: "Bangers", cursive !important;
+      font-family: ${theme?.typography?.fontFamily?.display ||
+      '"Bangers", cursive'} !important;
       letter-spacing: 1px;
       text-transform: uppercase;
       &:hover {
@@ -78,7 +90,8 @@ const getButtonStyles = ({
       border: 3px solid #000 !important;
       box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8) !important;
       transform: rotate(-1deg);
-      font-family: "Bangers", cursive !important;
+      font-family: ${theme?.typography?.fontFamily?.display ||
+      '"Bangers", cursive'} !important;
       letter-spacing: 1px;
       text-transform: uppercase;
       &:hover {
@@ -102,7 +115,8 @@ const getButtonStyles = ({
       color: ${colorToken.main} !important;
       box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8) !important;
       transform: rotate(-1deg);
-      font-family: "Bangers", cursive !important;
+      font-family: ${theme?.typography?.fontFamily?.display ||
+      '"Bangers", cursive'} !important;
       letter-spacing: 1px;
       text-transform: uppercase;
       &:hover {
@@ -126,7 +140,8 @@ const getButtonStyles = ({
       border: 3px dashed ${colorToken.main} !important;
       box-shadow: none !important;
       transform: rotate(-1deg);
-      font-family: "Bangers", cursive !important;
+      font-family: ${theme?.typography?.fontFamily?.display ||
+      '"Bangers", cursive'} !important;
       letter-spacing: 1px;
       text-transform: uppercase;
       &:hover {
@@ -152,17 +167,9 @@ const getButtonStyles = ({
   };
 
   return css`
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: ${theme.borderRadius.md};
-    font-weight: ${theme.typography.fontWeight.medium};
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: visible;
+    ${baseStyles}
     ${sizeStyles[customSize]}
     ${variantStyles[customVariant]}
-    ${fullWidth && "width: 100%;"}
 
     &:disabled {
       opacity: 0.6;
@@ -210,7 +217,19 @@ const getButtonStyles = ({
   `;
 };
 
-const StyledAntButton = styled(Button)<StyledButtonProps & { theme: any }>`
+// shouldForwardProp을 사용하여 DOM에 전달되지 않을 props 필터링
+const customProps = [
+  "customVariant",
+  "customSize",
+  "customColor",
+  "fullWidth",
+  "theme",
+];
+const shouldForwardProp = (prop: string) => !customProps.includes(prop);
+
+const StyledAntButton = styled(Button, { shouldForwardProp })<
+  StyledButtonProps & { theme: any }
+>`
   ${(props) => getButtonStyles(props)}
 `;
 
@@ -232,15 +251,20 @@ export const StyledButton = ({
 }: StyledButtonProps) => {
   const { theme } = useTheme();
 
+  // 실제 Button 컴포넌트에 전달할 props 준비
+  const buttonProps = {
+    size: sizeMap[customSize],
+    ...props,
+  };
+
   return (
     <StyledAntButton
-      size={sizeMap[customSize]}
+      theme={theme}
       customVariant={customVariant}
       customSize={customSize}
       customColor={customColor}
       fullWidth={fullWidth}
-      theme={theme}
-      {...props}
+      {...buttonProps}
     >
       {children}
     </StyledAntButton>

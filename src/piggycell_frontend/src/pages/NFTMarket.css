@@ -80,7 +80,7 @@
 }
 
 .page-header h1 {
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   font-size: 1.8rem !important;
   color: var(--primary-color) !important;
   text-shadow: 2px 2px 0 #000, 4px 4px 0 #fff !important;

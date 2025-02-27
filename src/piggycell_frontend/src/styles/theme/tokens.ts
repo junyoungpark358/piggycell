@@ -1,4 +1,11 @@
 import { Theme } from "./types";
+import {
+  fontFamily,
+  fontSize,
+  fontWeight,
+  lineHeight,
+  textStyle,
+} from "./typography";
 
 export const lightTheme: Theme = {
   colors: {
@@ -64,28 +71,11 @@ export const lightTheme: Theme = {
     },
   },
   typography: {
-    fontFamily: {
-      primary:
-        '"Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif',
-    },
-    fontSize: {
-      xs: "12px",
-      sm: "14px",
-      md: "16px",
-      lg: "18px",
-      xl: "20px",
-      xxl: "24px",
-    },
-    fontWeight: {
-      regular: 400,
-      medium: 500,
-      semibold: 600,
-      bold: 700,
-    },
-    lineHeight: {
-      tight: 1.25,
-      relaxed: 1.75,
-    },
+    fontFamily: fontFamily,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    lineHeight: lineHeight,
+    textStyle: textStyle,
   },
   spacing: {
     xs: "4px",
@@ -159,6 +149,9 @@ export const darkTheme = {
       focus: "#3B82F6",
     },
   },
+  typography: {
+    ...lightTheme.typography,
+  },
   shadows: {
     sm: "0 1px 2px 0 rgba(0, 0, 0, 0.3)",
     md: "0 4px 6px -1px rgba(0, 0, 0, 0.4)",
@@ -183,32 +176,6 @@ export const spacing = {
   lg: "24px",
   xl: "32px",
   xxl: "48px",
-};
-
-export const typography = {
-  fontFamily: {
-    primary:
-      '"Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif',
-  },
-  fontSize: {
-    xs: "12px",
-    sm: "14px",
-    md: "16px",
-    lg: "18px",
-    xl: "20px",
-    xxl: "24px",
-  },
-  fontWeight: {
-    regular: 400,
-    medium: 500,
-    semibold: 600,
-    bold: 700,
-  },
-  lineHeight: {
-    tight: 1.25,
-    normal: 1.5,
-    relaxed: 1.75,
-  },
 };
 
 export const borderRadius = {

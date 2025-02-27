@@ -28,7 +28,7 @@ const getInputStyles = ({
   const baseStyles = css`
     border-radius: ${theme.borderRadius.md};
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    font-family: "Comic Neue", cursive;
+    font-family: ${theme.typography.fontFamily.primary};
     transform: rotate(-1deg);
     box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
     ${fullWidth && "width: 100%;"}
@@ -62,7 +62,7 @@ const getInputStyles = ({
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: "Bangers", cursive;
+        font-family: ${theme.typography.fontFamily.display};
         font-size: 14px;
         transform: rotate(15deg);
       }
@@ -173,7 +173,7 @@ const getInputStyles = ({
       }
 
       .ant-input {
-        font-family: "Comic Neue", cursive;
+        font-family: ${theme.typography.fontFamily.primary};
         background: transparent;
       }
     }

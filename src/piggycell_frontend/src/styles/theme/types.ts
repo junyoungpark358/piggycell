@@ -43,9 +43,21 @@ export interface Colors {
   };
 }
 
+// 텍스트 스타일 타입 정의
+export interface TextStyle {
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: number;
+  lineHeight: number;
+  letterSpacing?: string;
+  textTransform?: string;
+}
+
 export interface Typography {
   fontFamily: {
     primary: string;
+    secondary: string;
+    display: string;
   };
   fontSize: {
     xs: string;
@@ -54,8 +66,13 @@ export interface Typography {
     lg: string;
     xl: string;
     xxl: string;
+    h1?: string;
+    h2?: string;
+    h3?: string;
+    h4?: string;
   };
   fontWeight: {
+    light?: number;
     regular: number;
     medium: number;
     semibold: number;
@@ -63,7 +80,18 @@ export interface Typography {
   };
   lineHeight: {
     tight: number;
+    normal?: number;
     relaxed: number;
+  };
+  textStyle?: {
+    h1?: TextStyle;
+    h2?: TextStyle;
+    h3?: TextStyle;
+    h4?: TextStyle;
+    body1?: TextStyle;
+    body2?: TextStyle;
+    button?: TextStyle;
+    caption?: TextStyle;
   };
 }
 

@@ -9,6 +9,7 @@ import {
   UserOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
+import { useTheme } from "../contexts/ThemeContext";
 
 export type TrendType = "up" | "down" | "neutral";
 export type IconType = "chart" | "user" | "token" | "wallet" | "none";
@@ -20,13 +21,15 @@ interface StatCardProps extends Omit<StatisticProps, "className"> {
   unit?: string;
 }
 
-const StyledStatistic = styled(Statistic)`
+const StyledStatistic = styled(Statistic)(
+  ({ theme }) => `
   text-align: center;
 
   .ant-statistic-title {
-    color: #4b5563;
-    font-size: 1rem;
-    font-weight: 500;
+    color: ${theme?.colors?.text?.secondary || "#666"};
+    font-family: var(--font-display);
+    font-size: ${theme?.typography?.fontSize?.md || "1rem"};
+    font-weight: ${theme?.typography?.fontWeight?.medium || 500};
     margin-bottom: 0.5rem;
   }
 
@@ -38,15 +41,17 @@ const StyledStatistic = styled(Statistic)`
   }
 
   .ant-statistic-content-value {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #0284c7;
+    font-family: var(--font-primary);
+    font-size: ${theme?.typography?.fontSize?.xl || "1.5rem"};
+    font-weight: ${theme?.typography?.fontWeight?.bold || 700};
+    color: ${theme?.colors?.primary?.main || "#1A73E8"};
   }
 
   .ant-statistic-content-suffix {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #4b5563;
+    font-family: var(--font-primary);
+    font-size: ${theme?.typography?.fontSize?.md || "1rem"};
+    font-weight: ${theme?.typography?.fontWeight?.medium || 500};
+    color: ${theme?.colors?.text?.secondary || "#666"};
     margin-left: 0.25rem;
   }
 
@@ -67,7 +72,8 @@ const StyledStatistic = styled(Statistic)`
   .trend-neutral {
     color: #6366f1;
   }
-`;
+`
+);
 
 const SpinnerContainer = styled.div`
   display: flex;
@@ -111,32 +117,52 @@ const getTrendIcon = (trend: TrendType) => {
 };
 
 export const StatCard: React.FC<StatCardProps> = ({
-  loading,
+  loading = false,
   trend = "neutral",
   iconType = "none",
   unit,
   ...props
 }) => {
+  const { theme } = useTheme();
   const trendIcon = getTrendIcon(trend);
   const icon = getIconByType(iconType);
 
+  const renderSuffix = () => {
+    if (unit) {
+      return (
+        <>
+          {icon}
+          <span className="ant-statistic-content-suffix">{unit}</span>
+        </>
+      );
+    }
+    return props.suffix;
+  };
+
+  const renderPrefix = () => {
+    if (icon) {
+      return icon;
+    }
+    return trendIcon;
+  };
+
   return (
-    <AnimatedCard customVariant="stats">
+    <StyledCard customVariant="stats">
       {loading ? (
         <div>
           <div className="ant-statistic-title">{props.title}</div>
           <SpinnerContainer>
-            <Spin size="small" />
+            <Spin size="large" />
           </SpinnerContainer>
         </div>
       ) : (
         <StyledStatistic
           {...props}
-          prefix={icon}
-          suffix={unit || props.suffix}
+          suffix={renderSuffix()}
+          prefix={renderPrefix()}
         />
       )}
-    </AnimatedCard>
+    </StyledCard>
   );
 };
 

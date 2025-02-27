@@ -53,19 +53,21 @@ const getCardStyles = ({
       );
       margin: -1px;
       border-radius: ${theme.borderRadius.lg} ${theme.borderRadius.lg} 0 0;
+    }
 
-      .ant-card-head-title {
-        font-family: "Bangers", cursive;
-        font-size: 1.5rem;
-        color: #fff;
-        text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
-        letter-spacing: 1px;
-      }
+    .ant-card-head-title {
+      font-family: ${theme.typography.fontFamily.display};
+      font-size: ${theme.typography.fontSize.lg};
+      color: ${theme.colors.neutral.white};
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+      letter-spacing: 1px;
     }
 
     .ant-card-body {
       padding: ${paddingStyles[customPadding]};
-      font-family: "Comic Neue", cursive;
+      position: relative;
+      z-index: 1;
+      font-family: ${theme.typography.fontFamily.primary};
     }
 
     &::before {
@@ -140,7 +142,7 @@ const getCardStyles = ({
         box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.8);
       }
       .ant-statistic-title {
-        font-family: "Bangers", cursive;
+        font-family: ${theme.typography.fontFamily.display};
         color: ${theme.colors.text.primary};
         font-size: 1.2rem;
         letter-spacing: 1px;
@@ -148,7 +150,7 @@ const getCardStyles = ({
         text-transform: uppercase;
       }
       .ant-statistic-content {
-        font-family: "Comic Neue", cursive;
+        font-family: ${theme.typography.fontFamily.primary};
         color: ${theme.colors.primary.main};
         font-size: 2rem;
         font-weight: 700;
@@ -161,10 +163,10 @@ const getCardStyles = ({
         background: ${theme.colors.info.main};
       }
       .ant-table {
-        font-family: "Comic Neue", cursive;
+        font-family: ${theme.typography.fontFamily.primary};
       }
       .ant-table-thead > tr > th {
-        font-family: "Bangers", cursive;
+        font-family: ${theme.typography.fontFamily.display};
         background: linear-gradient(
           135deg,
           ${theme.colors.primary.main} 0%,
@@ -191,7 +193,20 @@ const getCardStyles = ({
   `;
 };
 
-const StyledAntCard = styled(Card)<StyledCardProps & { theme: any }>`
+// shouldForwardProp을 사용하여 DOM에 전달되지 않을 props 필터링
+const customProps = [
+  "customVariant",
+  "customPadding",
+  "elevation",
+  "interactive",
+  "bordered",
+  "theme",
+];
+const shouldForwardProp = (prop: string) => !customProps.includes(prop);
+
+const StyledAntCard = styled(Card, { shouldForwardProp })<
+  CustomCardProps & { theme: any }
+>`
   ${(props) => getCardStyles(props)}
 `;
 

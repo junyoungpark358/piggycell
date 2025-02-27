@@ -29,7 +29,7 @@
   font-size: 1.8rem !important;
   white-space: nowrap;
   text-decoration: none;
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   letter-spacing: 2px;
   text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000,
     -1px 1px 0 #000, 1px 1px 0 #000 !important;
@@ -109,7 +109,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   letter-spacing: 1px;
   transform: none;
 }
@@ -253,7 +253,7 @@
 }
 
 .mobile-menu-drawer .ant-drawer-title {
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   color: #000000 !important;
   text-shadow: 2px 2px 0 #ffffff;
   font-size: 1.5rem;
@@ -270,7 +270,7 @@
 }
 
 .mobile-menu-drawer .ant-menu-item {
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   letter-spacing: 1px;
   font-size: 1.2rem;
   margin: 4px 0 !important;
@@ -292,7 +292,7 @@
 
 .mobile-menu-drawer .ant-menu-item a {
   color: #000000 !important;
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   letter-spacing: 1px;
 }
 
@@ -409,7 +409,7 @@
 }
 
 .page-header h1 {
-  font-family: "Bangers", cursive !important;
+  font-family: var(--font-display) !important;
   font-size: 2.5rem !important;
   color: var(--primary-color) !important;
   text-shadow: 3px 3px 0 #000, 6px 6px 0 #fff !important;
