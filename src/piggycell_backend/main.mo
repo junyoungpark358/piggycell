@@ -1510,4 +1510,20 @@ actor Main {
     public query func get_recent_transactions(count : Nat) : async [PiggyCellToken.Transaction] {
         token.get_recent_transactions(count)
     };
+
+    // 마켓 캐니스터 Principal 반환
+    public query func getMarketCanisterPrincipal() : async Principal {
+        Principal.fromActor(Main)
+    };
+
+    // ICRC-2 토큰 승인 함수
+    public shared({ caller }) func icrc2_approve(args: PiggyCellToken.ApproveArgs) : async Result.Result<Nat, PiggyCellToken.ApproveError> {
+        Debug.print("icrc2_approve 함수 호출, 호출자 Principal ID: " # Principal.toText(caller));
+        token.icrc2_approve(caller, args)
+    };
+
+    // ICRC-2 승인 정보 조회 함수
+    public query func icrc2_allowance(args: PiggyCellToken.AllowanceArgs) : async Nat {
+        token.icrc2_allowance(args)
+    };
 };

@@ -16,6 +16,8 @@ import type {
   _SERVICE,
   Listing,
   PageResult,
+  AllowanceArgs,
+  ApproveArgs,
 } from "../../../declarations/piggycell_backend/piggycell_backend.did";
 import "./NFTMarket.css";
 import { NFTCard } from "../components/NFTCard";
@@ -406,11 +408,12 @@ const NFTMarket = () => {
       const actor = await createActor();
       console.log("백엔드 액터 생성 완료");
 
-      // 먼저 사용자의 PGC 잔액 확인
+      // 사용자 인증 정보 확인
       const authManager = AuthManager.getInstance();
       const userPrincipal = await authManager.getPrincipal();
       if (!userPrincipal) {
         message.error("로그인이 필요합니다.");
+        setBuyingNFT(null);
         return;
       }
       console.log(`구매자 Principal: ${userPrincipal.toString()}`);
@@ -419,6 +422,7 @@ const NFTMarket = () => {
       const nftInfo = nfts.find((nft) => nft.id === nftId);
       if (!nftInfo) {
         message.error("NFT 정보를 찾을 수 없습니다.");
+        setBuyingNFT(null);
         return;
       }
       console.log(
@@ -426,6 +430,20 @@ const NFTMarket = () => {
           nftInfo.location
         }`
       );
+
+      // 마켓 캐니스터의 Principal 확인
+      let marketCanisterPrincipal: Principal;
+      try {
+        marketCanisterPrincipal = await actor.getMarketCanisterPrincipal();
+        console.log(
+          `마켓 캐니스터 Principal: ${marketCanisterPrincipal.toString()}`
+        );
+      } catch (error) {
+        console.error("마켓 캐니스터 Principal 조회 실패:", error);
+        message.error("마켓 정보를 가져오는데 실패했습니다.");
+        setBuyingNFT(null);
+        return;
+      }
 
       // 사용자의 PGC 잔액 확인
       const account = {
@@ -448,11 +466,80 @@ const NFTMarket = () => {
             2
           )} PGC, 필요한 금액: ${formattedPrice.toFixed(2)} PGC`
         );
+        setBuyingNFT(null);
         return;
       }
 
+      // 현재 승인 금액 확인
+      const allowanceArgs: AllowanceArgs = {
+        account: account,
+        spender: {
+          owner: marketCanisterPrincipal,
+          subaccount: [] as [] | [Uint8Array],
+        },
+      };
+
+      console.log("현재 승인 금액 확인 중...");
+      const currentAllowance = await actor.icrc2_allowance(allowanceArgs);
+      console.log(`현재 승인 금액: ${currentAllowance.toString()}`);
+
+      // 승인 금액이 부족한 경우, 추가 승인 요청
+      if (currentAllowance < nftInfo.price) {
+        console.log(
+          `승인 금액 부족: 현재=${currentAllowance}, 필요=${nftInfo.price}`
+        );
+        message.loading({
+          content: "토큰 사용 승인 요청 중...",
+          key: "approveMessage",
+        });
+
+        const approveArgs: ApproveArgs = {
+          from_subaccount: [] as [] | [Uint8Array],
+          spender: {
+            owner: marketCanisterPrincipal,
+            subaccount: [] as [] | [Uint8Array],
+          },
+          amount: nftInfo.price,
+          expected_allowance: [currentAllowance],
+          expires_at: [] as [] | [bigint],
+          fee: [] as [] | [bigint],
+          memo: [] as [] | [Uint8Array],
+          created_at_time: [] as [] | [bigint],
+        };
+
+        console.log(`토큰 승인 요청: 승인 금액=${nftInfo.price.toString()}`);
+        const approveResult = await actor.icrc2_approve(approveArgs);
+
+        if ("err" in approveResult) {
+          console.error("토큰 승인 실패:", approveResult.err);
+          message.error({
+            content: `토큰 승인 실패: ${JSON.stringify(approveResult.err)}`,
+            key: "approveMessage",
+          });
+          setBuyingNFT(null);
+          return;
+        }
+
+        console.log("토큰 승인 성공:", approveResult.ok);
+        message.success({
+          content: "토큰 사용이 승인되었습니다.",
+          key: "approveMessage",
+        });
+      } else {
+        console.log(
+          `승인 금액 충분함: 현재=${currentAllowance}, 필요=${nftInfo.price}`
+        );
+      }
+
       // NFT 구매 시도
+      message.loading({
+        content: "NFT 구매 처리 중...",
+        key: "buyMessage",
+      });
+
       console.log(`NFT 구매 요청 시작 - 가격: ${nftInfo.price.toString()} PGC`);
+
+      // NFT 구매 요청
       const result = await actor.buyNFT(nftId);
       console.log(
         "NFT 구매 응답 받음:",
@@ -471,7 +558,11 @@ const NFTMarket = () => {
           `잔액 차이: ${(Number(balance) - Number(newBalance)).toString()} PGC`
         );
 
-        message.success("NFT 구매가 완료되었습니다.");
+        message.success({
+          content: "NFT 구매가 완료되었습니다!",
+          key: "buyMessage",
+          duration: 3,
+        });
         setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
         setMarketStats((prev) => ({
           ...prev,
@@ -481,23 +572,33 @@ const NFTMarket = () => {
       } else {
         console.error("NFT 구매 실패:", result.err);
 
-        // 에러 타입별 로그 기록
+        // 특정 오류 타입 처리
         if (result.err && typeof result.err === "object") {
           if ("InsufficientBalance" in result.err) {
-            console.error("구매 실패 사유: 잔액 부족");
-          } else if ("TransferError" in result.err) {
-            console.error("구매 실패 사유: 토큰 전송 오류");
-          } else if ("NotListed" in result.err) {
-            console.error("구매 실패 사유: 리스팅 없음");
+            message.error({
+              content:
+                "잔액이 부족합니다. 충분한 PGC 토큰을 보유하고 있는지 확인하세요.",
+              key: "buyMessage",
+            });
+          } else {
+            message.error({
+              content: `구매 실패: ${getErrorMessage(result.err)}`,
+              key: "buyMessage",
+            });
           }
+        } else {
+          message.error({
+            content: "알 수 없는 오류가 발생했습니다.",
+            key: "buyMessage",
+          });
         }
-
-        // 기존 에러 메시지 처리 함수 사용
-        message.error(`구매 실패: ${getErrorMessage(result.err)}`);
       }
     } catch (error) {
       console.error("NFT 구매 중 예외 발생:", error);
-      message.error("NFT 구매 중 오류가 발생했습니다.");
+      message.error({
+        content: "NFT 구매 중 오류가 발생했습니다.",
+        key: "buyMessage",
+      });
     } finally {
       console.log("NFT 구매 프로세스 종료");
       setBuyingNFT(null);

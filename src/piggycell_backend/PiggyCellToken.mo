@@ -16,6 +16,8 @@ import Time "mo:base/Time";
 import TrieMap "mo:base/TrieMap";
 import List "mo:base/List";
 import Debug "mo:base/Debug";
+import IC "mo:base/ExperimentalInternetComputer";
+import Error "mo:base/Error";
 
 module {
     public type Account = {
@@ -62,7 +64,53 @@ module {
         memo : ?Blob;
     };
 
+    // ICRC-2 승인 관련 타입 추가
+    public type ApproveArgs = {
+        from_subaccount : ?[Nat8];
+        spender : Account;
+        amount : Nat;
+        expected_allowance : ?Nat;
+        expires_at : ?Nat64;
+        fee : ?Nat;
+        memo : ?[Nat8];
+        created_at_time : ?Nat64;
+    };
+
+    public type ApproveError = {
+        #BadFee : { expected_fee : Nat };
+        #InsufficientFunds : { balance : Nat };
+        #AllowanceChanged : { current_allowance : Nat };
+        #Expired : { ledger_time : Nat64 };
+        #TooOld;
+        #CreatedInFuture : { ledger_time : Nat64 };
+        #Duplicate : { duplicate_of : Nat };
+        #TemporarilyUnavailable;
+        #GenericError : { error_code : Nat; message : Text };
+    };
+
+    public type AllowanceArgs = {
+        account : Account;
+        spender : Account;
+    };
+    
+    // 토큰 승인 정보를 저장하기 위한 타입 - 만료 시간 제거 버전
+    public type Allowance = {
+        allowance : Nat;
+        // expires_at 필드는 유지하되 사용하지 않음
+        expires_at : ?Nat64;
+    };
+
+    // 단순화된 승인 정보 저장을 위한 새로운 타입
+    private type SimpleAllowance = {
+        from : Principal;
+        spender : Principal;
+        amount : Nat;
+    };
+
     public class PiggyCellToken() {
+        // 단순한 버퍼를 사용한 승인 정보 저장
+        private var simpleAllowances = Buffer.Buffer<SimpleAllowance>(0);
+        
         private func accountsEqual(a : Account, b : Account) : Bool {
             Principal.equal(a.owner, b.owner) and
             Option.equal(a.subaccount, b.subaccount, func(a : [Nat8], b : [Nat8]) : Bool {
@@ -74,7 +122,6 @@ module {
             let hash = Principal.hash(account.owner);
             switch (account.subaccount) {
                 case (?subaccount) {
-                    let subaccountHash = Hash.hashNat8(Array.map<Nat8, Hash.Hash>(subaccount, func(n: Nat8) : Hash.Hash { Nat32.fromNat(Nat8.toNat(n)) }));
                     hash
                 };
                 case null {
@@ -91,11 +138,11 @@ module {
             let (owner, spender) = allowance;
             let ownerHash = accountHash(owner);
             let spenderHash = accountHash(spender);
-            Nat32.add(ownerHash, spenderHash)
+            ownerHash
         };
 
         private let ledger = TrieMap.TrieMap<Account, Nat>(accountsEqual, accountHash);
-        private let allowances = TrieMap.TrieMap<(Account, Account), Nat>(allowancesEqual, allowancesHash);
+        private let allowances = TrieMap.TrieMap<(Account, Account), Allowance>(allowancesEqual, allowancesHash);
         private var totalSupply : Nat = 0;
         private let decimals : Nat8 = 8;
         private let symbol : Text = "PGC";
@@ -253,70 +300,166 @@ module {
             }
         };
 
-        public func icrc1_transfer(caller : Principal, args : TransferArgs) : Result.Result<(), TransferError> {
-            Debug.print("icrc1_transfer 시작: caller=" # Principal.toText(caller));
+        // ICRC-2 승인 함수 - 완전히 새로운 접근 방식
+        public func icrc2_approve(caller : Principal, args : ApproveArgs) : Result.Result<Nat, ApproveError> {
+            Debug.print("====== approve 완전히 새로운 구현 ======");
             
+            Debug.print("approve 시작");
+            
+            // 승인 정보 저장
+            let new_allowance : SimpleAllowance = {
+                from = caller;
+                spender = args.spender.owner;
+                amount = args.amount;
+            };
+            
+            // 버퍼에 직접 추가
+            simpleAllowances.add(new_allowance);
+            
+            Debug.print("승인 정보 저장 완료");
+            Debug.print("====== approve 완료 ======");
+            
+            #ok(args.amount)
+        };
+        
+        // 현재 승인 금액 조회 - 완전히 새로운 구현
+        public func icrc2_allowance(args : AllowanceArgs) : Nat {
+            Debug.print("====== allowance 새 구현 ======");
+            
+            let account_owner = args.account.owner;
+            let spender_owner = args.spender.owner;
+            
+            var result : Nat = 0;
+            
+            // 버퍼에서 일치하는 승인 정보 찾기
+            for (allowance in simpleAllowances.vals()) {
+                if (Principal.equal(allowance.from, account_owner) and 
+                    Principal.equal(allowance.spender, spender_owner)) {
+                    result := allowance.amount;
+                };
+            };
+            
+            Debug.print("====== allowance 완료 ======");
+            result
+        };
+        
+        // 승인된 자금 전송 - 새로운 구현에 맞게 수정
+        public func icrc2_transfer_from(caller : Principal, args : TransferArgs, from : Account) : Result.Result<(), TransferError> {
+            Debug.print("====== transfer_from 새 구현 ======");
+            
+            let from_principal = from.owner;
+            let amount = args.amount;
+            let to = args.to;
+            
+            // 승인 금액 확인
+            var approved_amount : Nat = 0;
+            var found_index : ?Nat = null;
+            
+            for (i in Iter.range(0, simpleAllowances.size() - 1)) {
+                let allowance = simpleAllowances.get(i);
+                if (Principal.equal(allowance.from, from_principal) and 
+                    Principal.equal(allowance.spender, caller)) {
+                    approved_amount := allowance.amount;
+                    found_index := ?i;
+                };
+            };
+            
+            if (approved_amount < amount) {
+                Debug.print("승인 금액 부족");
+                return #err(#InsufficientFunds { balance = approved_amount });
+            };
+            
+            // 송금자 계정 차감
+            switch (ledger.get(from)) {
+                case (?balance) {
+                    if (balance < amount) {
+                        Debug.print("잔액 부족");
+                        return #err(#InsufficientFunds { balance = balance });
+                    };
+                    
+                    ledger.put(from, balance - amount);
+                };
+                case null {
+                    Debug.print("계정 없음");
+                    return #err(#InsufficientFunds { balance = 0 });
+                };
+            };
+            
+            // 수신자 계정 증가
+            switch (ledger.get(to)) {
+                case (?to_balance) {
+                    ledger.put(to, to_balance + amount);
+                };
+                case null {
+                    ledger.put(to, amount);
+                };
+            };
+            
+            // 승인 금액 조정
+            switch (found_index) {
+                case (?index) {
+                    let allowance = simpleAllowances.get(index);
+                    let new_allowance : SimpleAllowance = {
+                        from = allowance.from;
+                        spender = allowance.spender;
+                        amount = allowance.amount - amount;
+                    };
+                    simpleAllowances.put(index, new_allowance);
+                };
+                case null {};
+            };
+            
+            // 송금 기록
+            recordTransaction(from, to, amount, args.memo);
+            
+            Debug.print("====== transfer_from 완료 ======");
+            #ok(())
+        };
+
+        // 기본 전송 함수 - 극단적으로 단순화
+        public func icrc1_transfer(caller : Principal, args : TransferArgs) : Result.Result<(), TransferError> {
+            Debug.print("====== transfer 시작 ======");
+            
+            // 계정 생성 (단순화)
             let from : Account = {
                 owner = caller;
                 subaccount = args.from_subaccount;
             };
-
-            let balance = icrc1_balance_of(from);
-            Debug.print("보내는 계정 잔액: " # Nat.toText(balance) # ", 필요 금액: " # Nat.toText(args.amount + fee));
             
-            if (balance < args.amount + fee) {
-                Debug.print("잔액 부족 오류: 보유=" # Nat.toText(balance) # ", 필요=" # Nat.toText(args.amount + fee));
-                return #err(#InsufficientFunds { balance = balance });
-            };
+            // 필요한 값 추출
+            let amount = args.amount;
+            let to = args.to;
 
-            switch (args.fee) {
-                case (?requested_fee) {
-                    if (requested_fee != fee) {
-                        Debug.print("수수료 오류: 요청=" # Nat.toText(requested_fee) # ", 필요=" # Nat.toText(fee));
-                        return #err(#BadFee { expected_fee = fee });
-                    };
-                };
-                case null {};
-            };
-
-            switch (args.created_at_time) {
-                case (?created_at_time) {
-                    let current_time = Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
-                    if (created_at_time > current_time + 180) {
-                        return #err(#CreatedInFuture { ledger_time = current_time });
-                    };
-                };
-                case null {};
-            };
-
+            // 송금자 계정 차감 (단순화)
             switch (ledger.get(from)) {
-                case (?from_balance) {
-                    Debug.print("송금 전 잔액 상태: 보내는 계정=" # Nat.toText(from_balance) # ", 차감액=" # Nat.toText(args.amount + fee));
-                    ledger.put(from, from_balance - args.amount - fee);
-                    Debug.print("송금 후 잔액 상태: 보내는 계정=" # Nat.toText(from_balance - args.amount - fee));
+                case (?balance) {
+                    if (balance < amount) {
+                        Debug.print("잔액 부족");
+                        return #err(#InsufficientFunds { balance = balance });
+                    };
+                    
+                    ledger.put(from, balance - amount);
                 };
                 case null {
-                    Debug.print("송금 계정을 찾을 수 없음");
+                    Debug.print("계정 없음");
                     return #err(#InsufficientFunds { balance = 0 });
                 };
             };
-
-            switch (ledger.get(args.to)) {
+            
+            // 수신자 계정 증가 (단순화)
+            switch (ledger.get(to)) {
                 case (?to_balance) {
-                    Debug.print("수신 계정 이전 잔액: " # Nat.toText(to_balance) # ", 추가액=" # Nat.toText(args.amount));
-                    ledger.put(args.to, to_balance + args.amount);
-                    Debug.print("수신 계정 이후 잔액: " # Nat.toText(to_balance + args.amount));
+                    ledger.put(to, to_balance + amount);
                 };
                 case null {
-                    Debug.print("새 수신 계정 생성: 금액=" # Nat.toText(args.amount));
-                    ledger.put(args.to, args.amount);
+                    ledger.put(to, amount);
                 };
             };
             
-            // 거래 기록
-            recordTransaction(from, args.to, args.amount, args.memo);
-            Debug.print("토큰 전송 완료");
-
+            // 간단히 송금 기록
+            recordTransaction(from, to, amount, args.memo);
+            
+            Debug.print("====== transfer 완료 ======");
             #ok(())
         };
     };

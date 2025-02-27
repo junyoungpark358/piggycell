@@ -86,47 +86,61 @@ module {
         };
 
         // NFT 구매
-        public func buyNFT(caller: Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
+        public func buyNFT(caller : Principal, tokenId: Nat) : Result.Result<Listing, ListingError> {
             Debug.print("buyNFT 시작: caller=" # Principal.toText(caller) # ", tokenId=" # Nat.toText(tokenId));
             
             switch (listings.get(tokenId)) {
                 case (?listing) {
                     Debug.print("Listing 정보: 판매자=" # Principal.toText(listing.seller) # ", 가격=" # Nat.toText(listing.price));
                     
-                    // 1. 구매자의 PGC 잔액 확인
-                    let buyerAccount: PiggyCellToken.Account = {
-                        owner = caller;
-                        subaccount = null;
-                    };
-                    let balance = token.icrc1_balance_of(buyerAccount);
-                    Debug.print("구매자 잔액: " # Nat.toText(balance));
-                    
-                    // 잔액이 부족한 경우 오류 반환
-                    if (balance < listing.price) {
-                        Debug.print("잔액 부족: 필요=" # Nat.toText(listing.price) # ", 보유=" # Nat.toText(balance));
-                        return #err(#InsufficientBalance);
-                    };
-                    
-                    // 2. 판매자 계정 생성
+                    // 1. 판매자 계정 생성
                     let sellerAccount: PiggyCellToken.Account = {
                         owner = listing.seller;
                         subaccount = null;
                     };
                     
-                    // 3. 토큰 전송 (구매자 -> 판매자)
+                    // 2. 구매자 계정 생성
+                    let buyerAccount: PiggyCellToken.Account = {
+                        owner = caller;
+                        subaccount = null;
+                    };
+                    
+                    // 3. 마켓 계정 생성
+                    let marketAccount: PiggyCellToken.Account = {
+                        owner = marketCanister;
+                        subaccount = null;
+                    };
+                    
+                    // 4. 구매자가 마켓에 승인한 금액 확인
+                    let allowanceArgs: PiggyCellToken.AllowanceArgs = {
+                        account = buyerAccount;
+                        spender = marketAccount;
+                    };
+                    
+                    let allowance = token.icrc2_allowance(allowanceArgs);
+                    Debug.print("승인된 금액: " # Nat.toText(allowance) # ", 필요 금액: " # Nat.toText(listing.price));
+                    
+                    if (allowance < listing.price) {
+                        Debug.print("승인 금액 부족: 승인=" # Nat.toText(allowance) # ", 필요=" # Nat.toText(listing.price));
+                        return #err(#InsufficientBalance);
+                    };
+                    
+                    // 5. 토큰 전송 (구매자 -> 판매자, 마켓이 대신 처리)
                     let transferArgs: PiggyCellToken.TransferArgs = {
                         from_subaccount = null;
                         to = sellerAccount;
                         amount = listing.price;
                         fee = ?token.icrc1_fee();
                         memo = null;
-                        created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
+                        // 시간 처리 완전 생략 - 오버플로우 방지
+                        created_at_time = null;
                     };
                     
-                    Debug.print("토큰 전송 시도: 금액=" # Nat.toText(listing.price) # ", 수수료=" # Nat.toText(token.icrc1_fee()));
+                    Debug.print("토큰 전송 시도(transfer_from): 금액=" # Nat.toText(listing.price) # ", 수수료=" # Nat.toText(token.icrc1_fee()));
+                    Debug.print("시간 값: 생략됨 (null)");
                     
-                    // PGC 토큰 전송 시도
-                    let tokenTransferResult = token.icrc1_transfer(caller, transferArgs);
+                    // 승인된 토큰 전송 시도
+                    let tokenTransferResult = token.icrc2_transfer_from(marketCanister, transferArgs, buyerAccount);
                     
                     switch(tokenTransferResult) {
                         case (#err(transferError)) {
@@ -157,7 +171,8 @@ module {
                                     subaccount = null;
                                 };
                                 memo = null;
-                                created_at_time = ?Nat64.fromNat(Int.abs(Time.now()) / 1_000_000);
+                                // 시간 처리 완전 생략 - 오버플로우 방지
+                                created_at_time = null;
                             };
 
                             // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
