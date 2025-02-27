@@ -182,7 +182,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
       key: "/admin/token",
       label: (
         <Link to="/admin/token">
-          <WalletOutlined /> 토큰 관리
+          <WalletOutlined /> PGC 관리
         </Link>
       ),
       icon: <WalletOutlined />,
@@ -252,7 +252,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
           },
           {
             key: "/admin/token",
-            label: "토큰 관리",
+            label: "PGC 관리",
             icon: <WalletOutlined />,
             onClick: () => navigate("/admin/token"),
           },

@@ -185,8 +185,8 @@ const TokenManagement: React.FC = () => {
         total: ownersData.length,
       }));
     } catch (error) {
-      console.error("토큰 통계 데이터를 가져오는 중 오류 발생:", error);
-      message.error("토큰 통계 데이터를 가져오는 중 오류가 발생했습니다.");
+      console.error("PGC 통계 데이터를 가져오는 중 오류 발생:", error);
+      message.error("PGC 통계 데이터를 가져오는 중 오류가 발생했습니다.");
 
       // 오류 발생 시 백업으로 가상 데이터 생성
       generateMockData();
@@ -244,7 +244,7 @@ const TokenManagement: React.FC = () => {
 
       // 금액 유효성 검사
       if (isNaN(Number(amount)) || Number(amount) <= 0) {
-        message.error("유효한 토큰 수량을 입력해주세요.");
+        message.error("유효한 PGC 수량을 입력해주세요.");
         setTransferLoading(false);
         return;
       }
@@ -256,7 +256,7 @@ const TokenManagement: React.FC = () => {
       const isAdmin = await authManager.isAdmin();
       if (!isAdmin) {
         message.error(
-          "관리자 권한이 없습니다. 토큰 추가 기능은 관리자만 사용할 수 있습니다."
+          "관리자 권한이 없습니다. PGC 추가 기능은 관리자만 사용할 수 있습니다."
         );
         setTransferLoading(false);
         return;
@@ -270,26 +270,26 @@ const TokenManagement: React.FC = () => {
 
       // 디버그 로그 추가: 호출 직전 상태
       console.log(
-        "[토큰 전송 디버그] 현재 로그인 Principal:",
+        "[PGC 전송 디버그] 현재 로그인 Principal:",
         principal.toString()
       );
 
       // 진행 중임을 알리는 메시지
       const messageKey = "transferMessage";
       message.loading({
-        content: "토큰 전송 중입니다...",
+        content: "PGC 전송 중입니다...",
         key: messageKey,
         duration: 0,
       });
 
       // 인증된 액터 생성 (기존 프로젝트의 createActor 함수 사용)
-      console.log("[토큰 전송 디버그] 인증된 액터 생성 시작");
+      console.log("[PGC 전송 디버그] 인증된 액터 생성 시작");
       const authenticatedActor = await createActor();
-      console.log("[토큰 전송 디버그] 인증된 액터 생성 완료");
+      console.log("[PGC 전송 디버그] 인증된 액터 생성 완료");
 
       // 토큰 전송 실행 (인증된 액터 사용)
       try {
-        console.log("[토큰 전송 디버그] mint_tokens 호출 직전");
+        console.log("[PGC 전송 디버그] mint_tokens 호출 직전");
         // raw units 그대로 사용 (변환하지 않음)
         const tokenAmount = BigInt(amount);
         const result = await authenticatedActor.mint_tokens(
@@ -299,13 +299,13 @@ const TokenManagement: React.FC = () => {
           },
           tokenAmount
         );
-        console.log("[토큰 전송 디버그] mint_tokens 호출 결과:", result);
+        console.log("[PGC 전송 디버그] mint_tokens 호출 결과:", result);
 
         if ("ok" in result) {
           // 성공 메시지 표시 - PGC 단위로 변환하여 표시
           const pgcAmount = formatTokenBalance(tokenAmount);
           message.success({
-            content: `${pgcAmount} PGC 토큰이 성공적으로 전송되었습니다.`,
+            content: `${pgcAmount} PGC가 성공적으로 전송되었습니다.`,
             key: messageKey,
             duration: 2,
           });
@@ -340,22 +340,22 @@ const TokenManagement: React.FC = () => {
           }
 
           message.error({
-            content: `토큰 전송 실패: ${errorMsg}`,
+            content: `PGC 전송 실패: ${errorMsg}`,
             key: messageKey,
             duration: 3,
           });
         }
       } catch (error) {
-        console.error("토큰 전송 API 호출 중 오류:", error);
+        console.error("PGC 전송 API 호출 중 오류:", error);
         message.error({
-          content: "토큰 전송 중 오류가 발생했습니다.",
+          content: "PGC 전송 중 오류가 발생했습니다.",
           key: messageKey,
           duration: 3,
         });
       }
     } catch (error) {
-      console.error("토큰 전송 중 오류 발생:", error);
-      message.error("토큰 전송 중 오류가 발생했습니다.");
+      console.error("PGC 전송 중 오류 발생:", error);
+      message.error("PGC 전송 중 오류가 발생했습니다.");
     } finally {
       setTransferLoading(false);
     }
@@ -480,7 +480,7 @@ const TokenManagement: React.FC = () => {
   return (
     <div className="nft-management">
       <div className="page-header">
-        <h1>토큰 관리</h1>
+        <h1>PGC 관리</h1>
         <div className="flex gap-2">
           <StyledButton
             customVariant="primary"
@@ -497,7 +497,7 @@ const TokenManagement: React.FC = () => {
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={24} sm={8} md={8}>
           <StatCard
-            title="토큰 발행량"
+            title="PGC 발행량"
             value={tokenStats.totalSupply}
             prefix={<DollarOutlined />}
             suffix="PGC"
@@ -506,7 +506,7 @@ const TokenManagement: React.FC = () => {
         </Col>
         <Col xs={24} sm={8} md={8}>
           <StatCard
-            title="토큰 보유자"
+            title="PGC 보유 사용자"
             value={tokenStats.totalHolders}
             prefix={<UserOutlined />}
             suffix="명"
@@ -541,12 +541,12 @@ const TokenManagement: React.FC = () => {
             onClick={() => setIsTransferModalVisible(true)}
             icon={<PlusOutlined />}
           >
-            토큰 추가
+            PGC 발행
           </StyledButton>
         </div>
       </div>
 
-      {/* 토큰 소유자 테이블 */}
+      {/* PGC 소유자 테이블 */}
       <StyledTable
         columns={ownerColumns}
         dataSource={getCurrentPageData()}
@@ -565,12 +565,31 @@ const TokenManagement: React.FC = () => {
         onChange={handleTableChange}
       />
 
-      {/* 토큰 전송 모달 */}
+      {/* PGC 발행 모달 */}
       <Modal
-        title="PGC 토큰 전송"
+        title="PGC 발행"
         open={isTransferModalVisible}
         onCancel={() => setIsTransferModalVisible(false)}
-        footer={null}
+        footer={[
+          <StyledButton
+            key="cancel"
+            customVariant="ghost"
+            customColor="primary"
+            onClick={() => setIsTransferModalVisible(false)}
+          >
+            취소
+          </StyledButton>,
+          <StyledButton
+            key="submit"
+            customVariant="primary"
+            customColor="primary"
+            htmlType="submit"
+            loading={transferLoading}
+            onClick={() => form.submit()}
+          >
+            전송
+          </StyledButton>,
+        ]}
         className="admin-modal"
       >
         {currentPrincipal && (
@@ -587,7 +606,7 @@ const TokenManagement: React.FC = () => {
             </p>
             <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9rem" }}>
               <strong>알림:</strong> 백엔드에서 이 계정이 관리자로 등록되어
-              있어야 토큰 발행이 가능합니다.
+              있어야 PGC 발행이 가능합니다.
             </p>
           </div>
         )}
@@ -651,29 +670,9 @@ const TokenManagement: React.FC = () => {
               min={1}
               max={100000000000000}
               customSize="md"
-              placeholder="전송할 토큰 수량 (raw units)"
+              placeholder="전송할 PGC 수량 (raw units)"
             />
           </Form.Item>
-
-          <div className="ant-modal-footer">
-            <StyledButton
-              customVariant="outline"
-              customSize="md"
-              customColor="secondary"
-              onClick={() => setIsTransferModalVisible(false)}
-            >
-              취소
-            </StyledButton>
-            <StyledButton
-              customVariant="primary"
-              customSize="md"
-              customColor="primary"
-              htmlType="submit"
-              loading={transferLoading}
-            >
-              전송
-            </StyledButton>
-          </div>
         </Form>
       </Modal>
     </div>
