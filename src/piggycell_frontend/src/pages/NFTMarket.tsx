@@ -23,7 +23,7 @@ import { StatCard } from "../components/StatCard";
 import { StyledInput } from "../components/common/StyledInput";
 import { getMarketStats, NFTStats, createActor } from "../utils/statsApi";
 import PageHeader from "../components/common/PageHeader";
-import { formatTokenDisplayForUI } from "../utils/tokenUtils";
+import { formatTokenDisplayForUI, formatPGCBalance } from "../utils/tokenUtils";
 
 interface MetadataValue {
   Text?: string;
@@ -545,6 +545,7 @@ const NFTMarket = () => {
             value={marketStats.totalVolume}
             prefix={<DollarOutlined />}
             suffix="PGC"
+            formatter={(value) => formatPGCBalance(value)}
             loading={loading}
           />
         </Col>

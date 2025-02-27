@@ -874,6 +874,7 @@ const NFTManagement = () => {
             value={totalStats.totalValue}
             prefix={<DollarOutlined />}
             suffix="PGC"
+            formatter={(value) => formatPGCBalance(value)}
             loading={loading}
           />
         </Col>

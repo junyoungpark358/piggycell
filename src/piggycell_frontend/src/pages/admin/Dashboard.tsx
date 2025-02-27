@@ -16,6 +16,7 @@ import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
+import { formatPGCBalance } from "../../utils/tokenUtils";
 
 import {
   getBasicNFTStats,
@@ -430,6 +431,7 @@ const AdminDashboard = () => {
             prefix={<LineChartOutlined style={{ color: "#0284c7" }} />}
             suffix="PGC"
             loading={loading}
+            formatter={(value) => formatPGCBalance(value)}
           />
         </Col>
       </Row>
