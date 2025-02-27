@@ -41,6 +41,12 @@ import { createActor } from "../../utils/statsApi"; // 기존 createActor 함수
 const { Title } = Typography;
 const { Search } = Input;
 
+// 토큰 잔액 변환 함수 추가 (8자리 소수점 고려)
+const formatTokenBalance = (rawBalance: number | bigint): number => {
+  const balance = Number(rawBalance);
+  return balance / Math.pow(10, 8);
+};
+
 interface TokenOwner {
   key: string;
   address: string;
@@ -114,23 +120,23 @@ const TokenManagement: React.FC = () => {
         key: "7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe",
         address:
           "7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe",
-        balance: 100,
+        balance: 1, // 1 PGC로 수정
       },
       {
         key: "cd5wa-o3kaa-caaaa-qaaka-cai",
         address: "cd5wa-o3kaa-caaaa-qaaka-cai",
-        balance: 250,
+        balance: 2.5, // 2.5 PGC로 수정
       },
       {
         key: "example-principal-3",
         address: "example-principal-3",
-        balance: 75,
+        balance: 0.75, // 0.75 PGC로 수정
       },
     ];
 
     setTokenOwners(mockOwners);
     setTokenStats({
-      totalSupply: 425,
+      totalSupply: 4.25, // 4.25 PGC로 수정
       totalHolders: mockOwners.length,
       transactionCount: 25,
     });
@@ -150,7 +156,7 @@ const TokenManagement: React.FC = () => {
       const actor = await createActor();
 
       // 1. 총 토큰 공급량 가져오기
-      const totalSupply = Number(await actor.icrc1_total_supply());
+      const totalSupply = formatTokenBalance(await actor.icrc1_total_supply());
 
       // 2. 토큰 보유자 수 가져오기
       const holdersCount = Number(await actor.get_token_holders_count());
@@ -163,7 +169,7 @@ const TokenManagement: React.FC = () => {
       const ownersData: TokenOwner[] = holders.map(([principal, balance]) => ({
         key: principal.toString(),
         address: principal.toString(),
-        balance: Number(balance),
+        balance: formatTokenBalance(balance), // 소수점 8자리 적용
       }));
 
       setTokenOwners(ownersData);
@@ -191,7 +197,6 @@ const TokenManagement: React.FC = () => {
 
   useEffect(() => {
     fetchTokenStats();
-    checkAdminStatus(); // 관리자 상태 확인 추가
 
     // 백엔드 액터 정보 로깅
     console.log("[TokenManagement] 페이지 로드 시 백엔드 액터 참조:", {
@@ -285,19 +290,22 @@ const TokenManagement: React.FC = () => {
       // 토큰 전송 실행 (인증된 액터 사용)
       try {
         console.log("[토큰 전송 디버그] mint_tokens 호출 직전");
+        // raw units 그대로 사용 (변환하지 않음)
+        const tokenAmount = BigInt(amount);
         const result = await authenticatedActor.mint_tokens(
           {
             owner: recipientPrincipal,
             subaccount: [],
           },
-          BigInt(amount)
+          tokenAmount
         );
         console.log("[토큰 전송 디버그] mint_tokens 호출 결과:", result);
 
         if ("ok" in result) {
-          // 성공 메시지 표시
+          // 성공 메시지 표시 - PGC 단위로 변환하여 표시
+          const pgcAmount = formatTokenBalance(tokenAmount);
           message.success({
-            content: `${amount} PGC 토큰이 성공적으로 전송되었습니다.`,
+            content: `${pgcAmount} PGC 토큰이 성공적으로 전송되었습니다.`,
             key: messageKey,
             duration: 2,
           });
@@ -445,9 +453,27 @@ const TokenManagement: React.FC = () => {
       dataIndex: "balance",
       key: "balance",
       width: "30%",
-      render: (balance: number) => (
-        <span style={{ color: "#1890ff" }}>{`${balance} PGC`}</span>
-      ),
+      render: (balance: number) => {
+        const balanceStr = balance.toFixed(8);
+        const parts = balanceStr.split(".");
+        return (
+          <div style={{ fontWeight: "medium" }}>
+            <span style={{ color: "#1890ff" }}>{parts[0]}</span>
+            <span
+              style={{
+                color: "#1e40af",
+                fontSize: "1.2em",
+                margin: "0 2px",
+                fontWeight: "bold",
+              }}
+            >
+              .
+            </span>
+            <span style={{ color: "#6b7280" }}>{parts[1]}</span>
+            <span style={{ color: "#4b5563", marginLeft: "4px" }}>PGC</span>
+          </div>
+        );
+      },
     },
   ];
 
@@ -463,13 +489,6 @@ const TokenManagement: React.FC = () => {
             icon={<ReloadOutlined />}
           >
             새로 고침
-          </StyledButton>
-          <StyledButton
-            customVariant="outline"
-            customSize="md"
-            onClick={checkAdminStatus}
-          >
-            관리자 상태 확인
           </StyledButton>
         </div>
       </div>
@@ -601,7 +620,7 @@ const TokenManagement: React.FC = () => {
 
           <Form.Item
             name="amount"
-            label="전송 금액 (PGC)"
+            label="전송 금액 (raw units, 100,000,000 = 1 PGC)"
             rules={[
               { required: true, message: "전송 금액을 입력해주세요" },
               {
@@ -617,7 +636,7 @@ const TokenManagement: React.FC = () => {
                   if (isNaN(numValue)) {
                     return Promise.reject("유효한 숫자를 입력해주세요");
                   }
-                  if (numValue > 1000000) {
+                  if (numValue > 100000000000000) {
                     return Promise.reject(
                       "최대 1,000,000 PGC까지 전송 가능합니다"
                     );
@@ -630,9 +649,9 @@ const TokenManagement: React.FC = () => {
             <StyledInput
               type="number"
               min={1}
-              max={1000000}
+              max={100000000000000}
               customSize="md"
-              placeholder="전송할 토큰 수량"
+              placeholder="전송할 토큰 수량 (raw units)"
             />
           </Form.Item>
 
