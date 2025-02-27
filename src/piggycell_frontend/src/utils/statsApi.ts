@@ -261,17 +261,59 @@ export const getStakingStats = async (): Promise<NFTStats> => {
  */
 export const getAdminDashboardStats = async (): Promise<NFTStats> => {
   try {
-    const basicStats = await getBasicNFTStats();
+    const actor = await createActor();
+
+    // 총 발행량 조회
+    const totalSupply = await actor.icrc7_total_supply();
+    const totalSupplyNum = Number(totalSupply);
+
+    // 스테이킹된 NFT 수 계산 (전체 조회)
+    let stakedCount = 0;
+    for (let i = 0; i < totalSupplyNum; i++) {
+      try {
+        const tokenId = BigInt(i);
+        const isStaked = await actor.isNFTStaked(tokenId);
+        if (isStaked) {
+          stakedCount++;
+        }
+      } catch (e) {
+        console.warn(`NFT #${i} 스테이킹 상태 확인 실패:`, e);
+      }
+    }
+
+    // 활성 사용자 수 조회
+    const activeUsers = await actor.getActiveUsersCount();
+
+    // 총 거래액 조회
+    const totalVolume = await actor.getTotalVolume();
+
+    // 마켓 통계 조회
     const marketStats = await getMarketStats();
 
     return {
-      ...basicStats,
+      totalSupply: totalSupplyNum,
+      stakedCount: stakedCount,
+      activeUsers: Number(activeUsers),
+      totalVolume: Number(totalVolume),
       availableNFTs: marketStats.availableNFTs,
       soldNFTs: marketStats.soldNFTs,
     };
   } catch (error) {
     console.error("관리자 대시보드 통계 데이터 조회 실패:", error);
-    throw error;
+    // 에러 발생 시 기본 통계 데이터 조회 시도
+    try {
+      const basicStats = await getBasicNFTStats();
+      const marketStats = await getMarketStats();
+      console.warn("기본 통계 대체 데이터 사용:", basicStats);
+      return {
+        ...basicStats,
+        availableNFTs: marketStats.availableNFTs,
+        soldNFTs: marketStats.soldNFTs,
+      };
+    } catch (fallbackError) {
+      console.error("기본 통계 대체 데이터 조회 실패:", fallbackError);
+      throw error; // 원래 에러 전달
+    }
   }
 };
 
