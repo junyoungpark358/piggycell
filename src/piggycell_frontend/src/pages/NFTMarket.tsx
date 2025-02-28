@@ -563,7 +563,21 @@ const NFTMarket = () => {
           key: "buyMessage",
           duration: 3,
         });
+
+        // 구매한 NFT 찾기
+        const boughtNFT = nfts.find((nft) => nft.id === nftId);
+
+        // 판매 중인 NFT 목록에서 제거
         setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
+
+        // 판매 완료된 NFT 목록에 추가
+        if (boughtNFT) {
+          setSoldNfts((prevSoldNfts) => [
+            ...prevSoldNfts,
+            { ...boughtNFT, status: "sold" },
+          ]);
+        }
+
         setMarketStats((prev) => ({
           ...prev,
           availableNFTs: (prev.availableNFTs || 0) - 1,
