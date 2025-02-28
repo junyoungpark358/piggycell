@@ -665,7 +665,7 @@ const NFTMarket = () => {
         items={[
           {
             key: "available",
-            label: "판매 중인 NFT",
+            label: `판매 중인 NFT (${nfts.length})`,
             children: (
               <Row gutter={[24, 24]} className="nft-grid">
                 {nfts.map((nft, index) => (
@@ -706,7 +706,7 @@ const NFTMarket = () => {
           },
           {
             key: "sold",
-            label: "판매 완료된 NFT",
+            label: `판매 완료된 NFT (${soldNfts.length})`,
             children: (
               <Row gutter={[24, 24]} className="nft-grid">
                 {soldNfts.map((nft) => (
