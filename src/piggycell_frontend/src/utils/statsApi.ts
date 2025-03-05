@@ -558,8 +558,8 @@ export const getTransactions = async (
     );
 
     // 백엔드 호출
-    console.log("[STATS_API] icrc3_get_transactions 호출 시작");
-    const response = await actor.icrc3_get_transactions(request);
+    console.log("[STATS_API] get_transaction_history 호출 시작");
+    const response = await actor.get_transaction_history(request);
     console.log(
       `[STATS_API] 백엔드 응답: 총 ${response.total} 건, 트랜잭션 ${response.transactions.length}개 반환`
     );

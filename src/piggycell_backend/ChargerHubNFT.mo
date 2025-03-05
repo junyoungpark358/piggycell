@@ -725,23 +725,8 @@ module {
             }
         };
 
-        // ICRC-3 배치 전송 함수
-        public func icrc3_batch_transfer(caller: Principal, args: BatchTransferArgs) : BatchTransferResult {
-            let result = icrc7_transfer(caller, args.transfers);
-            #Ok(result)
-        };
-
-        // ICRC-3 지원 표준 조회 함수
-        public func icrc3_supported_standards() : [(Text, Text)] {
-            [
-                ("ICRC-7", "https://github.com/dfinity/ICRC/ICRCs/ICRC-7"),
-                ("ICRC-2", "https://github.com/dfinity/ICRC/ICRCs/ICRC-2"),
-                ("ICRC-3", "https://github.com/dfinity/ICRC/ICRCs/ICRC-3")
-            ]
-        };
-
-        // ICRC-3 트랜잭션 조회 함수
-        public func icrc3_get_transactions(args: GetTransactionsArgs) : TransactionRange {
+        // 트랜잭션 조회 함수
+        public func get_transaction_history(args: GetTransactionsArgs) : TransactionRange {
             let start = Option.get(args.start, 0);
             let length = Option.get(args.length, 100);
             
@@ -792,7 +777,6 @@ module {
             [
                 ("ICRC-7", "https://github.com/dfinity/ICRC/ICRCs/ICRC-7"),
                 ("ICRC-2", "https://github.com/dfinity/ICRC/ICRCs/ICRC-2"),
-                ("ICRC-3", "https://github.com/dfinity/ICRC/ICRCs/ICRC-3"),
                 ("ICRC-10", "https://github.com/dfinity/ICRC/ICRCs/ICRC-10")
             ]
         };

@@ -521,8 +521,8 @@ actor Main {
         Array.freeze<ICRC3Transaction>(sorted)
     };
 
-    // ICRC-3 표준 트랜잭션 조회 함수 (개선된 버전)
-    public query func icrc3_get_transactions(request : GetTransactionsRequest) : async GetTransactionsResponse {
+    // 트랜잭션 히스토리 조회 함수
+    public query func get_transaction_history(request : GetTransactionsRequest) : async GetTransactionsResponse {
         let start = Option.get(request.start, 0);
         let length = Option.get(request.length, 10);
         let account = request.account;
@@ -606,14 +606,6 @@ actor Main {
             transactions = Buffer.toArray(pageItems);
             total = total;
         }
-    };
-
-    public shared({ caller }) func icrc3_batch_transfer(args: ChargerHubNFT.BatchTransferArgs) : async ChargerHubNFT.BatchTransferResult {
-        nft.icrc3_batch_transfer(caller, args)
-    };
-
-    public query func icrc3_supported_standards() : async [(Text, Text)] {
-        nft.icrc3_supported_standards()
     };
 
     // 관리자 관련 메소드
