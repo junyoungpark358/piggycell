@@ -1515,7 +1515,7 @@ actor Main {
     };
 
     // ICRC-2 승인 정보 조회 함수
-    public query func icrc2_allowance(args: PiggyCellToken.AllowanceArgs) : async Nat {
+    public query func icrc2_allowance(args: PiggyCellToken.AllowanceArgs) : async PiggyCellToken.AllowanceResponse {
         token.icrc2_allowance(args)
     };
 };

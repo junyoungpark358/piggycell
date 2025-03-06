@@ -480,7 +480,10 @@ const NFTMarket = () => {
       };
 
       console.log("현재 승인 금액 확인 중...");
-      const currentAllowance = await actor.icrc2_allowance(allowanceArgs);
+      const currentAllowanceResponse = await actor.icrc2_allowance(
+        allowanceArgs
+      );
+      const currentAllowance = currentAllowanceResponse.allowance;
       console.log(`현재 승인 금액: ${currentAllowance.toString()}`);
 
       // 승인 금액이 부족한 경우, 추가 승인 요청

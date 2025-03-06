@@ -117,22 +117,23 @@ module {
                         spender = marketAccount;
                     };
                     
-                    let allowance = token.icrc2_allowance(allowanceArgs);
-                    Debug.print("승인된 금액: " # Nat.toText(allowance) # ", 필요 금액: " # Nat.toText(listing.price));
+                    let allowanceResponse = token.icrc2_allowance(allowanceArgs);
+                    let allowanceAmount = allowanceResponse.allowance;
+                    Debug.print("승인된 금액: " # Nat.toText(allowanceAmount) # ", 필요 금액: " # Nat.toText(listing.price));
                     
-                    if (allowance < listing.price) {
-                        Debug.print("승인 금액 부족: 승인=" # Nat.toText(allowance) # ", 필요=" # Nat.toText(listing.price));
+                    if (allowanceAmount < listing.price) {
+                        Debug.print("승인 금액 부족: 승인=" # Nat.toText(allowanceAmount) # ", 필요=" # Nat.toText(listing.price));
                         return #err(#InsufficientBalance);
                     };
                     
                     // 5. 토큰 전송 (구매자 -> 판매자, 마켓이 대신 처리)
-                    let transferArgs: PiggyCellToken.TransferArgs = {
-                        from_subaccount = null;
+                    let transferFromArgs: PiggyCellToken.TransferFromArgs = {
+                        spender_subaccount = null;
+                        from = buyerAccount;
                         to = sellerAccount;
                         amount = listing.price;
                         fee = ?token.icrc1_fee();
                         memo = null;
-                        // 시간 처리 완전 생략 - 오버플로우 방지
                         created_at_time = null;
                     };
                     
@@ -140,7 +141,7 @@ module {
                     Debug.print("시간 값: 생략됨 (null)");
                     
                     // 승인된 토큰 전송 시도
-                    let tokenTransferResult = token.icrc2_transfer_from(marketCanister, transferArgs, buyerAccount);
+                    let tokenTransferResult = token.icrc2_transfer_from(marketCanister, transferFromArgs);
                     
                     switch(tokenTransferResult) {
                         case (#Err(transferError)) {
@@ -148,6 +149,10 @@ module {
                             switch(transferError) {
                                 case (#InsufficientFunds({ balance })) { 
                                     Debug.print("토큰 전송 실패: 잔액 부족 - 잔액=" # Nat.toText(balance));
+                                    return #err(#InsufficientBalance) 
+                                };
+                                case (#InsufficientAllowance({ allowance })) { 
+                                    Debug.print("토큰 전송 실패: 승인 잔액 부족 - 승인액=" # Nat.toText(allowance));
                                     return #err(#InsufficientBalance) 
                                 };
                                 case (#BadFee({ expected_fee })) {

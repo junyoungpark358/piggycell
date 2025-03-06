@@ -37,6 +37,17 @@ module {
         created_at_time : ?Nat64;
     };
 
+    // ICRC-2 표준에 맞는 TransferFromArgs 추가
+    public type TransferFromArgs = {
+        spender_subaccount : ?Subaccount;
+        from : Account;
+        to : Account;
+        amount : Nat;
+        fee : ?Nat;
+        memo : ?Blob;
+        created_at_time : ?Nat64;
+    };
+
     // Value 타입 추가 (ICRC-1 표준)
     public type Value = {
         #Nat : Nat;
@@ -49,6 +60,19 @@ module {
         #BadFee : { expected_fee : Nat };
         #BadBurn : { min_burn_amount : Nat };
         #InsufficientFunds : { balance : Nat };
+        #TooOld;
+        #CreatedInFuture : { ledger_time : Nat64 };
+        #Duplicate : { duplicate_of : Nat };
+        #TemporarilyUnavailable;
+        #GenericError : { error_code : Nat; message : Text };
+    };
+
+    // ICRC-2 표준에 맞는 TransferFromError 추가
+    public type TransferFromError = {
+        #BadFee : { expected_fee : Nat };
+        #BadBurn : { min_burn_amount : Nat };
+        #InsufficientFunds : { balance : Nat };
+        #InsufficientAllowance : { allowance : Nat };
         #TooOld;
         #CreatedInFuture : { ledger_time : Nat64 };
         #Duplicate : { duplicate_of : Nat };
@@ -102,6 +126,12 @@ module {
     public type AllowanceArgs = {
         account : Account;
         spender : Account;
+    };
+    
+    // 표준 ICRC-2에 맞는 Allowance 응답 타입 추가
+    public type AllowanceResponse = {
+        allowance : Nat;
+        expires_at : ?Nat64;
     };
     
     // 토큰 승인 정보를 저장하기 위한 타입 - 만료 시간 제거 버전
@@ -361,8 +391,8 @@ module {
             #Ok(args.amount)
         };
         
-        // 현재 승인 금액 조회 - 완전히 새로운 구현
-        public func icrc2_allowance(args : AllowanceArgs) : Nat {
+        // 현재 승인 금액 조회 - ICRC-2 표준에 맞게 수정
+        public func icrc2_allowance(args : AllowanceArgs) : AllowanceResponse {
             Debug.print("====== allowance 새 구현 ======");
             
             let account_owner = args.account.owner;
@@ -379,14 +409,14 @@ module {
             };
             
             Debug.print("====== allowance 완료 ======");
-            result
+            { allowance = result; expires_at = null }
         };
         
-        // 승인된 자금 전송 - 새로운 구현에 맞게 수정
-        public func icrc2_transfer_from(caller : Principal, args : TransferArgs, from : Account) : { #Ok : Nat; #Err : TransferError } {
+        // 승인된 자금 전송 - ICRC-2 표준에 맞게 수정
+        public func icrc2_transfer_from(caller : Principal, args : TransferFromArgs) : { #Ok : Nat; #Err : TransferFromError } {
             Debug.print("====== transfer_from 새 구현 ======");
             
-            let from_principal = from.owner;
+            let from_principal = args.from.owner;
             let amount = args.amount;
             let to = args.to;
             
@@ -405,18 +435,19 @@ module {
             
             if (approved_amount < amount) {
                 Debug.print("승인 금액 부족");
-                return #Err(#InsufficientFunds { balance = approved_amount });
+                // ICRC-2 표준에 맞게 InsufficientAllowance 오류 반환
+                return #Err(#InsufficientAllowance { allowance = approved_amount });
             };
             
             // 송금자 계정 차감
-            switch (ledger.get(from)) {
+            switch (ledger.get(args.from)) {
                 case (?balance) {
                     if (balance < amount) {
                         Debug.print("잔액 부족");
                         return #Err(#InsufficientFunds { balance = balance });
                     };
                     
-                    ledger.put(from, balance - amount);
+                    ledger.put(args.from, balance - amount);
                 };
                 case null {
                     Debug.print("계정 없음");
@@ -449,7 +480,7 @@ module {
             };
             
             // 송금 기록
-            recordTransaction(from, to, amount, args.memo);
+            recordTransaction(args.from, to, amount, args.memo);
             
             Debug.print("====== transfer_from 완료 ======");
             #Ok(amount)
