@@ -216,10 +216,10 @@ module {
         };
 
         // 3. 누락된 함수 추가: icrc1_supported_standards
-        public func icrc1_supported_standards() : [(Text, Text)] {
+        public func icrc1_supported_standards() : [{ name : Text; url : Text }] {
             [
-                ("ICRC-1", "https://github.com/dfinity/ICRC/ICRCs/ICRC-1"),
-                ("ICRC-2", "https://github.com/dfinity/ICRC/ICRCs/ICRC-2")
+                { name = "ICRC-1"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-1" },
+                { name = "ICRC-2"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-2" }
             ]
         };
         
