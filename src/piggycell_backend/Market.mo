@@ -143,7 +143,7 @@ module {
                     let tokenTransferResult = token.icrc2_transfer_from(marketCanister, transferArgs, buyerAccount);
                     
                     switch(tokenTransferResult) {
-                        case (#err(transferError)) {
+                        case (#Err(transferError)) {
                             // 토큰 전송 실패 시 오류 정보 상세 로깅
                             switch(transferError) {
                                 case (#InsufficientFunds({ balance })) { 
@@ -160,7 +160,7 @@ module {
                                 };
                             };
                         };
-                        case (#ok(_)) {
+                        case (#Ok(_)) {
                             Debug.print("토큰 전송 성공. NFT 전송 시작");
                             // 토큰 전송 성공 시 NFT 전송 진행
                             let nftTransferArg: ChargerHubNFT.TransferArg = {

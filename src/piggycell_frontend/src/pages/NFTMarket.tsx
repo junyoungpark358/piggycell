@@ -510,17 +510,17 @@ const NFTMarket = () => {
         console.log(`토큰 승인 요청: 승인 금액=${nftInfo.price.toString()}`);
         const approveResult = await actor.icrc2_approve(approveArgs);
 
-        if ("err" in approveResult) {
-          console.error("토큰 승인 실패:", approveResult.err);
+        if ("Err" in approveResult) {
+          console.error("토큰 승인 실패:", approveResult.Err);
           message.error({
-            content: `토큰 승인 실패: ${JSON.stringify(approveResult.err)}`,
+            content: `토큰 승인 실패: ${JSON.stringify(approveResult.Err)}`,
             key: "approveMessage",
           });
           setBuyingNFT(null);
           return;
         }
 
-        console.log("토큰 승인 성공:", approveResult.ok);
+        console.log("토큰 승인 성공:", approveResult.Ok);
         message.success({
           content: "토큰 사용이 승인되었습니다.",
           key: "approveMessage",

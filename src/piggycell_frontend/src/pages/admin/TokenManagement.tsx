@@ -301,7 +301,7 @@ const TokenManagement: React.FC = () => {
         );
         console.log("[PGC 전송 디버그] mint_tokens 호출 결과:", result);
 
-        if ("ok" in result) {
+        if ("Ok" in result) {
           // 성공 메시지 표시 - PGC 단위로 변환하여 표시
           const pgcAmount = formatTokenBalance(tokenAmount);
           message.success({
@@ -319,12 +319,12 @@ const TokenManagement: React.FC = () => {
           // 실패 메시지 표시
           let errorMsg = "알 수 없는 오류";
 
-          if (result.err) {
-            if (typeof result.err === "string") {
-              errorMsg = result.err;
-            } else if (typeof result.err === "object") {
+          if ("Err" in result) {
+            if (typeof result.Err === "string") {
+              errorMsg = result.Err;
+            } else if (typeof result.Err === "object") {
               // 객체 형태의 오류 메시지 형식에 따라 처리
-              errorMsg = JSON.stringify(result.err);
+              errorMsg = JSON.stringify(result.Err);
 
               // 특정 오류 메시지에 대한 사용자 친화적 메시지 정의
               if (errorMsg.includes("관리자")) {

@@ -20,18 +20,29 @@ import IC "mo:base/ExperimentalInternetComputer";
 import Error "mo:base/Error";
 
 module {
+    // 표준 ICRC-1에 맞게 타입 업데이트
+    public type Subaccount = Blob;
+    
     public type Account = {
         owner : Principal;
-        subaccount : ?[Nat8];
+        subaccount : ?Subaccount;
     };
 
     public type TransferArgs = {
-        from_subaccount : ?[Nat8];
+        from_subaccount : ?Subaccount;
         to : Account;
         amount : Nat;
         fee : ?Nat;
-        memo : ?[Nat8];
+        memo : ?Blob;
         created_at_time : ?Nat64;
+    };
+
+    // Value 타입 추가 (ICRC-1 표준)
+    public type Value = {
+        #Nat : Nat;
+        #Int : Int;
+        #Text : Text;
+        #Blob : Blob;
     };
 
     public type TransferError = {
@@ -53,7 +64,7 @@ module {
         amount : Nat;
         fee : Nat;
         timestamp : Time.Time;
-        memo : ?[Nat8];
+        memo : ?Blob;
     };
 
     public type TransactionRecord = {
@@ -66,13 +77,13 @@ module {
 
     // ICRC-2 승인 관련 타입 추가
     public type ApproveArgs = {
-        from_subaccount : ?[Nat8];
+        from_subaccount : ?Subaccount;
         spender : Account;
         amount : Nat;
         expected_allowance : ?Nat;
         expires_at : ?Nat64;
         fee : ?Nat;
-        memo : ?[Nat8];
+        memo : ?Blob;
         created_at_time : ?Nat64;
     };
 
@@ -113,9 +124,7 @@ module {
         
         private func accountsEqual(a : Account, b : Account) : Bool {
             Principal.equal(a.owner, b.owner) and
-            Option.equal(a.subaccount, b.subaccount, func(a : [Nat8], b : [Nat8]) : Bool {
-                Array.equal(a, b, Nat8.equal)
-            })
+            Option.equal(a.subaccount, b.subaccount, Blob.equal)
         };
 
         private func accountHash(account : Account) : Nat32 {
@@ -149,11 +158,41 @@ module {
         private let name : Text = "PiggyCell Token";
         private let fee : Nat = 0;
         
+        // 민팅 계정 정의
+        private let minting_account : Account = {
+            owner = Principal.fromText("aaaaa-aa");
+            subaccount = null;
+        };
+        
         // 거래 이력을 위한 변수들
         private var nextTxId : Nat = 0;
         private var transactions = Buffer.Buffer<Transaction>(0);
         private var transactionCount : Nat = 0;
 
+        // 1. 누락된 함수 추가: icrc1_metadata
+        public func icrc1_metadata() : [(Text, Value)] {
+            [
+                ("icrc1:name", #Text(name)),
+                ("icrc1:symbol", #Text(symbol)),
+                ("icrc1:decimals", #Nat(Nat8.toNat(decimals))),
+                ("icrc1:fee", #Nat(fee)),
+                ("icrc1:total_supply", #Nat(totalSupply))
+            ]
+        };
+
+        // 2. 누락된 함수 추가: icrc1_minting_account
+        public func icrc1_minting_account() : ?Account {
+            ?minting_account
+        };
+
+        // 3. 누락된 함수 추가: icrc1_supported_standards
+        public func icrc1_supported_standards() : [(Text, Text)] {
+            [
+                ("ICRC-1", "https://github.com/dfinity/ICRC/ICRCs/ICRC-1"),
+                ("ICRC-2", "https://github.com/dfinity/ICRC/ICRCs/ICRC-2")
+            ]
+        };
+        
         public func icrc1_name() : Text {
             name
         };
@@ -227,7 +266,7 @@ module {
         };
 
         // 트랜잭션 기록 함수
-        private func recordTransaction(from : Account, to : Account, amount : Nat, memo : ?[Nat8]) {
+        private func recordTransaction(from : Account, to : Account, amount : Nat, memo : ?Blob) {
             let txn : Transaction = {
                 id = nextTxId;
                 from = from;
@@ -255,7 +294,7 @@ module {
             transactions.add(txn);
         };
 
-        public func mint(to : Account, amount : Nat) : Result.Result<(), Text> {
+        public func mint(to : Account, amount : Nat) : { #Ok : Nat; #Err : Text } {
             switch (ledger.get(to)) {
                 case (?balance) {
                     ledger.put(to, balance + amount);
@@ -273,14 +312,14 @@ module {
             };
             recordTransaction(systemAccount, to, amount, null);
             
-            #ok(())
+            #Ok(amount)
         };
 
-        public func burn(from : Account, amount : Nat) : Result.Result<(), Text> {
+        public func burn(from : Account, amount : Nat) : { #Ok : Nat; #Err : Text } {
             switch (ledger.get(from)) {
                 case (?balance) {
                     if (balance < amount) {
-                        return #err("Insufficient balance");
+                        return #Err("Insufficient balance");
                     };
                     ledger.put(from, balance - amount);
                     totalSupply -= amount;
@@ -292,16 +331,16 @@ module {
                     };
                     recordTransaction(from, systemAccount, amount, null);
                     
-                    #ok(())
+                    #Ok(amount)
                 };
                 case null {
-                    #err("Account not found")
+                    #Err("Account not found")
                 };
             }
         };
 
         // ICRC-2 승인 함수 - 완전히 새로운 접근 방식
-        public func icrc2_approve(caller : Principal, args : ApproveArgs) : Result.Result<Nat, ApproveError> {
+        public func icrc2_approve(caller : Principal, args : ApproveArgs) : { #Ok : Nat; #Err : ApproveError } {
             Debug.print("====== approve 완전히 새로운 구현 ======");
             
             Debug.print("approve 시작");
@@ -319,7 +358,7 @@ module {
             Debug.print("승인 정보 저장 완료");
             Debug.print("====== approve 완료 ======");
             
-            #ok(args.amount)
+            #Ok(args.amount)
         };
         
         // 현재 승인 금액 조회 - 완전히 새로운 구현
@@ -344,7 +383,7 @@ module {
         };
         
         // 승인된 자금 전송 - 새로운 구현에 맞게 수정
-        public func icrc2_transfer_from(caller : Principal, args : TransferArgs, from : Account) : Result.Result<(), TransferError> {
+        public func icrc2_transfer_from(caller : Principal, args : TransferArgs, from : Account) : { #Ok : Nat; #Err : TransferError } {
             Debug.print("====== transfer_from 새 구현 ======");
             
             let from_principal = from.owner;
@@ -366,7 +405,7 @@ module {
             
             if (approved_amount < amount) {
                 Debug.print("승인 금액 부족");
-                return #err(#InsufficientFunds { balance = approved_amount });
+                return #Err(#InsufficientFunds { balance = approved_amount });
             };
             
             // 송금자 계정 차감
@@ -374,14 +413,14 @@ module {
                 case (?balance) {
                     if (balance < amount) {
                         Debug.print("잔액 부족");
-                        return #err(#InsufficientFunds { balance = balance });
+                        return #Err(#InsufficientFunds { balance = balance });
                     };
                     
                     ledger.put(from, balance - amount);
                 };
                 case null {
                     Debug.print("계정 없음");
-                    return #err(#InsufficientFunds { balance = 0 });
+                    return #Err(#InsufficientFunds { balance = 0 });
                 };
             };
             
@@ -413,11 +452,11 @@ module {
             recordTransaction(from, to, amount, args.memo);
             
             Debug.print("====== transfer_from 완료 ======");
-            #ok(())
+            #Ok(amount)
         };
 
-        // 기본 전송 함수 - 극단적으로 단순화
-        public func icrc1_transfer(caller : Principal, args : TransferArgs) : Result.Result<(), TransferError> {
+        // 기본 전송 함수 - 표준에 맞게 수정
+        public func icrc1_transfer(caller : Principal, args : TransferArgs) : { #Ok : Nat; #Err : TransferError } {
             Debug.print("====== transfer 시작 ======");
             
             // 계정 생성 (단순화)
@@ -435,14 +474,14 @@ module {
                 case (?balance) {
                     if (balance < amount) {
                         Debug.print("잔액 부족");
-                        return #err(#InsufficientFunds { balance = balance });
+                        return #Err(#InsufficientFunds { balance = balance });
                     };
                     
                     ledger.put(from, balance - amount);
                 };
                 case null {
                     Debug.print("계정 없음");
-                    return #err(#InsufficientFunds { balance = 0 });
+                    return #Err(#InsufficientFunds { balance = 0 });
                 };
             };
             
@@ -460,7 +499,7 @@ module {
             recordTransaction(from, to, amount, args.memo);
             
             Debug.print("====== transfer 완료 ======");
-            #ok(())
+            #Ok(amount)
         };
     };
 }; 

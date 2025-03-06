@@ -93,8 +93,8 @@ module {
                         };
                         
                         switch(token.icrc1_transfer(caller, transferArgs)) {
-                            case (#err(_)) { return #err(#TransferError) };
-                            case (#ok()) { };
+                            case (#Err(_)) { return #err(#TransferError) };
+                            case (#Ok(_)) { };
                         };
                     };
 
@@ -132,8 +132,8 @@ module {
                         };
                         
                         switch(token.icrc1_transfer(caller, transferArgs)) {
-                            case (#err(_)) { return #err(#TransferError) };
-                            case (#ok()) {
+                            case (#Err(_)) { return #err(#TransferError) };
+                            case (#Ok(_)) {
                                 // 마지막 보상 수령 시간 업데이트
                                 let updatedInfo: StakingInfo = {
                                     tokenId = stakingInfo.tokenId;
