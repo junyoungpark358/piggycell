@@ -218,12 +218,12 @@ module {
             "PiggyCell Charger Hub NFTs"
         };
 
-        public func icrc7_description() : Text {
-            "Tokenized charging infrastructure NFTs for the PiggyCell ecosystem"
+        public func icrc7_description() : ?Text {
+            ?"Tokenized charging infrastructure NFTs for the PiggyCell ecosystem"
         };
 
-        public func icrc7_logo() : Text {
-            "https://piggycell.com/logo.png" // 실제 로고 URL로 변경 필요
+        public func icrc7_logo() : ?Text {
+            ?"https://piggycell.com/logo.png"
         };
 
         public func icrc7_total_supply() : Nat {

@@ -247,11 +247,11 @@ actor Main {
         nft.icrc7_name()
     };
 
-    public query func icrc7_description() : async Text {
+    public query func icrc7_description() : async ?Text {
         nft.icrc7_description()
     };
 
-    public query func icrc7_logo() : async Text {
+    public query func icrc7_logo() : async ?Text {
         nft.icrc7_logo()
     };
 
