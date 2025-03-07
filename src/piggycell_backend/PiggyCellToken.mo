@@ -41,6 +41,54 @@ module {
     };
     
     //-----------------------------------------------------------------------------
+    // ICRC-3 관련 타입 정의
+    //-----------------------------------------------------------------------------
+    
+    // ICRC-3 Value 타입
+    public type ICRC3Value = {
+        #Blob : Blob;
+        #Text : Text;
+        #Nat : Nat;
+        #Int : Int;
+        #Array : [ICRC3Value];
+        #Map : [(Text, ICRC3Value)];
+    };
+    
+    // 블록 타입
+    public type Block = {
+        phash : ?Blob;     // 부모 블록 해시
+        btype : Text;      // 블록 타입 (1mint, 1xfer, 2approve, 3revDist 등)
+        ts : Nat;          // 타임스탬프
+        tx : ICRC3Value;   // 트랜잭션 정보
+        fee : ?Nat;        // 수수료 (선택적)
+    };
+    
+    // GetBlocksArgs 타입
+    public type GetBlocksArgs = [{start : Nat; length : Nat}];
+    
+    // GetBlocksResult 타입
+    public type GetBlocksResult = {
+        log_length : Nat;
+        blocks : [{id : Nat; block: ICRC3Value}];
+        archived_blocks : [{
+            args : GetBlocksArgs;
+            callback : shared query (GetBlocksArgs) -> async GetBlocksResult;
+        }];
+    };
+    
+    // 데이터 인증서 타입
+    public type DataCertificate = {
+        certificate : Blob;    // 인증서 서명
+        hash_tree : Blob;      // CBOR 인코딩된 해시 트리
+    };
+    
+    // 지원하는 블록 타입
+    public type SupportedBlockType = {
+        block_type : Text;
+        url : Text;
+    };
+    
+    //-----------------------------------------------------------------------------
     // ICRC-1 관련 타입 정의
     //-----------------------------------------------------------------------------
     
@@ -219,6 +267,187 @@ module {
         private var transactions = Buffer.Buffer<Transaction>(0);
         private var transactionCount : Nat = 0;
         
+        // ICRC-3 블록 관련 변수
+        private var blocks = Buffer.Buffer<Block>(100);       // 블록 저장소
+        private var nextBlockId : Nat = 0;                   // 다음 블록 ID
+        private let maxBlocksToStore : Nat = 1000;           // 최대 저장할 블록 수 (메모리 관리용)
+        private var lastBlockHash : ?Blob = null;            // 마지막 블록 해시
+        
+        // 지원하는 블록 타입 목록
+        private let supportedBlockTypes : [SupportedBlockType] = [
+            { block_type = "1mint"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-1" },
+            { block_type = "1burn"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-1" },
+            { block_type = "1xfer"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-1" }, 
+            { block_type = "2approve"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-2" },
+            { block_type = "2xfer"; url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-2" },
+            { block_type = "3revDist"; url = "https://github.com/your-org/piggycell/docs/revenue-distribution" }
+        ];
+        
+        //-----------------------------------------------------------------------------
+        // ICRC-3 유틸리티 함수
+        //-----------------------------------------------------------------------------
+        
+        // 블록 해시 계산 함수 (실제 구현에서는 표준 준수 필요)
+        private func hashBlock(block : Block) : Blob {
+            // 임시 구현: 실제로는 ICRC-3 표준에 따른 해시 함수 구현 필요
+            // 이 함수는 블록을 직렬화하고 적절한 해시 알고리즘(예: SHA-256)을 적용해야 함
+            let textRepresentation = blockToText(block);
+            
+            // 단순한 해시 함수 구현 (실제 프로덕션에서는 보안 해시 알고리즘 사용 필요)
+            let hashValue = Text.hash(textRepresentation);
+            
+            Blob.fromArray([
+                Nat8.fromNat(Nat32.toNat(hashValue / 16777216) % 256),
+                Nat8.fromNat(Nat32.toNat(hashValue / 65536) % 256),
+                Nat8.fromNat(Nat32.toNat(hashValue / 256) % 256),
+                Nat8.fromNat(Nat32.toNat(hashValue) % 256)
+            ])
+        };
+        
+        // 블록을 텍스트로 변환 (해싱용)
+        private func blockToText(block : Block) : Text {
+            var result = "Block{";
+            result #= "btype=" # block.btype # ";";
+            result #= "ts=" # Nat.toText(block.ts) # ";";
+            
+            // phash 필드 처리
+            switch (block.phash) {
+                case (?hash) {
+                    result #= "phash=" # debug_show(hash) # ";";
+                };
+                case (null) {
+                    result #= "phash=null;";
+                };
+            };
+            
+            // tx 필드 처리 (간략화)
+            result #= "tx=" # debug_show(block.tx) # ";";
+            
+            // fee 필드 처리
+            switch (block.fee) {
+                case (?feeValue) {
+                    result #= "fee=" # Nat.toText(feeValue) # ";";
+                };
+                case (null) {
+                    result #= "fee=null;";
+                };
+            };
+            
+            result #= "}";
+            result
+        };
+        
+        // ICRC-3 Value를 account 타입에서 변환
+        private func accountToICRC3Value(account : Account) : ICRC3Value {
+            #Array([
+                #Blob(Principal.toBlob(account.owner)),
+                switch (account.subaccount) {
+                    case (?subaccount) { #Blob(subaccount) };
+                    case (null) { #Blob(Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])) };
+                }
+            ])
+        };
+        
+        // 블록을 ICRC3Value로 변환
+        private func blockToICRC3Value(block : Block) : ICRC3Value {
+            let fieldsBuffer = Buffer.Buffer<(Text, ICRC3Value)>(10); // 대략적인 크기로 초기화
+            
+            // 필수 필드
+            fieldsBuffer.add(("btype", #Text(block.btype)));
+            
+            // phash가 있으면 추가
+            switch (block.phash) {
+                case (?hash) {
+                    fieldsBuffer.add(("phash", #Blob(hash)));
+                };
+                case (null) {};
+            };
+            
+            // 타임스탬프 추가
+            fieldsBuffer.add(("ts", #Nat(block.ts)));
+            
+            // tx 필드 추가
+            fieldsBuffer.add(("tx", block.tx));
+            
+            // fee가 있으면 추가
+            switch (block.fee) {
+                case (?feeValue) {
+                    fieldsBuffer.add(("fee", #Nat(feeValue)));
+                };
+                case (null) {};
+            };
+            
+            #Map(Buffer.toArray(fieldsBuffer))
+        };
+        
+        //-----------------------------------------------------------------------------
+        // ICRC-3 표준 함수
+        //-----------------------------------------------------------------------------
+        
+        // 블록 가져오기 (ICRC-3 표준)
+        public func icrc3_get_blocks(args : GetBlocksArgs) : GetBlocksResult {
+            let totalBlocks = blocks.size();
+            let resultBuffer = Buffer.Buffer<{id : Nat; block : ICRC3Value}>(totalBlocks);
+            
+            for (range in args.vals()) {
+                let start = range.start;
+                let length = range.length;
+                
+                // 범위가 유효한지 확인
+                if (start < totalBlocks) {
+                    let endIndex = Nat.min(start + length, totalBlocks);
+                    var i = start;
+                    
+                    while (i < endIndex) {
+                        let block = blocks.get(i);
+                        let icrc3Block = blockToICRC3Value(block);
+                        resultBuffer.add({id = i; block = icrc3Block});
+                        i += 1;
+                    };
+                };
+            };
+            
+            {
+                log_length = totalBlocks;
+                blocks = Buffer.toArray(resultBuffer);
+                archived_blocks = []; // 내부 관리이므로 아카이브드 블록 없음
+            }
+        };
+        
+        // 인증서 가져오기 (ICRC-3 표준)
+        // 참고: 실제 구현에서는 IC 인증 메커니즘 활용 필요
+        public func icrc3_get_tip_certificate() : ?DataCertificate {
+            // 간단한 구현: 실제로는 IC의 인증 메커니즘 사용 필요
+            if (blocks.size() == 0) {
+                return null;
+            };
+            
+            // 간이 인증서 생성 (실제 구현에서는 IC API 사용)
+            let last_index = Nat64.fromNat(blocks.size() - 1);
+            let dummy_cert = Blob.fromArray([0, 1, 2, 3]); // 더미 인증서
+            let dummy_tree = Blob.fromArray([4, 5, 6, 7]); // 더미 해시 트리
+            
+            ?{
+                certificate = dummy_cert;
+                hash_tree = dummy_tree;
+            }
+        };
+        
+        // 지원하는 블록 타입 조회 (ICRC-3 표준)
+        public func icrc3_supported_block_types() : [SupportedBlockType] {
+            supportedBlockTypes
+        };
+        
+        // 아카이브 조회 (ICRC-3 표준)
+        public func icrc3_get_archives(_from : ?Principal) : [{
+            canister_id : Principal;
+            start : Nat;
+            end : Nat;
+        }] {
+            // 내부 관리이므로 아카이브 노드 없음
+            []
+        };
+        
         //-----------------------------------------------------------------------------
         // 내부 유틸리티 함수
         //-----------------------------------------------------------------------------
@@ -250,6 +479,24 @@ module {
             
             // 새 거래 추가
             transactions.add(txn);
+            
+            // ICRC-3 블록도 추가
+            // 시스템 계정으로부터의 민팅 또는 소각인지 확인
+            let isSystemAccount = Principal.equal(from.owner, Principal.fromText("aaaaa-aa")) or 
+                                  Principal.equal(to.owner, Principal.fromText("aaaaa-aa"));
+            
+            if (isSystemAccount) {
+                if (Principal.equal(from.owner, Principal.fromText("aaaaa-aa"))) {
+                    // 민팅
+                    addMintBlock(to, amount);
+                } else {
+                    // 소각
+                    addBurnBlock(from, amount);
+                }
+            } else {
+                // 일반 전송
+                addTransactionBlock(from, to, amount, memo, "1xfer");
+            }
         };
         
         //-----------------------------------------------------------------------------
@@ -381,8 +628,51 @@ module {
             simpleAllowances.add(new_allowance);
             
             Debug.print("승인 정보 저장 완료");
-            Debug.print("====== approve 완료 ======");
             
+            // 성공 시 승인 블록 기록
+            let fromAccount : Account = {
+                owner = caller;
+                subaccount = args.from_subaccount;
+            };
+            
+            // 트랜잭션 정보를 Buffer로 구성
+            let txBuffer = Buffer.Buffer<(Text, ICRC3Value)>(4);
+            txBuffer.add(("amt", #Nat(args.amount)));
+            txBuffer.add(("from", accountToICRC3Value(fromAccount)));
+            txBuffer.add(("spender", accountToICRC3Value(args.spender)));
+            
+            switch (args.memo) {
+                case (?m) { txBuffer.add(("memo", #Blob(m))) };
+                case (null) { }; // 메모가 없으면 추가하지 않음
+            };
+            
+            // 블록 생성
+            let newBlock : Block = {
+                phash = if (blocks.size() > 0) { lastBlockHash } else { null };
+                btype = "2approve";
+                ts = Int.abs(Time.now());
+                tx = #Map(Buffer.toArray(txBuffer));
+                fee = ?fee;
+            };
+            
+            // 블록 저장 및 해시 계산
+            let blockHash = hashBlock(newBlock);
+            lastBlockHash := ?blockHash;
+            
+            // 블록 저장 - 최대 개수 제한
+            if (blocks.size() >= maxBlocksToStore) {
+                // 가장 오래된 블록 제거
+                let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
+                for (i in Iter.range(1, maxBlocksToStore - 1)) {
+                    tempBlocks.add(blocks.get(i));
+                };
+                blocks := tempBlocks;
+            };
+            
+            blocks.add(newBlock);
+            nextBlockId += 1;
+            
+            Debug.print("====== approve 완료 ======");
             #Ok(args.amount)
         };
         
@@ -477,6 +767,8 @@ module {
             // 송금 기록
             recordTransaction(args.from, to, amount, args.memo);
             
+            // ICRC-3 블록 추가 (recordTransaction 내부에서 처리됨)
+            
             Debug.print("====== transfer_from 완료 ======");
             #Ok(amount)
         };
@@ -504,6 +796,8 @@ module {
             };
             recordTransaction(systemAccount, to, amount, null);
             
+            // ICRC-3 민팅 블록은 recordTransaction 내에서 처리됨
+            
             #Ok(amount)
         };
         
@@ -523,6 +817,8 @@ module {
                         subaccount = null;
                     };
                     recordTransaction(from, systemAccount, amount, null);
+                    
+                    // ICRC-3 소각 블록은 recordTransaction 내에서 처리됨
                     
                     #Ok(amount)
                 };
@@ -575,6 +871,121 @@ module {
             };
             
             Buffer.toArray(result)
+        };
+        
+        // 트랜잭션 기록 함수 (ICRC-3 블록 생성)
+        private func addTransactionBlock(from : Account, to : Account, amount : Nat, memo : ?Blob, blockType : Text) {
+            let parentHash = if (blocks.size() > 0) {
+                lastBlockHash
+            } else {
+                null
+            };
+            
+            // 트랜잭션 정보를 Buffer로 구성
+            let txBuffer = Buffer.Buffer<(Text, ICRC3Value)>(5);
+            txBuffer.add(("amt", #Nat(amount)));
+            txBuffer.add(("from", accountToICRC3Value(from)));
+            txBuffer.add(("to", accountToICRC3Value(to)));
+            
+            switch (memo) {
+                case (?m) { txBuffer.add(("memo", #Blob(m))) };
+                case (null) { }; // 메모가 없으면 추가하지 않음
+            };
+            
+            // 블록 생성
+            let newBlock : Block = {
+                phash = parentHash;
+                btype = blockType;
+                ts = Int.abs(Time.now());
+                tx = #Map(Buffer.toArray(txBuffer));
+                fee = ?fee;
+            };
+            
+            // 블록 저장 및 해시 계산
+            let blockHash = hashBlock(newBlock);
+            lastBlockHash := ?blockHash;
+            
+            // 블록 저장 - 최대 개수 제한
+            if (blocks.size() >= maxBlocksToStore) {
+                // 가장 오래된 블록 제거
+                let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
+                for (i in Iter.range(1, maxBlocksToStore - 1)) {
+                    tempBlocks.add(blocks.get(i));
+                };
+                blocks := tempBlocks;
+            };
+            
+            blocks.add(newBlock);
+            nextBlockId += 1;
+        };
+        
+        // 민팅 전용 블록 추가
+        private func addMintBlock(to : Account, amount : Nat) {
+            let systemAccount : Account = {
+                owner = Principal.fromText("aaaaa-aa");
+                subaccount = null;
+            };
+            
+            addTransactionBlock(systemAccount, to, amount, null, "1mint");
+        };
+        
+        // 소각 전용 블록 추가
+        private func addBurnBlock(from : Account, amount : Nat) {
+            let systemAccount : Account = {
+                owner = Principal.fromText("aaaaa-aa");
+                subaccount = null;
+            };
+            
+            addTransactionBlock(from, systemAccount, amount, null, "1burn");
+        };
+        
+        // 수익 배분 전용 블록 추가 (3revDist)
+        public func addRevenueDistributionBlock(to : Account, amount : Nat, tokenId : Nat, distributionId : Nat) {
+            let systemAccount : Account = {
+                owner = Principal.fromText("aaaaa-aa");
+                subaccount = null;
+            };
+            
+            let parentHash = if (blocks.size() > 0) {
+                lastBlockHash
+            } else {
+                null
+            };
+            
+            // 수익 배분 전용 필드 추가
+            let txBuffer = Buffer.Buffer<(Text, ICRC3Value)>(6);
+            txBuffer.add(("amt", #Nat(amount)));
+            txBuffer.add(("from", accountToICRC3Value(systemAccount)));
+            txBuffer.add(("to", accountToICRC3Value(to)));
+            txBuffer.add(("tokenId", #Nat(tokenId)));
+            txBuffer.add(("distributionId", #Nat(distributionId)));
+            txBuffer.add(("revenueType", #Text("nft-staking")));
+            
+            // 블록 생성
+            let newBlock : Block = {
+                phash = parentHash;
+                btype = "3revDist";
+                ts = Int.abs(Time.now());
+                tx = #Map(Buffer.toArray(txBuffer));
+                fee = null;  // 수익 배분에는 수수료 없음
+            };
+            
+            // 블록 저장 및 해시 계산
+            let blockHash = hashBlock(newBlock);
+            lastBlockHash := ?blockHash;
+            
+            // 블록 저장 - 최대 개수 제한
+            if (blocks.size() >= maxBlocksToStore) {
+                // 가장 오래된 블록 제거
+                let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
+                for (i in Iter.range(1, maxBlocksToStore - 1)) {
+                    tempBlocks.add(blocks.get(i));
+                };
+                blocks := tempBlocks;
+            };
+            
+            blocks.add(newBlock);
+            nextBlockId += 1;
         };
     };
 }; 

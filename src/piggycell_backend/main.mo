@@ -1540,4 +1540,95 @@ actor Main {
     public query func icrc2_allowance(args: PiggyCellToken.AllowanceArgs) : async PiggyCellToken.AllowanceResponse {
         token.icrc2_allowance(args)
     };
+    
+    //-----------------------------------------------------------------------------
+    // 수익 배분 관련 인터페이스
+    //-----------------------------------------------------------------------------
+    
+    // 관리자용: 수익 배분 실행
+    public shared({ caller }) func distributeRevenue(totalAmount: Nat) : async Result.Result<Nat, RevenueDistribution.DistributionError> {
+        revenueManager.distributeRevenue(caller, totalAmount)
+    };
+
+    // 관리자용: 모든 배분 기록 조회
+    public query func getAllDistributionRecords() : async [RevenueDistribution.DistributionRecord] {
+        revenueManager.getAllDistributionRecords()
+    };
+
+    // 사용자용: 자신의 수익 배분 내역 조회
+    public query({ caller }) func getMyDistributionRecords() : async [RevenueDistribution.UserDistributionRecord] {
+        revenueManager.getUserDistributionRecords(caller)
+    };
+
+    // 사용자/관리자용: 특정 NFT의 수익 배분 내역 조회
+    public query func getNFTDistributionRecords(tokenId: Nat) : async [RevenueDistribution.UserDistributionRecord] {
+        revenueManager.getTokenDistributionRecords(tokenId)
+    };
+
+    // 사용자의 보류 중인 수익 배분 조회
+    public query func getPendingDistributions(user: Principal) : async [RevenueDistribution.UserDistributionRecord] {
+        revenueManager.getPendingDistributions(user)
+    };
+
+    // 특정 배분 기록 조회
+    public query func getDistributionRecord(id: Nat) : async ?RevenueDistribution.DistributionRecord {
+        revenueManager.getDistributionRecord(id)
+    };
+
+    // ICRC-3 인터페이스 노출
+    public query func icrc3_get_blocks(args: RevenueDistribution.GetBlocksArgs) : async RevenueDistribution.GetBlocksResult {
+        revenueManager.icrc3_get_blocks(args)
+    };
+
+    public query func icrc3_get_tip_certificate() : async ?RevenueDistribution.DataCertificate {
+        revenueManager.icrc3_get_tip_certificate()
+    };
+
+    public query func icrc3_supported_block_types() : async [{block_type: Text; url: Text}] {
+        revenueManager.icrc3_supported_block_types()
+    };
+
+    // 모든 수익 배분 거래 내역 조회 (페이지네이션 지원)
+    public query func getRevenueTransactions(start: Nat, limit: Nat) : async [RevenueDistribution.UserDistributionRecord] {
+        revenueManager.getTransactions(start, limit)
+    };
+
+    // 특정 사용자의 수익 배분 내역 조회 (페이지네이션 지원)
+    public query func getUserRevenueTransactions(user: Principal, start: Nat, limit: Nat) : async [RevenueDistribution.UserDistributionRecord] {
+        revenueManager.getUserTransactions(user, start, limit)
+    };
+
+    //-----------------------------------------------------------------------------
+    // 수익 배분 통계 관련 인터페이스
+    //-----------------------------------------------------------------------------
+    
+    // 전체 수익 배분 통계 요약 조회
+    public query func getRevenueDistributionStats() : async RevenueDistribution.DistributionStats {
+        revenueManager.getDistributionStats()
+    };
+    
+    // 특정 기간의 배분 통계 조회
+    public query func getRevenueStatsByPeriod(period: Text, startTime: Int, endTime: Int) : async RevenueDistribution.PeriodStats {
+        revenueManager.getDistributionStatsByPeriod(period, startTime, endTime)
+    };
+    
+    // NFT 성과 통계 조회
+    public query func getNFTRevenueStats(limit: Nat) : async RevenueDistribution.NFTPerformanceStats {
+        revenueManager.getNFTPerformanceStats(limit)
+    };
+    
+    // 사용자 통계 조회
+    public query func getUserRevenueStats(user: Principal) : async RevenueDistribution.UserStats {
+        revenueManager.getUserStats(user)
+    };
+    
+    // 자신의 통계 조회 (caller 기반)
+    public query({ caller }) func getMyRevenueStats() : async RevenueDistribution.UserStats {
+        revenueManager.getUserStats(caller)
+    };
+    
+    // 수익 대시보드 데이터 조회
+    public query func getRevenueDashboardData() : async RevenueDistribution.DashboardData {
+        revenueManager.getDashboardData()
+    };
 };
