@@ -8,6 +8,7 @@ import Hash "mo:base/Hash";
 import Buffer "mo:base/Buffer";
 import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
+import Admin "./Admin";
 
 module {
     //-----------------------------------------------------------------------------
@@ -20,6 +21,7 @@ module {
         owner: Principal;
         stakedAt: Int;
         lastRewardClaimAt: Int;
+        price: Nat;  // NFT 가격 정보 추가
     };
 
     // 스테이킹 오류 타입
@@ -28,6 +30,7 @@ module {
         #AlreadyStaked;
         #NotStaked;
         #TransferError;
+        #NotAuthorized;
     };
 
     //-----------------------------------------------------------------------------
@@ -54,12 +57,17 @@ module {
             Nat.max(Int.abs(hoursStaked), 0)
         };
         
+        // 사용자가 관리자인지 확인 - adminManager가 없으므로 항상 false 반환
+        private func isAdmin(user: Principal) : Bool {
+            false  // 관리자 체크를 하지 않음
+        };
+        
         //-----------------------------------------------------------------------------
         // 스테이킹 주요 기능 함수
         //-----------------------------------------------------------------------------
         
-        // NFT 스테이킹
-        public func stakeNFT(caller: Principal, tokenId: Nat) : Result.Result<(), StakingError> {
+        // NFT 스테이킹 (가격 정보 추가)
+        public func stakeNFT(caller: Principal, tokenId: Nat, price: Nat) : Result.Result<(), StakingError> {
             // 토큰 소유자 확인
             let owners = nft.icrc7_owner_of([tokenId]);
             
@@ -82,6 +90,7 @@ module {
                         owner = caller;
                         stakedAt = now;
                         lastRewardClaimAt = now;
+                        price = price;  // 가격 정보 저장
                     };
                     stakingInfos.put(tokenId, stakingInfo);
                     #ok(())
@@ -162,6 +171,7 @@ module {
                                     owner = stakingInfo.owner;
                                     stakedAt = stakingInfo.stakedAt;
                                     lastRewardClaimAt = Time.now();
+                                    price = stakingInfo.price;  // 가격 유지
                                 };
                                 stakingInfos.put(tokenId, updatedInfo);
                             };
@@ -173,6 +183,48 @@ module {
                     #err(#NotStaked)
                 };
             }
+        };
+        
+        // NFT 가격 업데이트 함수 추가
+        public func updateNFTPrice(caller: Principal, tokenId: Nat, newPrice: Nat) : Result.Result<(), StakingError> {
+            switch(stakingInfos.get(tokenId)) {
+                case (?info) {
+                    // 권한 검증 (소유자만 가능)
+                    if (info.owner != caller) {
+                        return #err(#NotAuthorized);
+                    };
+                    
+                    // 가격 업데이트
+                    let updatedInfo: StakingInfo = {
+                        tokenId = info.tokenId;
+                        owner = info.owner;
+                        stakedAt = info.stakedAt;
+                        lastRewardClaimAt = info.lastRewardClaimAt;
+                        price = newPrice;
+                    };
+                    stakingInfos.put(tokenId, updatedInfo);
+                    #ok(())
+                };
+                case null { #err(#NotStaked) };
+            }
+        };
+        
+        // 모든 스테이킹된 NFT ID 목록 반환
+        public func getAllStakedTokenIds() : [Nat] {
+            let buffer = Buffer.Buffer<Nat>(0);
+            for ((tokenId, _) in stakingInfos.entries()) {
+                buffer.add(tokenId);
+            };
+            Buffer.toArray(buffer)
+        };
+        
+        // 총 스테이킹 가치 계산 함수 추가
+        public func getTotalStakedValue() : Nat {
+            var total: Nat = 0;
+            for ((_, info) in stakingInfos.entries()) {
+                total += info.price;
+            };
+            total
         };
 
         //-----------------------------------------------------------------------------

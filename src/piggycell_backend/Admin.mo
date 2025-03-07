@@ -2,6 +2,8 @@ import Principal "mo:base/Principal";
 import Result "mo:base/Result";
 import TrieMap "mo:base/TrieMap";
 import Text "mo:base/Text";
+import Array "mo:base/Array";
+import Iter "mo:base/Iter";
 
 module {
     public type AdminError = {
@@ -19,14 +21,12 @@ module {
             Principal.equal(caller, superAdmin)
         };
 
-        // 관리자 확인 - 슈퍼 관리자도 자동으로 관리자로 인식되도록 수정
+        // 관리자 확인 - 슈퍼 관리자도 자동으로 관리자로 인식
         public func isAdmin(caller: Principal) : Bool {
-            // 슈퍼 관리자는 자동으로 관리자 권한을 가짐
             if (isSuperAdmin(caller)) {
                 return true;
             };
             
-            // 일반 관리자 확인
             switch (admins.get(caller)) {
                 case (?isAdmin) { isAdmin };
                 case null { false };
@@ -71,6 +71,12 @@ module {
             
             superAdmin := newSuperAdmin;
             #ok(());
+        };
+        
+        // 모든 관리자 목록 조회
+        public func getAllAdmins() : [Principal] {
+            let adminArray = Iter.toArray(admins.keys());
+            Array.append<Principal>([superAdmin], adminArray)
         };
     };
 }; 

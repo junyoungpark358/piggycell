@@ -19,13 +19,15 @@ import Admin "./Admin";
 import Market "./Market";
 import PiggyCellToken "./PiggyCellToken";
 import Staking "./Staking";
+import RevenueDistribution "./RevenueDistribution";
 
 actor Main {
     private let nft = ChargerHubNFT.NFTCanister(Principal.fromActor(Main));
     private let adminManager = Admin.AdminManager();
     private let token = PiggyCellToken.PiggyCellToken();
-    private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
     private let stakingManager = Staking.StakingManager(token, nft);
+    private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
+    private let revenueManager = RevenueDistribution.RevenueDistributionManager(token, stakingManager, adminManager);
 
     // 거래 내역을 저장하기 위한 타입과 변수
     type TransactionType = {
@@ -846,7 +848,27 @@ actor Main {
 
     // 스테이킹 관련 인터페이스
     public shared({ caller }) func stakeNFT(tokenId: Nat) : async Result.Result<(), Staking.StakingError> {
-        switch(stakingManager.stakeNFT(caller, tokenId)) {
+        // NFT 가격 정보 가져오기
+        let metadataResult = nft.icrc7_token_metadata([tokenId]);
+        var price: Nat = 0;
+        
+        if (metadataResult.size() > 0) {
+            switch (metadataResult[0]) {
+                case (?metadata) {
+                    for ((key, value) in metadata.vals()) {
+                        if (key == "price") {
+                            switch (value) {
+                                case (#Nat(p)) { price := p };
+                                case (_) {};
+                            };
+                        };
+                    };
+                };
+                case (null) {};
+            };
+        };
+        
+        switch(stakingManager.stakeNFT(caller, tokenId, price)) {
             case (#ok()) {
                 // 스테이킹 거래 내역 추가
                 addTransaction(#Stake, ?tokenId, caller, 0);
