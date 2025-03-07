@@ -10,6 +10,10 @@ import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 
 module {
+    //-----------------------------------------------------------------------------
+    // 타입 정의
+    //-----------------------------------------------------------------------------
+    
     // 스테이킹 정보 타입
     public type StakingInfo = {
         tokenId: Nat;
@@ -18,6 +22,7 @@ module {
         lastRewardClaimAt: Int;
     };
 
+    // 스테이킹 오류 타입
     public type StakingError = {
         #NotOwner;
         #AlreadyStaked;
@@ -25,8 +30,21 @@ module {
         #TransferError;
     };
 
+    //-----------------------------------------------------------------------------
+    // 스테이킹 관리자 구현
+    //-----------------------------------------------------------------------------
+    
     public class StakingManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister) {
+        //-----------------------------------------------------------------------------
+        // 변수 및 초기화
+        //-----------------------------------------------------------------------------
+        
+        // 스테이킹 정보 저장소
         private let stakingInfos = TrieMap.TrieMap<Nat, StakingInfo>(Nat.equal, Hash.hash);
+        
+        //-----------------------------------------------------------------------------
+        // 내부 유틸리티 함수
+        //-----------------------------------------------------------------------------
         
         // 스테이킹 보상 계산 (1시간당 1 PGC)
         private func calculateReward(stakingInfo: StakingInfo) : Nat {
@@ -35,7 +53,11 @@ module {
             let hoursStaked = Int.abs(timeSinceLastClaim) / (1_000_000_000 * 60 * 60); // 나노초를 시간으로 변환
             Nat.max(Int.abs(hoursStaked), 0)
         };
-
+        
+        //-----------------------------------------------------------------------------
+        // 스테이킹 주요 기능 함수
+        //-----------------------------------------------------------------------------
+        
         // NFT 스테이킹
         public func stakeNFT(caller: Principal, tokenId: Nat) : Result.Result<(), StakingError> {
             // 토큰 소유자 확인
@@ -153,6 +175,10 @@ module {
             }
         };
 
+        //-----------------------------------------------------------------------------
+        // 조회 함수
+        //-----------------------------------------------------------------------------
+        
         // 스테이킹 정보 조회
         public func getStakingInfo(tokenId: Nat) : ?StakingInfo {
             stakingInfos.get(tokenId)
