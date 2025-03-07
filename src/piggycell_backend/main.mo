@@ -734,7 +734,57 @@ actor Main {
 
     // 전송 기능
     public shared({ caller }) func icrc7_transfer(args: [ChargerHubNFT.TransferArg]) : async [?ChargerHubNFT.TransferResult] {
-        nft.icrc7_transfer(caller, args)
+        // 각 토큰이 스테이킹 상태인지 확인하고 전송을 제한
+        let results = Buffer.Buffer<?ChargerHubNFT.TransferResult>(args.size());
+        
+        for (arg in args.vals()) {
+            // 스테이킹 상태 확인
+            if (stakingManager.isStaked(arg.token_id)) {
+                // 스테이킹 상태면 전송 불가 에러 반환
+                results.add(?#Err(#GenericError({
+                    error_code = 100;
+                    message = "Token is currently staked and cannot be transferred";
+                })));
+            } else {
+                // 스테이킹 상태가 아니면 전송 진행
+                // 여기서는 결과를 null로 설정하고 실제 전송은 아래에서 수행
+                results.add(null);
+            };
+        };
+        
+        // 스테이킹되지 않은 토큰만 필터링
+        var nonStakedArgs = Buffer.Buffer<ChargerHubNFT.TransferArg>(args.size());
+        var resultIndices = Buffer.Buffer<Nat>(args.size());
+        
+        var i = 0;
+        for (arg in args.vals()) {
+            switch (results.get(i)) {
+                case (null) {
+                    // 스테이킹되지 않은 토큰: 전송 가능
+                    nonStakedArgs.add(arg);
+                    resultIndices.add(i);
+                };
+                case (?_) {
+                    // 스테이킹된 토큰: 이미 에러 처리됨
+                };
+            };
+            i += 1;
+        };
+        
+        // 전송 가능한 토큰이 있으면 실제 전송 수행
+        if (nonStakedArgs.size() > 0) {
+            let transferResults = nft.icrc7_transfer(caller, Buffer.toArray(nonStakedArgs));
+            
+            // 결과 병합
+            var j = 0;
+            for (transferResult in transferResults.vals()) {
+                let originalIndex = resultIndices.get(j);
+                results.put(originalIndex, transferResult);
+                j += 1;
+            };
+        };
+        
+        Buffer.toArray(results)
     };
 
     // 마켓 관련 인터페이스
