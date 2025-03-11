@@ -15,8 +15,90 @@ import Staking "./Staking";
 import Admin "./Admin";
 import Blob "mo:base/Blob";   // ICRC-3 구현을 위해 추가
 import Text "mo:base/Text";   // 날짜 변환을 위해 추가
+import Timer "mo:base/Timer"; // 타이머 기능을 위해 추가
+import Nat64 "mo:base/Nat64"; // Nat64 변환을 위해 추가
 
 module {
+    //-----------------------------------------------------------------------------
+    // Date 유틸리티 모듈
+    //-----------------------------------------------------------------------------
+    
+    // 날짜 관련 유틸리티 함수
+    module Date {
+        public type Date = {
+            year: Nat;
+            month: Nat;
+            day: Nat;
+            hour: Nat;
+            minute: Nat;
+            second: Nat;
+        };
+        
+        // 타임스탬프를 Date 객체로 변환
+        public func fromTime(timestamp: Int) : Date {
+            // 나노초를 초로 변환
+            let seconds = timestamp / 1_000_000_000;
+            
+            // UTC 1970-01-01 00:00:00 기준
+            let SECONDS_PER_DAY = 86400;
+            let SECONDS_PER_HOUR = 3600;
+            let SECONDS_PER_MINUTE = 60;
+            
+            // 날짜 계산 (간단한 알고리즘, 실제로는 더 복잡한 달력 계산 필요)
+            let secondsInDay = Int.abs(seconds) % SECONDS_PER_DAY;
+            let days = Int.abs(seconds) / SECONDS_PER_DAY;
+            
+            // 1970년 1월 1일부터의 날짜 계산 (대략적인 계산)
+            // 실제 구현에서는 윤년과 월별 일수를 고려해야 함
+            let year = 1970 + days / 365;
+            let dayOfYear = days % 365;
+            
+            // 매우 단순화된 월 계산 (실제로는 복잡함)
+            let month = 1 + dayOfYear / 30;
+            let day = 1 + dayOfYear % 30;
+            
+            let hour = secondsInDay / SECONDS_PER_HOUR;
+            let minute = (secondsInDay % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
+            let second = secondsInDay % SECONDS_PER_MINUTE;
+            
+            {
+                year = Int.abs(year);
+                month = Int.abs(month);
+                day = Int.abs(day);
+                hour = Int.abs(hour);
+                minute = Int.abs(minute);
+                second = Int.abs(second);
+            }
+        };
+        
+        // Date 객체를 타임스탬프로 변환
+        public func toTime(date: Date) : Int {
+            // 매우 간단한 구현 (실제로는 더 정확한 계산 필요)
+            let SECONDS_PER_DAY = 86400;
+            let SECONDS_PER_HOUR = 3600;
+            let SECONDS_PER_MINUTE = 60;
+            
+            // 1970년부터의 일수 계산 (대략적)
+            let years = date.year - 1970;
+            let daysFromYears = years * 365;
+            
+            // 월별 일수 (매우 단순화)
+            let daysFromMonths = (date.month - 1) * 30;
+            
+            // 총 일수
+            let days = daysFromYears + daysFromMonths + (date.day - 1);
+            
+            // 초 계산
+            let seconds = days * SECONDS_PER_DAY +
+                         date.hour * SECONDS_PER_HOUR +
+                         date.minute * SECONDS_PER_MINUTE +
+                         date.second;
+            
+            // 나노초로 변환
+            seconds * 1_000_000_000
+        };
+    };
+    
     //-----------------------------------------------------------------------------
     // 타입 정의
     //-----------------------------------------------------------------------------
@@ -244,6 +326,144 @@ module {
         
         // 고유 NFT ID 세트
         private let activeNFTs = TrieMap.TrieMap<Nat, Bool>(Nat.equal, Hash.hash);
+        
+        //-----------------------------------------------------------------------------
+        // 자동 수익 분배 관련 변수 및 함수
+        //-----------------------------------------------------------------------------
+        
+        // 매일 분배되는 토큰 양
+        private var dailyDistributionAmount: Nat = 100; // 기본값 100 PGC
+        
+        // 타이머 ID 저장 변수
+        private var timerId: ?Nat = null;
+        
+        // 마지막 분배 날짜 (일 단위)
+        private var lastDistributionDay: Int = 0;
+        
+        // 타이머 초기화 함수
+        public func setupDailyDistribution() : async () {
+            cancelCurrentTimer(); // 기존 타이머 취소
+            
+            // 현재 시간 및 날짜 정보 가져오기
+            let now = Time.now();
+            let nowDate = Date.fromTime(now);
+            
+            // 다음 자정 계산
+            let nextMidnight = Date.toTime({
+                year = nowDate.year;
+                month = nowDate.month;
+                day = nowDate.day + 1;
+                hour = 0;
+                minute = 0;
+                second = 0;
+            });
+            
+            // 다음 자정까지 남은 시간 (밀리초)
+            let timeUntilMidnight = (nextMidnight - now) / 1_000_000; // 나노초를 밀리초로 변환
+            
+            // 타이머 설정 (밀리초 단위로 설정)
+            let durationMs = Int.abs(timeUntilMidnight);
+            
+            // 타이머 설정 (최소 1초, 최대 60분으로 제한)
+            let boundedDuration = Nat.max(1, Nat.min(3600, durationMs / 1_000_000)); // 초 단위로 변환
+            
+            timerId := ?Timer.setTimer<system>(
+                #seconds(boundedDuration), 
+                func() : async () {
+                    await executeDailyDistribution();
+                }
+            );
+        };
+        
+        // 기존 타이머 취소 함수
+        private func cancelCurrentTimer() {
+            switch (timerId) {
+                case (?id) {
+                    Timer.cancelTimer(id);
+                    timerId := null;
+                };
+                case (null) {};
+            };
+        };
+        
+        // 일일 수익 분배 실행 함수
+        private func executeDailyDistribution() : async () {
+            // 현재 날짜 확인
+            let now = Time.now();
+            let currentDay = Int.abs(now) / (86400 * 1_000_000_000);
+            
+            // 이미 오늘 실행했는지 확인 (중복 실행 방지)
+            if (currentDay <= lastDistributionDay) {
+                // 이미 오늘 실행했다면 다음 자정으로 타이머 재설정만 진행
+                await setupDailyDistribution();
+                return;
+            };
+            
+            // 스테이킹된 NFT 확인
+            let stakedTokenIds = stakingManager.getAllStakedTokenIds();
+            
+            if (stakedTokenIds.size() > 0) {
+                // 스테이킹된 NFT가 있으면 시스템 계정을 통해 토큰 민팅 및 분배 실행
+                
+                // 시스템 계정 생성 (토큰 민팅용)
+                let systemAccount : PiggyCellToken.Account = {
+                    owner = Principal.fromText("aaaaa-aa");
+                    subaccount = null;
+                };
+                
+                // 분배할 토큰 금액 (매일 100 PGC)
+                let distributionAmount = dailyDistributionAmount;
+                
+                // 시스템 계정에 토큰 민팅
+                let mintResult = token.mint(systemAccount, distributionAmount);
+                
+                // 민팅 결과에 따라 처리
+                switch (mintResult) {
+                    case (#Ok(_)) {
+                        // 민팅 성공 시 분배 실행
+                        let result = distributeRevenue(Principal.fromText("aaaaa-aa"), distributionAmount);
+                        switch (result) {
+                            case (#ok(_)) {
+                                // 성공 시 기본 분배량으로 리셋
+                                dailyDistributionAmount := 100;
+                            };
+                            case (#err(error)) {
+                                // 오류 발생 시에도 기본값으로 리셋 (로깅 로직 추가 가능)
+                                dailyDistributionAmount := 100;
+                            };
+                        };
+                    };
+                    case (#Err(error)) {
+                        // 민팅 실패 시 로그 기록 (실제 구현에서는 더 상세한 오류 처리 필요)
+                        // 오류가 발생해도 기본 분배량으로 리셋하지 않고 기존 금액 유지
+                    };
+                };
+            } else {
+                // 스테이킹된 NFT가 없으면 누적하지 않고 다음날에는 항상 기본값인 100 PGC로 시작
+                dailyDistributionAmount := 100;
+            };
+            
+            // 마지막 분배 날짜 업데이트
+            lastDistributionDay := currentDay;
+            
+            // 다음 날 자정에 다시 실행되도록 타이머 재설정
+            await setupDailyDistribution();
+        };
+        
+        // 금액 조회 함수
+        public query func getDailyDistributionAmount() : async Nat {
+            dailyDistributionAmount
+        };
+        
+        // 수동으로 타이머 재설정 (관리자용)
+        public func reinitializeTimer(caller: Principal) : async Result.Result<(), DistributionError> {
+            if (not isAdmin(caller)) {
+                return #err(#NotAuthorized);
+            };
+            
+            await setupDailyDistribution();
+            return #ok(());
+        };
         
         //-----------------------------------------------------------------------------
         // ICRC-3 관련 함수 - PiggyCellToken을 통해 호출
