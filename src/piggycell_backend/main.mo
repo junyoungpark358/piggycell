@@ -1655,14 +1655,38 @@ actor Main {
         revenueManager.icrc3_supported_block_types()
     };
 
+    // 페이지네이션 결과 타입 정의
+    public type PaginatedResult<T> = {
+        items: [T];
+        nextStart: Nat;
+        hasMore: Bool;
+    };
+
     // 모든 수익 배분 거래 내역 조회 (페이지네이션 지원)
-    public query func getRevenueTransactions(start: Nat, limit: Nat) : async [RevenueDistribution.UserDistributionRecord] {
-        revenueManager.getTransactions(start, limit)
+    public func getRevenueTransactions(start: Nat, limit: Nat) : async PaginatedResult<RevenueDistribution.UserDistributionRecord> {
+        Debug.print("[Main] getRevenueTransactions 호출: start=" # Nat.toText(start) # ", limit=" # Nat.toText(limit));
+        
+        // 최대 조회 개수 제한
+        let maxResults = Nat.min(limit, 20);
+        
+        // 수익 배분 트랜잭션 조회
+        try {
+            await revenueManager.getTransactions(start, maxResults)
+        } catch(e) {
+            Debug.print("[Main] getRevenueTransactions 오류: " # Error.message(e));
+            // 오류 발생 시 빈 결과 반환
+            return {
+                items = [];
+                nextStart = start;
+                hasMore = false;
+            };
+        }
     };
 
     // 특정 사용자의 수익 배분 내역 조회 (페이지네이션 지원)
-    public query func getUserRevenueTransactions(user: Principal, start: Nat, limit: Nat) : async [RevenueDistribution.UserDistributionRecord] {
-        revenueManager.getUserTransactions(user, start, limit)
+    public func getUserRevenueTransactions(user: Principal, start: Nat, limit: Nat) : async PaginatedResult<RevenueDistribution.UserDistributionRecord> {
+        Debug.print("[Main] getUserRevenueTransactions 호출: user=" # Principal.toText(user) # ", start=" # Nat.toText(start) # ", limit=" # Nat.toText(limit));
+        await revenueManager.getUserTransactions(user, start, limit)
     };
 
     //-----------------------------------------------------------------------------

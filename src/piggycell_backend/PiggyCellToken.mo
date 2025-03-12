@@ -940,7 +940,7 @@ module {
         };
         
         // 수익 배분 전용 블록 추가 (3revDist)
-        public func addRevenueDistributionBlock(to : Account, amount : Nat, tokenId : Nat, distributionId : Nat) {
+        public func addRevenueDistributionBlock(to : Account, amount : Nat, tokenId : Nat, distributionId : Nat) : Nat {
             let systemAccount : Account = {
                 owner = Principal.fromText("aaaaa-aa");
                 subaccount = null;
@@ -974,18 +974,30 @@ module {
             let blockHash = hashBlock(newBlock);
             lastBlockHash := ?blockHash;
             
+            // 블록 ID 생성
+            let blockId = blocks.size();
+            
             // 블록 저장 - 최대 개수 제한
             if (blocks.size() >= maxBlocksToStore) {
                 // 가장 오래된 블록 제거
                 let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
-                for (i in Iter.range(1, maxBlocksToStore - 1)) {
+                var i = blocks.size() - maxBlocksToStore + 1;
+                while (i < blocks.size()) {
                     tempBlocks.add(blocks.get(i));
+                    i += 1;
                 };
+                tempBlocks.add(newBlock);
                 blocks := tempBlocks;
+            } else {
+                blocks.add(newBlock);
             };
             
-            blocks.add(newBlock);
-            nextBlockId += 1;
+            Debug.print("[PiggyCellToken] 수익 배분 블록 생성 완료, ID: " # Nat.toText(blockId) # 
+                      ", 사용자: " # Principal.toText(to.owner) # 
+                      ", 토큰ID: " # Nat.toText(tokenId) # 
+                      ", 배분ID: " # Nat.toText(distributionId));
+            
+            return blockId; // 생성된 블록 ID 반환
         };
     };
 }; 

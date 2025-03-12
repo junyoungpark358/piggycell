@@ -19,6 +19,7 @@ import Timer "mo:base/Timer"; // 타이머 기능을 위해 추가
 import Nat64 "mo:base/Nat64"; // Nat64 변환을 위해 추가
 import Debug "mo:base/Debug"; // Debug 모듈을 추가
 import Bool "mo:base/Bool";   // Bool 모듈을 추가
+import List "mo:base/List";   // List 모듈을 추가
 
 module {
     //-----------------------------------------------------------------------------
@@ -166,6 +167,15 @@ module {
         distributedAt: Int;
         claimed: Bool;
         claimedAt: ?Int;
+    };
+
+    // 블록 정보 타입 정의
+    public type BlockInfo = {
+        userId: Principal;       // 사용자 ID
+        tokenId: Nat;            // NFT ID
+        distributionId: Nat;     // 배분 ID
+        amount: Nat;             // 배분 금액
+        timestamp: Int;          // 배분 시간
     };
 
     // 수익 배분 오류 타입
@@ -695,9 +705,27 @@ module {
                     // 통계 인덱스 업데이트
                     updateStatIndices(userRecord);
                     
-                    // ICRC-3 수익 배분 블록 추가 (PiggyCellToken의 addRevenueDistributionBlock 사용)
-                    token.addRevenueDistributionBlock(userAccount, amount, tokenId, recordId);
-                    Debug.print("[RevenueDistribution] ICRC-3 블록 추가 완료");
+                    // ICRC-3 수익 배분 블록 추가 - 전용 블록 저장소 구현 (타입 명시)
+                    let blockId = token.addRevenueDistributionBlock(userAccount, amount, tokenId, recordId);
+                    Debug.print("[RevenueDistribution] ICRC-3 블록 추가 완료, 블록ID: " # Nat.toText(blockId));
+                    
+                    // 블록 인덱스 업데이트
+                    updateBlockIndex(user, blockId);
+                    
+                    // 전체 수익 배분 블록 목록에도 추가
+                    revenueBlockIds.add(blockId);
+                    
+                    // 배포 블록 정보 맵에 저장
+                    let blockInfo: BlockInfo = {
+                        userId = user;
+                        tokenId = tokenId;
+                        distributionId = recordId;
+                        amount = amount;
+                        timestamp = timestamp;
+                    };
+                    distributionBlockInfoMap.put(blockId, blockInfo);
+                    
+                    Debug.print("[RevenueDistribution] 블록 정보 맵 추가 완료, 블록ID: " # Nat.toText(blockId));
                 };
                 case (#Err(error)) {
                     Debug.print("[RevenueDistribution] 토큰 민팅 실패: " # debug_show(error));
@@ -1047,236 +1075,474 @@ module {
             Buffer.toArray(buffer)
         };
         
-        // ICRC-3 트랜잭션 조회 구현 (PiggyCellToken의 ICRC-3 구현 사용)
-        // start: 조회 시작 블록 인덱스, limit: 조회할 최대 블록 수
-        // 반환: 수익 배분(3revDist) 블록에서 추출한 UserDistributionRecord 배열
-        public func getTransactions(start: Nat, limit: Nat) : [UserDistributionRecord] {
-            // ICRC-3 API를 사용하여 블록 가져오기
-            let blocksResult = token.icrc3_get_blocks([{ start = start; length = limit }]);
+        // 모든 수익 분배 내역 조회 (페이지네이션 지원)
+        public func getTransactions(start: Nat, limit: Nat): async PaginatedResult<UserDistributionRecord> {
+            Debug.print("[RevenueDistribution] getTransactions 호출됨: start=" # Nat.toText(start) # ", limit=" # Nat.toText(limit));
             
-            // 블록에서 UserDistributionRecord로 변환할 항목 저장용 버퍼
-            let resultBuffer = Buffer.Buffer<UserDistributionRecord>(blocksResult.blocks.size());
+            // 최대 조회 개수 제한
+            let maxResults = Nat.min(limit, 20);
             
-            for (blockData in blocksResult.blocks.vals()) {
-                let id = blockData.id;
-                let block = blockData.block;
+            // 전체 수익 배분 블록 ID 활용
+            let totalBlocks = revenueBlockIds.size();
+            
+            // 시작 인덱스 검증
+            if (start >= totalBlocks) {
+                Debug.print("[RevenueDistribution] 시작 인덱스가 총 블록 수를 초과합니다");
+                return {
+                    items = [];
+                    nextStart = start;
+                    hasMore = false;
+                };
+            };
+            
+            // 페이지네이션 범위 계산
+            let endIndex = Nat.min(start + maxResults, totalBlocks);
+            let hasMore = endIndex < totalBlocks;
+            let nextStart = if (hasMore) endIndex else start;
+            
+            Debug.print("[RevenueDistribution] 페이지네이션 범위: start=" # Nat.toText(start) # 
+                      ", end=" # Nat.toText(endIndex) # 
+                      ", hasMore=" # Bool.toText(hasMore));
+            
+            // 블록 ID 추출 - 페이지네이션 범위에 맞춰 배열 잘라내기
+            let blockIdsToLoad = Array.subArray(Buffer.toArray(revenueBlockIds), start, endIndex - start);
+            Debug.print("[RevenueDistribution] 로드할 블록 ID: " # debug_show(blockIdsToLoad));
+            
+            if (blockIdsToLoad.size() == 0) {
+                Debug.print("[RevenueDistribution] 로드할 블록이 없습니다");
+                return {
+                    items = [];
+                    nextStart = start;
+                    hasMore = false;
+                };
+            };
+            
+            // 결과 버퍼
+            let resultBuffer = Buffer.Buffer<UserDistributionRecord>(blockIdsToLoad.size());
+            
+            // 최적화된 배치 블록 검색 구현
+            // 블록 정보 맵을 사용하여 효율적으로 결과 구성
+            for (blockId in blockIdsToLoad.vals()) {
+                Debug.print("[RevenueDistribution] 블록 정보 맵에서 블록 조회: ID=" # Nat.toText(blockId));
                 
-                // "3revDist" 타입 블록만 처리
-                switch (block) {
-                    case (#Map(fields)) {
-                        // 블록 타입 확인
-                        var isRevDist = false;
-                        var timestamp : Int = 0;
-                        var amount : Nat = 0;
-                        var userId : ?Principal = null;
-                        var tokenId : ?Nat = null;
-                        var distributionId : ?Nat = null;
+                switch (distributionBlockInfoMap.get(blockId)) {
+                    case (?blockInfo) {
+                        // 블록 정보 맵에서 직접 데이터 가져오기
+                        let record : UserDistributionRecord = {
+                            recordId = blockInfo.distributionId;
+                            userId = blockInfo.userId;
+                            tokenId = blockInfo.tokenId;
+                            amount = blockInfo.amount;
+                            distributedAt = blockInfo.timestamp;
+                            claimed = true;  // 블록에 기록되었으므로 이미 청구됨
+                            claimedAt = ?blockInfo.timestamp;
+                        };
                         
-                        // 필드 추출
-                        for ((fieldName, fieldValue) in fields.vals()) {
-                            if (fieldName == "btype") {
-                                // 블록 타입 확인
-                                switch (fieldValue) {
-                                    case (#Text(btype)) {
-                                        if (btype == "3revDist") {
-                                            isRevDist := true;
-                                        };
-                                    };
-                                    case (_) {};
-                                };
-                            } else if (fieldName == "ts") {
-                                // 타임스탬프 추출
-                                switch (fieldValue) {
-                                    case (#Nat(ts)) { timestamp := Int.abs(ts); };
-                                    case (_) {};
-                                };
-                            } else if (fieldName == "tx") {
-                                // 트랜잭션 데이터 추출
-                                switch (fieldValue) {
-                                    case (#Map(txFields)) {
-                                        for ((txFieldName, txFieldValue) in txFields.vals()) {
-                                            if (txFieldName == "amt") {
-                                                // 금액 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(amt)) { amount := amt; };
-                                                    case (_) {};
+                        resultBuffer.add(record);
+                        Debug.print("[RevenueDistribution] 블록 정보 맵에서 기록 추가됨: 블록ID=" # Nat.toText(blockId));
+                    };
+                    case (null) {
+                        // 맵에 없는 경우 블록 데이터 직접 로드 (fallback)
+                        Debug.print("[RevenueDistribution] 블록 정보 맵에 없음, 직접 블록 로드 시도: ID=" # Nat.toText(blockId));
+                        
+                        // 블록을 하나씩 조회
+                        let blockRequest = token.icrc3_get_blocks([{ start = blockId; length = 1 }]);
+                        
+                        if (blockRequest.blocks.size() > 0) {
+                            let blockData = blockRequest.blocks[0];
+                            let block = blockData.block;
+                            
+                            // "3revDist" 타입 블록만 처리
+                            switch (block) {
+                                case (#Map(fields)) {
+                                    // 필드 추출
+                                    var isRevDist = false;
+                                    var timestamp : Int = 0;
+                                    var amount : Nat = 0;
+                                    var userId : ?Principal = null;
+                                    var tokenId : ?Nat = null;
+                                    var distributionId : ?Nat = null;
+                                    
+                                    // 필드 추출
+                                    for ((fieldName, fieldValue) in fields.vals()) {
+                                        if (fieldName == "btype") {
+                                            // 블록 타입 확인
+                                            switch (fieldValue) {
+                                                case (#Text(btype)) { 
+                                                    isRevDist := btype == "3revDist"; 
                                                 };
-                                            } else if (txFieldName == "to") {
-                                                // 수신자 ID 추출
-                                                switch (txFieldValue) {
-                                                    case (#Array(accountData)) {
-                                                        if (accountData.size() > 0) {
-                                                            switch (accountData[0]) {
-                                                                case (#Blob(ownerBlob)) {
-                                                                    userId := ?Principal.fromBlob(ownerBlob);
+                                                case (_) {};
+                                            };
+                                        } else if (fieldName == "ts") {
+                                            // 타임스탬프 추출
+                                            switch (fieldValue) {
+                                                case (#Nat(ts)) { timestamp := Int.abs(ts); };
+                                                case (_) {};
+                                            };
+                                        } else if (fieldName == "tx") {
+                                            // 트랜잭션 세부 정보 추출
+                                            switch (fieldValue) {
+                                                case (#Map(txFields)) {
+                                                    for ((txFieldName, txFieldValue) in txFields.vals()) {
+                                                        if (txFieldName == "amt") {
+                                                            // 금액 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(amt)) { amount := amt; };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "to") {
+                                                            // 수신자 ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Array(accountData)) {
+                                                                    if (accountData.size() > 0) {
+                                                                        switch (accountData[0]) {
+                                                                            case (#Blob(ownerBlob)) {
+                                                                                userId := ?Principal.fromBlob(ownerBlob);
+                                                                            };
+                                                                            case (_) {};
+                                                                        };
+                                                                    };
                                                                 };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "tokenId") {
+                                                            // NFT ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(tid)) { tokenId := ?tid; };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "distributionId") {
+                                                            // 배분 ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(did)) { distributionId := ?did; };
                                                                 case (_) {};
                                                             };
                                                         };
                                                     };
-                                                    case (_) {};
                                                 };
-                                            } else if (txFieldName == "tokenId") {
-                                                // NFT 토큰 ID 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(id)) { tokenId := ?id; };
-                                                    case (_) {};
-                                                };
-                                            } else if (txFieldName == "distributionId") {
-                                                // 수익 배분 ID 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(id)) { distributionId := ?id; };
-                                                    case (_) {};
-                                                };
+                                                case (_) {};
                                             };
                                         };
                                     };
-                                    case (_) {};
+                                    
+                                    // 유효한 수익 배분 블록 처리 (사용자와 관계없이 모든 레코드)
+                                    if (isRevDist and userId != null and tokenId != null and distributionId != null) {
+                                        let userPrincipal = Option.get(userId, Principal.fromText("aaaaa-aa"));
+                                        
+                                        let record : UserDistributionRecord = {
+                                            recordId = Option.get(distributionId, 0);
+                                            userId = userPrincipal;
+                                            tokenId = Option.get(tokenId, 0);
+                                            amount = amount;
+                                            distributedAt = timestamp;
+                                            claimed = true;  // 블록에 기록되었으므로 이미 청구됨
+                                            claimedAt = ?timestamp;
+                                        };
+                                        
+                                        resultBuffer.add(record);
+                                        Debug.print("[RevenueDistribution] 블록에서 직접 기록 추가됨: 블록ID=" # Nat.toText(blockId));
+                                        
+                                        // 블록 정보 맵에 저장 (다음 조회 최적화)
+                                        let blockInfo: BlockInfo = {
+                                            userId = userPrincipal;
+                                            tokenId = Option.get(tokenId, 0);
+                                            distributionId = Option.get(distributionId, 0);
+                                            amount = amount;
+                                            timestamp = timestamp;
+                                        };
+                                        distributionBlockInfoMap.put(blockId, blockInfo);
+                                        Debug.print("[RevenueDistribution] 블록 정보 맵에 추가됨: 블록ID=" # Nat.toText(blockId));
+                                    };
                                 };
+                                case (_) {};
                             };
-                        };
-                        
-                        // 유효한 수익 배분 블록인 경우 레코드 생성
-                        if (isRevDist and userId != null and tokenId != null and distributionId != null) {
-                            let record : UserDistributionRecord = {
-                                recordId = Option.get(distributionId, 0);
-                                userId = Option.get(userId, Principal.fromText("aaaaa-aa"));
-                                tokenId = Option.get(tokenId, 0);
-                                amount = amount;
-                                distributedAt = timestamp;
-                                claimed = true;  // 블록에 기록되었으므로 이미 청구됨
-                                claimedAt = ?timestamp;
-                            };
-                            
-                            resultBuffer.add(record);
                         };
                     };
-                    case (_) {};
                 };
             };
             
-            Buffer.toArray(resultBuffer)
+            // 결과를 배열로 변환
+            let results = Buffer.toArray(resultBuffer);
+            
+            // 결과 정렬 (최신 배분부터)
+            let sortedResults = Array.sort(results, func(a: UserDistributionRecord, b: UserDistributionRecord) : {#less; #equal; #greater} {
+                if (a.distributedAt > b.distributedAt) { #less } 
+                else if (a.distributedAt < b.distributedAt) { #greater } 
+                else { #equal };
+            });
+            
+            Debug.print("[RevenueDistribution] 페이지네이션 결과: " # Nat.toText(sortedResults.size()) # "개 항목, " # 
+                      "hasMore=" # Bool.toText(hasMore) # 
+                      ", nextStart=" # Nat.toText(nextStart));
+            
+            return {
+                items = sortedResults;
+                nextStart = nextStart;
+                hasMore = hasMore;
+            };
+        };
+
+        //-----------------------------------------------------------------------------
+        // 블록 인덱싱 관련 구조 및 변수
+        //-----------------------------------------------------------------------------
+        
+        // 페이지네이션 결과 타입 정의
+        public type PaginatedResult<T> = {
+            items: [T];          // 결과 아이템 배열
+            nextStart: Nat;      // 다음 조회 시작점
+            hasMore: Bool;       // 더 가져올 데이터가 있는지 여부
         };
         
-        // 특정 사용자의 수익 배분 트랜잭션 조회 (PiggyCellToken의 ICRC-3 구현 사용)
-        // user: 조회할 사용자 ID, start: 조회 시작 블록 인덱스, limit: 조회할 최대 레코드 수
-        // 반환: 특정 사용자에게 배분된 수익 레코드 배열
-        public func getUserTransactions(user: Principal, start: Nat, limit: Nat) : [UserDistributionRecord] {
-            // 특정 개수의 블록 가져오기 (충분한 결과를 얻기 위해 요청한 limit보다 더 많은 블록 가져옴)
-            let blocksResult = token.icrc3_get_blocks([{ start = start; length = limit * 5 }]);
+        // 사용자별 블록 인덱스 맵 - Key: Principal(사용자 ID), Value: Nat 리스트(해당 사용자의 블록 ID들)
+        private let userBlockIndex = TrieMap.TrieMap<Principal, List.List<Nat>>(Principal.equal, Principal.hash);
+        
+        // 수익 배분 블록 ID들 (3revDist 타입 블록만)
+        private let revenueBlockIds = Buffer.Buffer<Nat>(100);
+        
+        // 블록 정보 맵 - Key: 블록 ID, Value: 블록 정보
+        private let distributionBlockInfoMap = TrieMap.TrieMap<Nat, BlockInfo>(Nat.equal, Hash.hash);
+
+        // 블록 인덱스를 업데이트하는 함수 (내부용)
+        private func updateBlockIndex(userId: Principal, blockId: Nat) {
+            // 해당 사용자의 블록 리스트 가져오기
+            let userBlocks = switch (userBlockIndex.get(userId)) {
+                case (null) { List.nil<Nat>() };
+                case (?blocks) { blocks };
+            };
             
-            // 블록에서 UserDistributionRecord로 변환할 항목 저장용 버퍼
-            let resultBuffer = Buffer.Buffer<UserDistributionRecord>(blocksResult.blocks.size());
+            // 리스트 앞에 새 블록 ID 추가 (최신 블록이 앞에 오도록)
+            let updatedBlocks = List.push(blockId, userBlocks);
+            userBlockIndex.put(userId, updatedBlocks);
             
-            for (blockData in blocksResult.blocks.vals()) {
-                let id = blockData.id;
-                let block = blockData.block;
+            // 전체 수익 배분 블록 목록에도 추가
+            revenueBlockIds.add(blockId);
+            
+            Debug.print("[RevenueDistribution] 블록 인덱스 업데이트: 사용자=" # Principal.toText(userId) # 
+                      ", 블록ID=" # Nat.toText(blockId) # 
+                      ", 현재 블록 수=" # Nat.toText(List.size(updatedBlocks)));
+        };
+        
+        // 특정 사용자의 수익 배분 내역 조회 (페이지네이션 지원)
+        public func getUserTransactions(user: Principal, start: Nat, limit: Nat): async PaginatedResult<UserDistributionRecord> {
+            Debug.print("[RevenueDistribution] getUserTransactions 호출됨: user=" # Principal.toText(user) # ", start=" # Nat.toText(start) # ", limit=" # Nat.toText(limit));
+            
+            // 최대 조회 개수 제한
+            let maxResults = Nat.min(limit, 20);
+            
+            // 사용자별 블록 인덱스 활용 (최적화된 조회)
+            let userBlocks = switch (userBlockIndex.get(user)) {
+                case (null) {
+                    // 해당 사용자 블록이 없음
+                    Debug.print("[RevenueDistribution] 해당 사용자의 블록 인덱스가 없습니다: " # Principal.toText(user));
+                    return {
+                        items = [];
+                        nextStart = start;
+                        hasMore = false;
+                    };
+                };
+                case (?blocks) { blocks };
+            };
+            
+            Debug.print("[RevenueDistribution] 사용자 블록 인덱스 발견: 총 " # Nat.toText(List.size(userBlocks)) # "개");
+            
+            // 사용자의 블록 리스트를 배열로 변환
+            let userBlocksArray = List.toArray(userBlocks);
+            
+            // 페이지네이션 처리
+            let totalBlocks = userBlocksArray.size();
+            
+            // 시작 인덱스 검증
+            if (start >= totalBlocks) {
+                Debug.print("[RevenueDistribution] 시작 인덱스가 총 블록 수를 초과합니다");
+                return {
+                    items = [];
+                    nextStart = start;
+                    hasMore = false;
+                };
+            };
+            
+            // 페이지네이션 범위 계산
+            let endIndex = Nat.min(start + maxResults, totalBlocks);
+            let hasMore = endIndex < totalBlocks;
+            let nextStart = if (hasMore) endIndex else start;
+            
+            Debug.print("[RevenueDistribution] 페이지네이션 범위: start=" # Nat.toText(start) # 
+                      ", end=" # Nat.toText(endIndex) # 
+                      ", hasMore=" # Bool.toText(hasMore));
+            
+            // 블록 ID 추출 - 페이지네이션 범위에 맞춰 배열 잘라내기
+            let blockIdsToLoad = Array.subArray(userBlocksArray, start, endIndex - start);
+            Debug.print("[RevenueDistribution] 로드할 블록 ID: " # debug_show(blockIdsToLoad));
+            
+            if (blockIdsToLoad.size() == 0) {
+                Debug.print("[RevenueDistribution] 로드할 블록이 없습니다");
+                return {
+                    items = [];
+                    nextStart = start;
+                    hasMore = false;
+                };
+            };
+            
+            // 결과 버퍼
+            let resultBuffer = Buffer.Buffer<UserDistributionRecord>(blockIdsToLoad.size());
+            
+            // 블록 정보 맵을 사용하여 효율적으로 결과 구성
+            for (blockId in blockIdsToLoad.vals()) {
+                Debug.print("[RevenueDistribution] 블록 정보 맵에서 블록 조회: ID=" # Nat.toText(blockId));
                 
-                // "3revDist" 타입 블록만 처리 및 특정 사용자 필터링
-                switch (block) {
-                    case (#Map(fields)) {
-                        // 필드 분석에 필요한 변수 초기화
-                        var isRevDist = false;
-                        var timestamp : Int = 0;
-                        var amount : Nat = 0;
-                        var userId : ?Principal = null;
-                        var tokenId : ?Nat = null;
-                        var distributionId : ?Nat = null;
+                switch (distributionBlockInfoMap.get(blockId)) {
+                    case (?blockInfo) {
+                        // 블록 정보 맵에서 직접 데이터 가져오기
+                        if (blockInfo.userId == user) {
+                            let record : UserDistributionRecord = {
+                                recordId = blockInfo.distributionId;
+                                userId = blockInfo.userId;
+                                tokenId = blockInfo.tokenId;
+                                amount = blockInfo.amount;
+                                distributedAt = blockInfo.timestamp;
+                                claimed = true;  // 블록에 기록되었으므로 이미 청구됨
+                                claimedAt = ?blockInfo.timestamp;
+                            };
+                            
+                            resultBuffer.add(record);
+                            Debug.print("[RevenueDistribution] 블록 정보 맵에서 기록 추가됨: 블록ID=" # Nat.toText(blockId));
+                        };
+                    };
+                    case (null) {
+                        // 맵에 없는 경우 블록 데이터 직접 로드 (fallback)
+                        Debug.print("[RevenueDistribution] 블록 정보 맵에 없음, 직접 블록 로드 시도: ID=" # Nat.toText(blockId));
                         
-                        // 블록의 모든 필드 분석
-                        for ((fieldName, fieldValue) in fields.vals()) {
-                            if (fieldName == "btype") {
-                                // 블록 타입 확인
-                                switch (fieldValue) {
-                                    case (#Text(btype)) {
-                                        if (btype == "3revDist") {
-                                            isRevDist := true;
-                                        };
-                                    };
-                                    case (_) {};
-                                };
-                            } else if (fieldName == "ts") {
-                                // 타임스탬프 추출
-                                switch (fieldValue) {
-                                    case (#Nat(ts)) { timestamp := Int.abs(ts); };
-                                    case (_) {};
-                                };
-                            } else if (fieldName == "tx") {
-                                // 트랜잭션 세부 정보 추출
-                                switch (fieldValue) {
-                                    case (#Map(txFields)) {
-                                        for ((txFieldName, txFieldValue) in txFields.vals()) {
-                                            if (txFieldName == "amt") {
-                                                // 금액 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(amt)) { amount := amt; };
-                                                    case (_) {};
+                        // 블록을 하나씩 조회
+                        let blockRequest = token.icrc3_get_blocks([{ start = blockId; length = 1 }]);
+                        
+                        if (blockRequest.blocks.size() > 0) {
+                            let blockData = blockRequest.blocks[0];
+                            let block = blockData.block;
+                            
+                            // "3revDist" 타입 블록만 처리
+                            switch (block) {
+                                case (#Map(fields)) {
+                                    // 필드 추출
+                                    var isRevDist = false;
+                                    var timestamp : Int = 0;
+                                    var amount : Nat = 0;
+                                    var userId : ?Principal = null;
+                                    var tokenId : ?Nat = null;
+                                    var distributionId : ?Nat = null;
+                                    
+                                    // 필드 추출
+                                    for ((fieldName, fieldValue) in fields.vals()) {
+                                        if (fieldName == "btype") {
+                                            // 블록 타입 확인
+                                            switch (fieldValue) {
+                                                case (#Text(btype)) { 
+                                                    isRevDist := btype == "3revDist"; 
                                                 };
-                                            } else if (txFieldName == "to") {
-                                                // 수신자 ID 추출 (이 사용자가 현재 요청한 사용자와 일치하는지 확인용)
-                                                switch (txFieldValue) {
-                                                    case (#Array(accountData)) {
-                                                        if (accountData.size() > 0) {
-                                                            switch (accountData[0]) {
-                                                                case (#Blob(ownerBlob)) {
-                                                                    userId := ?Principal.fromBlob(ownerBlob);
+                                                case (_) {};
+                                            };
+                                        } else if (fieldName == "ts") {
+                                            // 타임스탬프 추출
+                                            switch (fieldValue) {
+                                                case (#Nat(ts)) { timestamp := Int.abs(ts); };
+                                                case (_) {};
+                                            };
+                                        } else if (fieldName == "tx") {
+                                            // 트랜잭션 세부 정보 추출
+                                            switch (fieldValue) {
+                                                case (#Map(txFields)) {
+                                                    for ((txFieldName, txFieldValue) in txFields.vals()) {
+                                                        if (txFieldName == "amt") {
+                                                            // 금액 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(amt)) { amount := amt; };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "to") {
+                                                            // 수신자 ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Array(accountData)) {
+                                                                    if (accountData.size() > 0) {
+                                                                        switch (accountData[0]) {
+                                                                            case (#Blob(ownerBlob)) {
+                                                                                userId := ?Principal.fromBlob(ownerBlob);
+                                                                            };
+                                                                            case (_) {};
+                                                                        };
+                                                                    };
                                                                 };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "tokenId") {
+                                                            // NFT ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(tid)) { tokenId := ?tid; };
+                                                                case (_) {};
+                                                            };
+                                                        } else if (txFieldName == "distributionId") {
+                                                            // 배분 ID 추출
+                                                            switch (txFieldValue) {
+                                                                case (#Nat(did)) { distributionId := ?did; };
                                                                 case (_) {};
                                                             };
                                                         };
                                                     };
-                                                    case (_) {};
                                                 };
-                                            } else if (txFieldName == "tokenId") {
-                                                // NFT ID 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(id)) { tokenId := ?id; };
-                                                    case (_) {};
-                                                };
-                                            } else if (txFieldName == "distributionId") {
-                                                // 수익 배분 ID 추출
-                                                switch (txFieldValue) {
-                                                    case (#Nat(id)) { distributionId := ?id; };
-                                                    case (_) {};
-                                                };
+                                                case (_) {};
                                             };
                                         };
                                     };
-                                    case (_) {};
+                                    
+                                    if (isRevDist and userId != null and Option.get(userId, Principal.fromText("aaaaa-aa")) == user and tokenId != null and distributionId != null) {
+                                        let record : UserDistributionRecord = {
+                                            recordId = Option.get(distributionId, 0);
+                                            userId = user;
+                                            tokenId = Option.get(tokenId, 0);
+                                            amount = amount;
+                                            distributedAt = timestamp;
+                                            claimed = true;  // 블록에 기록되었으므로 이미 청구됨
+                                            claimedAt = ?timestamp;
+                                        };
+                                        
+                                        resultBuffer.add(record);
+                                        Debug.print("[RevenueDistribution] 블록에서 직접 기록 추가됨: 블록ID=" # Nat.toText(blockId));
+                                        
+                                        // 블록 정보 맵에 저장 (다음 조회 최적화)
+                                        let blockInfo: BlockInfo = {
+                                            userId = user;
+                                            tokenId = Option.get(tokenId, 0);
+                                            distributionId = Option.get(distributionId, 0);
+                                            amount = amount;
+                                            timestamp = timestamp;
+                                        };
+                                        distributionBlockInfoMap.put(blockId, blockInfo);
+                                        Debug.print("[RevenueDistribution] 블록 정보 맵에 추가됨: 블록ID=" # Nat.toText(blockId));
+                                    };
                                 };
+                                case (_) {};
                             };
-                        };
-                        
-                        // 유효한 수익 배분 블록이며 현재 사용자의 블록인 경우 레코드 생성
-                        if (isRevDist and userId != null and Option.get(userId, Principal.fromText("aaaaa-aa")) == user and tokenId != null and distributionId != null) {
-                            let record : UserDistributionRecord = {
-                                recordId = Option.get(distributionId, 0);
-                                userId = user;
-                                tokenId = Option.get(tokenId, 0);
-                                amount = amount;
-                                distributedAt = timestamp;
-                                claimed = true;  // 블록에 기록되었으므로 이미 청구됨
-                                claimedAt = ?timestamp;
-                            };
-                            
-                            resultBuffer.add(record);
                         };
                     };
-                    case (_) {};
                 };
             };
             
-            // 결과 개수 제한
-            let filteredResults = Buffer.toArray(resultBuffer);
-            if (filteredResults.size() <= limit) {
-                return filteredResults;
-            } else {
-                // 요청한 limit 개수로 제한
-                let limitedResults = Buffer.Buffer<UserDistributionRecord>(limit);
-                for (i in Iter.range(0, limit - 1)) {
-                    limitedResults.add(filteredResults[i]);
-                };
-                return Buffer.toArray(limitedResults);
+            // 결과를 배열로 변환
+            let results = Buffer.toArray(resultBuffer);
+            
+            // 결과 정렬 (최신 배분부터)
+            let sortedResults = Array.sort(results, func(a: UserDistributionRecord, b: UserDistributionRecord) : {#less; #equal; #greater} {
+                if (a.distributedAt > b.distributedAt) { #less } 
+                else if (a.distributedAt < b.distributedAt) { #greater } 
+                else { #equal };
+            });
+            
+            Debug.print("[RevenueDistribution] 페이지네이션 결과: " # Nat.toText(sortedResults.size()) # "개 항목, " # 
+                      "hasMore=" # Bool.toText(hasMore) # 
+                      ", nextStart=" # Nat.toText(nextStart));
+            
+            return {
+                items = sortedResults;
+                nextStart = nextStart;
+                hasMore = hasMore;
             };
         };
     };
