@@ -1596,9 +1596,25 @@ actor Main {
     // 수익 배분 관련 인터페이스
     //-----------------------------------------------------------------------------
     
-    // 관리자용: 수익 배분 실행
-    public shared({ caller }) func distributeRevenue(totalAmount: Nat) : async Result.Result<Nat, RevenueDistribution.DistributionError> {
-        revenueManager.distributeRevenue(caller, totalAmount)
+    // 관리자용: 수익 배분 실행 (금액 지정 가능)
+    public shared({ caller }) func executeDistribution(amount: Nat) : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller)) {
+            return #err("Not authorized. Admin access required.");
+        };
+        
+        try {
+            let result = await revenueManager.executeDistribution(amount);
+            switch (result) {
+                case (#ok(_)) {
+                    return #ok(());
+                };
+                case (#err(errorMsg)) {
+                    return #err(errorMsg);
+                };
+            };
+        } catch (e) {
+            return #err("Error executing distribution: " # Debug.trap(Error.message(e)));
+        };
     };
 
     // 관리자용: 모든 배분 기록 조회
@@ -1681,26 +1697,5 @@ actor Main {
     // 수익 대시보드 데이터 조회
     public query func getRevenueDashboardData() : async RevenueDistribution.DashboardData {
         revenueManager.getDashboardData()
-    };
-
-    // 관리자용: 일일 수익 배분 수동 실행
-    public shared({ caller }) func executeDistribution() : async Result.Result<(), Text> {
-        if (not adminManager.isAdmin(caller)) {
-            return #err("Not authorized. Admin access required.");
-        };
-        
-        try {
-            let result = await revenueManager.executeDistribution();
-            switch (result) {
-                case (#ok(_)) {
-                    return #ok(());
-                };
-                case (#err(errorMsg)) {
-                    return #err(errorMsg);
-                };
-            };
-        } catch (e) {
-            return #err("Error executing distribution: " # Debug.trap(Error.message(e)));
-        };
     };
 };

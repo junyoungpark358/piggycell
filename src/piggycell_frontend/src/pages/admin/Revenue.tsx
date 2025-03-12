@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, message } from "antd";
+import { Row, Col, message, Modal, Form, InputNumber } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
@@ -121,6 +121,12 @@ const AdminRevenue = () => {
   const [pageSize, setPageSize] = useState(10);
   const [searchText, setSearchText] = useState("");
   const [isDistributing, setIsDistributing] = useState(false);
+  const [isDistributionModalVisible, setIsDistributionModalVisible] =
+    useState(false);
+  const [distributionAmount, setDistributionAmount] = useState<number | null>(
+    100
+  );
+  const [distributionForm] = Form.useForm();
 
   const fetchRevenue = async (
     newPage?: number,
@@ -191,21 +197,31 @@ const AdminRevenue = () => {
     }
   };
 
-  const triggerRevenueDistribution = async () => {
-    console.log("[Revenue] 수익 배분 시작");
+  const triggerRevenueDistribution = async (amount: number) => {
+    console.log("[Revenue] 수익 배분 시작, 금액:", amount);
     setIsDistributing(true);
     try {
       console.log("[Revenue] 백엔드 액터 가져오기 시도");
       const actor = await createActor();
       console.log("[Revenue] 백엔드 액터 생성 완료");
 
+      // PGC는 소수점 8자리를 지원하므로 금액을 10^8 배로 변환
+      const amountInTokenUnits = BigInt(Math.round(amount * 100000000));
+      console.log(
+        "[Revenue] 변환된 금액 (토큰 단위):",
+        amountInTokenUnits.toString()
+      );
+
       console.log("[Revenue] executeDistribution 함수 호출 시작");
-      const result = await actor.executeDistribution();
+      // 백엔드 인터페이스가 업데이트되어 금액 전달 가능
+      const result = await actor.executeDistribution(amountInTokenUnits);
       console.log("[Revenue] executeDistribution 함수 결과:", result);
 
       if ("ok" in result) {
         console.log("[Revenue] 수익 배분 성공");
-        message.success("일일 수익 배분이 성공적으로 실행되었습니다.");
+        message.success(
+          `${amount} PGC의 수익 배분이 성공적으로 완료되었습니다.`
+        );
       } else {
         console.error("[Revenue] 수익 배분 실패:", result.err);
         message.error(`수익 배분 오류: ${result.err}`);
@@ -216,11 +232,33 @@ const AdminRevenue = () => {
         "[Revenue] 오류 세부 정보:",
         JSON.stringify(error, Object.getOwnPropertyNames(error))
       );
-      message.error("수익 배분 실행 중 오류가 발생했습니다.");
+      message.error("수익 배분 중 오류가 발생했습니다.");
     } finally {
       console.log("[Revenue] 수익 배분 작업 완료");
       setIsDistributing(false);
     }
+  };
+
+  const showDistributionModal = () => {
+    distributionForm.setFieldsValue({ amount: 100 });
+    setIsDistributionModalVisible(true);
+  };
+
+  const handleDistributionCancel = () => {
+    setIsDistributionModalVisible(false);
+  };
+
+  const handleDistributionSubmit = () => {
+    distributionForm
+      .validateFields()
+      .then((values) => {
+        const amount = values.amount;
+        setIsDistributionModalVisible(false);
+        triggerRevenueDistribution(amount);
+      })
+      .catch((info) => {
+        console.log("검증 실패:", info);
+      });
   };
 
   useEffect(() => {
@@ -282,11 +320,11 @@ const AdminRevenue = () => {
           <StyledButton
             customVariant="primary"
             customSize="md"
-            onClick={triggerRevenueDistribution}
+            onClick={showDistributionModal}
             loading={isDistributing}
             icon={<ThunderboltOutlined />}
           >
-            일일 수익 배분 실행
+            수익 배분하기
           </StyledButton>
         </div>
       </div>
@@ -297,6 +335,59 @@ const AdminRevenue = () => {
         customVariant="default"
         pagination={{ pageSize: 10 }}
       />
+
+      {/* 수익 배분 모달 */}
+      <Modal
+        title="수익 배분하기"
+        open={isDistributionModalVisible}
+        onCancel={handleDistributionCancel}
+        footer={[
+          <StyledButton
+            key="cancel"
+            customVariant="ghost"
+            customColor="primary"
+            onClick={handleDistributionCancel}
+          >
+            취소
+          </StyledButton>,
+          <StyledButton
+            key="submit"
+            customVariant="primary"
+            customColor="primary"
+            loading={isDistributing}
+            onClick={handleDistributionSubmit}
+          >
+            배분하기
+          </StyledButton>,
+        ]}
+      >
+        <Form form={distributionForm} layout="vertical">
+          <Form.Item
+            name="amount"
+            label="배분할 수익 (PGC)"
+            rules={[
+              { required: true, message: "수익 금액을 입력해주세요" },
+              {
+                type: "number",
+                min: 0.00000001,
+                message: "0보다 큰 값을 입력해주세요",
+              },
+            ]}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="배분할 수익 입력 (예: 100)"
+              precision={8} // 소수점 8자리까지 지원
+              step={0.1}
+              stringMode // 큰 소수점 값을 정확하게 처리하기 위해
+            />
+          </Form.Item>
+          <p className="text-gray-500 text-sm">
+            입력한 금액이 스테이킹한 NFT 소유자들에게 분배됩니다. 소수점
+            8자리까지 입력 가능합니다.
+          </p>
+        </Form>
+      </Modal>
     </div>
   );
 };

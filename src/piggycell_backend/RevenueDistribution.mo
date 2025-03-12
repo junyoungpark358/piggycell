@@ -354,8 +354,9 @@ module {
         };
         
         // 테스트용: 수동으로 호출하여 분배 실행
-        public func executeDistribution() : async Result.Result<(), Text> {
+        public func executeDistribution(amount: Nat) : async Result.Result<(), Text> {
             Debug.print("[RevenueDistribution] executeDistribution 함수 시작");
+            Debug.print("[RevenueDistribution] 요청된 금액: " # Nat.toText(amount));
             
             // 현재 날짜 확인
             let now = Time.now();
@@ -377,8 +378,8 @@ module {
             if (stakedTokenIds.size() > 0) {
                 Debug.print("[RevenueDistribution] 스테이킹된 NFT 발견, 배분 시작");
                 
-                // 분배할 토큰 금액 (매일 100 PGC)
-                let distributionAmount = dailyDistributionAmount;
+                // 분배할 토큰 금액 (사용자 지정)
+                let distributionAmount = amount;
                 Debug.print("[RevenueDistribution] 배분할 금액: " # Nat.toText(distributionAmount));
                 
                 // 민팅 로직 제거 - 시스템 계정에 토큰을 민팅하지 않음
