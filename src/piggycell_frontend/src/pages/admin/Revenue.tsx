@@ -611,9 +611,13 @@ const AdminRevenue = () => {
             rules={[
               { required: true, message: "수익 금액을 입력해주세요" },
               {
-                type: "number",
-                min: 0.00000001,
-                message: "0보다 큰 값을 입력해주세요",
+                validator: (_, value) => {
+                  const numValue = parseFloat(value);
+                  if (isNaN(numValue) || numValue <= 0) {
+                    return Promise.reject("0보다 큰 값을 입력해주세요");
+                  }
+                  return Promise.resolve();
+                },
               },
             ]}
           >
