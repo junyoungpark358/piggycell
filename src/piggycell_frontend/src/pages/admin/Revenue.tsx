@@ -6,6 +6,10 @@ import {
   SearchOutlined,
   ReloadOutlined,
   ThunderboltOutlined,
+  DollarOutlined,
+  UserOutlined,
+  ShoppingCartOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../../components/StatCard";
@@ -13,69 +17,177 @@ import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
 import { createActor } from "../../utils/statsApi";
+import { formatTokenDisplayForUI } from "../../utils/tokenUtils";
 
-// 임시 데이터를 반환하는 API 함수
-const getRevenueStats = async () => {
-  // 실제 구현에서는 백엔드 API를 호출
-  return {
-    thisMonthTotalRevenue: 271.3,
-    lastMonthComparison: 12.5,
-    stakingRewardsTotal: 22.7,
-  };
+// BigInt를 안전하게 Number로 변환하는 유틸리티 함수
+const toSafeNumber = (
+  value: bigint | number | string | undefined | null
+): number => {
+  if (value === undefined || value === null) return 0;
+  const numValue = typeof value === "bigint" ? Number(value) : Number(value);
+  return isNaN(numValue) ? 0 : numValue;
 };
 
+// 백엔드 응답 인터페이스 정의
+interface DashboardData {
+  recentDistributions: RecentDistribution[];
+  todayTotal: number | bigint;
+  weeklyChange: number;
+  activeNFTCount: number | bigint;
+  pendingDistributions: number | bigint;
+}
+
+interface RecentDistribution {
+  id: number | bigint;
+  amount: number | bigint;
+  timestamp: number | bigint;
+  recipientCount: number | bigint;
+}
+
+interface DistributionStats {
+  totalDistributions: number | bigint;
+  totalAmountDistributed: number | bigint;
+  averageDistributionAmount: number | bigint;
+  lastDistributionTime: number | bigint | null;
+  activeUserCount: number | bigint;
+  totalNFTsRewarded: number | bigint;
+}
+
+// 통계 데이터를 백엔드에서 가져오는 함수
+const getRevenueStats = async () => {
+  try {
+    const actor = await createActor();
+
+    // 수익 대시보드 데이터와 배분 통계 가져오기
+    const dashboardData = await actor.getRevenueDashboardData();
+    const distributionStats = await actor.getRevenueDistributionStats();
+
+    console.log("수익 대시보드 데이터:", dashboardData);
+    console.log("배분 통계:", distributionStats);
+
+    // 추가 상세 로그
+    console.log("==== 배분 통계 상세 로그 ====");
+    console.log(
+      "총 배분 횟수 (원본 값):",
+      distributionStats.totalDistributions
+    );
+    console.log(
+      "총 배분 횟수 (숫자 변환):",
+      toSafeNumber(distributionStats.totalDistributions)
+    );
+    console.log(
+      "총 배분 금액:",
+      toSafeNumber(distributionStats.totalAmountDistributed)
+    );
+    console.log(
+      "활성 사용자 수:",
+      toSafeNumber(distributionStats.activeUserCount)
+    );
+    console.log(
+      "보상 받은 NFT 수:",
+      toSafeNumber(distributionStats.totalNFTsRewarded)
+    );
+    console.log("================================");
+
+    // 통계 데이터 반환
+    return {
+      // 대시보드 데이터
+      todayTotal: toSafeNumber(dashboardData.todayTotal),
+      weeklyChange: dashboardData.weeklyChange,
+      activeNFTCount: toSafeNumber(dashboardData.activeNFTCount),
+      pendingDistributions: toSafeNumber(dashboardData.pendingDistributions),
+      recentDistributions: dashboardData.recentDistributions,
+
+      // 배분 통계
+      totalDistributions: toSafeNumber(distributionStats.totalDistributions),
+      totalAmountDistributed: toSafeNumber(
+        distributionStats.totalAmountDistributed
+      ),
+      averageDistributionAmount: toSafeNumber(
+        distributionStats.averageDistributionAmount
+      ),
+      lastDistributionTime: distributionStats.lastDistributionTime
+        ? toSafeNumber(distributionStats.lastDistributionTime[0])
+        : null,
+      activeUserCount: toSafeNumber(distributionStats.activeUserCount),
+      totalNFTsRewarded: toSafeNumber(distributionStats.totalNFTsRewarded),
+    };
+  } catch (error) {
+    console.error("수익 통계 데이터 가져오기 실패:", error);
+    message.error("수익 통계 데이터를 가져오는데 실패했습니다.");
+    // 오류 발생 시 기본값 반환
+    return {
+      todayTotal: 0,
+      weeklyChange: 0,
+      activeNFTCount: 0,
+      pendingDistributions: 0,
+      recentDistributions: [],
+      totalDistributions: 0,
+      totalAmountDistributed: 0,
+      averageDistributionAmount: 0,
+      lastDistributionTime: null,
+      activeUserCount: 0,
+      totalNFTsRewarded: 0,
+    };
+  }
+};
+
+// 매출 내역 데이터 가져오기
 const getRevenueData = async (
   page: number,
   pageSize: number,
   searchText: string
 ) => {
-  // 실제 구현에서는 백엔드 API를 호출
-  // 여기서는 임시 데이터 반환
-  const tempData = [
-    {
-      key: "1",
-      date: "2024-02-12",
-      totalRevenue: 150.5,
-      nftCount: 8,
-      activeUsers: 25,
-      stakingRewards: 12.5,
-    },
-    {
-      key: "2",
-      date: "2024-02-11",
-      totalRevenue: 120.8,
-      nftCount: 8,
-      activeUsers: 22,
-      stakingRewards: 10.2,
-    },
-  ];
+  try {
+    const actor = await createActor();
 
-  return {
-    revenueData: tempData,
-    total: tempData.length,
-  };
+    // 최근 배분 내역을 활용하여 매출 내역 데이터 생성
+    const dashboardData = await actor.getRevenueDashboardData();
+
+    // 임시 데이터를 테이블용으로 변환
+    const revenueData = dashboardData.recentDistributions.map((dist, index) => {
+      const timestamp =
+        typeof dist.timestamp === "bigint"
+          ? Number(dist.timestamp) / 1_000_000 // 나노초를 밀리초로 변환
+          : Number(dist.timestamp) / 1_000_000;
+
+      const date = new Date(timestamp);
+      const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD 형식
+
+      return {
+        key: index.toString(),
+        date: formattedDate,
+        totalRevenue: toSafeNumber(dist.amount) / 100000000, // 토큰 단위 변환 (8자리 소수점)
+        nftCount: toSafeNumber(dashboardData.activeNFTCount),
+        activeUsers: toSafeNumber(dist.recipientCount),
+        stakingRewards: toSafeNumber(dist.amount) / 100000000, // 토큰 단위 변환 (8자리 소수점)
+      };
+    });
+
+    return {
+      revenueData,
+      total: revenueData.length,
+    };
+  } catch (error) {
+    console.error("매출 내역 가져오기 실패:", error);
+    message.error("매출 내역을 가져오는데 실패했습니다.");
+    return {
+      revenueData: [],
+      total: 0,
+    };
+  }
 };
 
 const AdminRevenue = () => {
-  // 임시 수익 데이터 초기값 정의
-  const initialRevenueData = [
-    {
-      key: "1",
-      date: "2024-02-12",
-      totalRevenue: 150.5,
-      nftCount: 8,
-      activeUsers: 25,
-      stakingRewards: 12.5,
-    },
-    {
-      key: "2",
-      date: "2024-02-11",
-      totalRevenue: 120.8,
-      nftCount: 8,
-      activeUsers: 22,
-      stakingRewards: 10.2,
-    },
-  ];
+  // 수익 데이터 초기값
+  const initialRevenueData: Array<{
+    key: string;
+    date: string;
+    totalRevenue: number;
+    nftCount: number;
+    activeUsers: number;
+    stakingRewards: number;
+  }> = [];
 
   const columns = [
     {
@@ -87,7 +199,7 @@ const AdminRevenue = () => {
       title: "총 수익",
       dataIndex: "totalRevenue",
       key: "totalRevenue",
-      render: (value: number) => `${value} PGC`,
+      render: (value: number) => `${value.toFixed(2)} PGC`,
     },
     {
       title: "활성 NFT 수",
@@ -105,18 +217,25 @@ const AdminRevenue = () => {
       title: "스테이킹 보상",
       dataIndex: "stakingRewards",
       key: "stakingRewards",
-      render: (value: number) => `${value} PGC`,
+      render: (value: number) => `${value.toFixed(2)} PGC`,
     },
   ];
 
   const [loading, setLoading] = useState(false);
   const [revenueData, setRevenueData] = useState(initialRevenueData);
   const [revenueStats, setRevenueStats] = useState({
-    thisMonthTotalRevenue: 271.3,
-    lastMonthComparison: 12.5,
-    stakingRewardsTotal: 22.7,
+    todayTotal: 0,
+    weeklyChange: 0,
+    activeNFTCount: 0,
+    pendingDistributions: 0,
+    totalDistributions: 0,
+    totalAmountDistributed: 0,
+    averageDistributionAmount: 0,
+    lastDistributionTime: null as number | null,
+    activeUserCount: 0,
+    totalNFTsRewarded: 0,
   });
-  const [totalItems, setTotalItems] = useState(2);
+  const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchText, setSearchText] = useState("");
@@ -161,6 +280,8 @@ const AdminRevenue = () => {
 
       // 통계 데이터 로드
       const stats = await getRevenueStats();
+      console.log("UI에 적용될 통계 데이터:", stats);
+      console.log("총 배분 횟수 (UI 적용 전):", stats.totalDistributions);
       setRevenueStats(stats);
 
       // 매출 내역 로드
@@ -222,6 +343,9 @@ const AdminRevenue = () => {
         message.success(
           `${amount} PGC의 수익 배분이 성공적으로 완료되었습니다.`
         );
+
+        // 성공적으로 배분된 후 데이터 새로고침
+        fetchRevenue(1, pageSize, "", true);
       } else {
         console.error("[Revenue] 수익 배분 실패:", result.err);
         message.error(`수익 배분 오류: ${result.err}`);
@@ -266,6 +390,11 @@ const AdminRevenue = () => {
     fetchRevenue(1, pageSize, "", false);
   }, []);
 
+  // 토큰 금액 표시 포맷팅 함수
+  const formatTokenAmount = (amount: number) => {
+    return amount / 100000000; // 8자리 소수점 고려
+  };
+
   return (
     <div className="revenue-management">
       <div className="page-header">
@@ -273,7 +402,7 @@ const AdminRevenue = () => {
         <StyledButton
           customVariant="primary"
           customSize="md"
-          onClick={() => fetchRevenue(1, pageSize, searchText, true)} // 버튼 클릭 시에는 메시지 표시 (showMessage = true)
+          onClick={() => fetchRevenue(1, pageSize, searchText, true)}
           icon={<ReloadOutlined />}
         >
           새로 고침
@@ -281,29 +410,63 @@ const AdminRevenue = () => {
       </div>
 
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={12} sm={8} md={8}>
+        <Col xs={12} sm={8} md={6}>
           <StatCard
-            title="이번 달 총 수익"
-            value={revenueStats.thisMonthTotalRevenue}
-            prefix={<LineChartOutlined />}
-            suffix="PGC"
+            title="활성 NFT 수"
+            value={revenueStats.activeNFTCount}
+            prefix={<ShoppingCartOutlined />}
+            suffix="개"
+            loading={loading}
           />
         </Col>
-        <Col xs={12} sm={8} md={8}>
+        <Col xs={12} sm={8} md={6}>
           <StatCard
-            title="전월 대비"
-            value={revenueStats.lastMonthComparison}
-            prefix={<RiseOutlined />}
-            suffix="%"
-            valueStyle={{ color: "#3f8600" }}
+            title="활성 사용자 수"
+            value={revenueStats.activeUserCount}
+            prefix={<UserOutlined />}
+            suffix="명"
+            loading={loading}
           />
         </Col>
-        <Col xs={12} sm={8} md={8}>
+        <Col xs={12} sm={8} md={6}>
           <StatCard
-            title="스테이킹 보상 지급액"
-            value={revenueStats.stakingRewardsTotal}
+            title="총 배분 횟수"
+            value={revenueStats.totalDistributions}
+            prefix={<ThunderboltOutlined />}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <StatCard
+            title="총 배분 금액"
+            value={formatTokenAmount(revenueStats.totalAmountDistributed)}
             prefix={<LineChartOutlined />}
             suffix="PGC"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <StatCard
+            title="평균 배분 금액"
+            value={formatTokenAmount(revenueStats.averageDistributionAmount)}
+            prefix={<DollarOutlined />}
+            suffix="PGC"
+            loading={loading}
+          />
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <StatCard
+            title="마지막 배분 시간"
+            value={
+              revenueStats.lastDistributionTime
+                ? new Date(
+                    Number(revenueStats.lastDistributionTime) / 1_000_000
+                  ).toLocaleString()
+                : "없음"
+            }
+            prefix={<CalendarOutlined />}
+            valueStyle={{ fontSize: "0.9rem" }}
+            loading={loading}
           />
         </Col>
       </Row>
@@ -314,6 +477,9 @@ const AdminRevenue = () => {
             placeholder="수익 내역 검색..."
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onPressEnter={() => fetchRevenue(1, pageSize, searchText, true)}
           />
         </div>
         <div className="action-wrapper">
@@ -333,7 +499,17 @@ const AdminRevenue = () => {
         columns={columns}
         dataSource={revenueData}
         customVariant="default"
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          pageSize: pageSize,
+          total: totalItems,
+          current: currentPage,
+          onChange: (page, pageSize) => {
+            setCurrentPage(page);
+            if (pageSize) setPageSize(pageSize);
+            fetchRevenue(page, pageSize);
+          },
+        }}
+        loading={loading}
       />
 
       {/* 수익 배분 모달 */}

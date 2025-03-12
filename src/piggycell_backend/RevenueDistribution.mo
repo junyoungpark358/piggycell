@@ -524,7 +524,6 @@ module {
         // 통계 인덱스 업데이트 함수
         private func updateStatIndices(distribution: UserDistributionRecord) {
             // 전체 통계 업데이트
-            totalDistributionCount += 1;
             totalDistributedAmount += distribution.amount;
             lastDistributionTimestamp := ?distribution.distributedAt;
             
@@ -622,6 +621,10 @@ module {
                 Debug.print("[RevenueDistribution] 총 스테이킹 가치가 0: InvalidAmount");
                 return #err(#InvalidAmount);
             };
+            
+            // 배분 이벤트 카운트 증가 - 이 부분을 추가해서 관리자 배분 작업 횟수만 카운트
+            totalDistributionCount += 1;
+            Debug.print("[RevenueDistribution] 총 배분 횟수 증가: " # Nat.toText(totalDistributionCount));
             
             // 배분 기록 생성
             let distributionId = nextDistributionId;
