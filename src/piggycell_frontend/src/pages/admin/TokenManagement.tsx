@@ -588,7 +588,7 @@ const TokenManagement: React.FC = () => {
             loading={transferLoading}
             onClick={() => form.submit()}
           >
-            전송
+            발행
           </StyledButton>,
         ]}
         className="admin-modal"
@@ -641,9 +641,9 @@ const TokenManagement: React.FC = () => {
 
           <Form.Item
             name="amount"
-            label="전송 금액 (raw units, 100,000,000 = 1 PGC)"
+            label="발행 금액 (raw units, 100,000,000 = 1 PGC)"
             rules={[
-              { required: true, message: "전송 금액을 입력해주세요" },
+              { required: true, message: "발행 금액을 입력해주세요" },
               {
                 type: "number",
                 min: 1,
@@ -659,7 +659,7 @@ const TokenManagement: React.FC = () => {
                   }
                   if (numValue > 100000000000000) {
                     return Promise.reject(
-                      "최대 1,000,000 PGC까지 전송 가능합니다"
+                      "최대 1,000,000 PGC까지 발행 가능합니다"
                     );
                   }
                   return Promise.resolve();
@@ -672,7 +672,7 @@ const TokenManagement: React.FC = () => {
               min={1}
               max={100000000000000}
               customSize="md"
-              placeholder="전송할 PGC 수량 (raw units)"
+              placeholder="발행할 PGC 수량 (raw units)"
               noRotate={true}
             />
           </Form.Item>
