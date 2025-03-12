@@ -20,6 +20,7 @@ import Nat64 "mo:base/Nat64"; // Nat64 변환을 위해 추가
 import Debug "mo:base/Debug"; // Debug 모듈을 추가
 import Bool "mo:base/Bool";   // Bool 모듈을 추가
 import List "mo:base/List";   // List 모듈을 추가
+import TrieSet "mo:base/TrieSet"; // TrieSet 모듈을 추가
 
 module {
     //-----------------------------------------------------------------------------
@@ -936,6 +937,19 @@ module {
             }
         };
         
+        // 특정 배분 ID에 대한 유니크한 사용자 수 계산
+        public func getDistributionUniqueUserCount(distributionId: Nat) : Nat {
+            var uniqueUsers = TrieSet.empty<Principal>();
+            
+            for ((_, userRecord) in userDistributionRecords.entries()) {
+                if (userRecord.recordId == distributionId) {
+                    uniqueUsers := TrieSet.put(uniqueUsers, userRecord.userId, Principal.hash(userRecord.userId), Principal.equal);
+                };
+            };
+            
+            TrieSet.size(uniqueUsers)
+        };
+        
         // 대시보드 데이터 조회
         public func getDashboardData() : DashboardData {
             // 최근 배분 내역 (최대 5개)
@@ -954,11 +968,12 @@ module {
             };
             
             for (record in recordsToProcess.vals()) {
-                // 각 배분에 대한 수신자 수 계산
-                var recipients = 0;
+                // 각 배분에 대한 유니크한 수신자 수 계산
+                var uniqueUsers = TrieSet.empty<Principal>();
+                
                 for ((_, userRecord) in userDistributionRecords.entries()) {
                     if (userRecord.recordId == record.id) {
-                        recipients += 1;
+                        uniqueUsers := TrieSet.put(uniqueUsers, userRecord.userId, Principal.hash(userRecord.userId), Principal.equal);
                     };
                 };
                 
@@ -966,7 +981,7 @@ module {
                     id = record.id;
                     amount = record.totalAmount;
                     timestamp = record.distributedAt;
-                    recipientCount = recipients;
+                    recipientCount = TrieSet.size(uniqueUsers);
                 });
             };
             

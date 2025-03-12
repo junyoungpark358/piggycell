@@ -53,6 +53,17 @@ interface DistributionStats {
   totalNFTsRewarded: number | bigint;
 }
 
+// 수익 배분 기록을 위한 인터페이스 정의 추가
+interface DistributionRecordWithDetails {
+  key: string;
+  id: number;
+  totalAmount: number;
+  distributedAt: number;
+  distributedBy: string;
+  recipientCount: number; // 수신자 수 (추가)
+  dateFormatted: string; // 날짜 포맷팅
+}
+
 // 통계 데이터를 백엔드에서 가져오는 함수
 const getRevenueStats = async () => {
   try {
@@ -132,7 +143,7 @@ const getRevenueStats = async () => {
   }
 };
 
-// 매출 내역 데이터 가져오기
+// getRevenueData 함수 수정 - 실제 배분 기록 가져오기
 const getRevenueData = async (
   page: number,
   pageSize: number,
@@ -140,37 +151,84 @@ const getRevenueData = async (
 ) => {
   try {
     const actor = await createActor();
+    console.log("[AdminRevenue] 수익 배분 기록 가져오기 시작");
 
-    // 최근 배분 내역을 활용하여 매출 내역 데이터 생성
-    const dashboardData = await actor.getRevenueDashboardData();
+    // 실제 모든 배분 기록 가져오기
+    const distributionRecords = await actor.getAllDistributionRecords();
+    console.log("[AdminRevenue] 배분 기록 조회 결과:", distributionRecords);
 
-    // 임시 데이터를 테이블용으로 변환
-    const revenueData = dashboardData.recentDistributions.map((dist, index) => {
-      const timestamp =
-        typeof dist.timestamp === "bigint"
-          ? Number(dist.timestamp) / 1_000_000 // 나노초를 밀리초로 변환
-          : Number(dist.timestamp) / 1_000_000;
+    // 배분 기록 변환 및 형식 지정
+    const revenueData: DistributionRecordWithDetails[] = await Promise.all(
+      distributionRecords.map(async (record) => {
+        const recordId = toSafeNumber(record.id);
 
-      const date = new Date(timestamp);
-      const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD 형식
+        // 나노초를 밀리초로 변환하여 날짜 생성
+        const timestamp = toSafeNumber(record.distributedAt) / 1_000_000;
+        const date = new Date(timestamp);
 
-      return {
-        key: index.toString(),
-        date: formattedDate,
-        totalRevenue: toSafeNumber(dist.amount) / 100000000, // 토큰 단위 변환 (8자리 소수점)
-        nftCount: toSafeNumber(dashboardData.activeNFTCount),
-        activeUsers: toSafeNumber(dist.recipientCount),
-        stakingRewards: toSafeNumber(dist.amount) / 100000000, // 토큰 단위 변환 (8자리 소수점)
-      };
-    });
+        // 날짜 포맷팅 (YYYY-MM-DD HH:MM)
+        const formattedDate = date.toLocaleString("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        // 수신자 수 계산 - 백엔드 API를 사용하여 유니크한 사용자 수 가져오기
+        let recipientCount;
+        try {
+          // 이제 백엔드에 getDistributionUniqueUserCount API가 구현되어 있어 호출 가능
+          recipientCount = await actor.getDistributionUniqueUserCount(
+            BigInt(recordId)
+          );
+          console.log(
+            `[AdminRevenue] 배분 ID ${recordId}의 유니크 사용자 수: ${recipientCount}`
+          );
+        } catch (error) {
+          console.error(
+            `[AdminRevenue] 유니크 사용자 수 가져오기 실패: ${error}`
+          );
+          recipientCount = 0; // 오류 발생 시 기본값
+        }
+
+        return {
+          key: recordId.toString(),
+          id: recordId,
+          totalAmount: toSafeNumber(record.totalAmount),
+          distributedAt: toSafeNumber(record.distributedAt),
+          distributedBy: record.distributedBy.toString(),
+          recipientCount: toSafeNumber(recipientCount),
+          dateFormatted: formattedDate,
+        };
+      })
+    );
+
+    // 검색어가 있으면 필터링
+    const filteredData = searchText
+      ? revenueData.filter(
+          (item) =>
+            item.dateFormatted.includes(searchText) ||
+            item.id.toString().includes(searchText) ||
+            item.distributedBy.includes(searchText)
+        )
+      : revenueData;
+
+    // 최신순으로 정렬 (ID 역순)
+    const sortedData = [...filteredData].sort((a, b) => b.id - a.id);
+
+    // 페이지네이션 적용
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedData = sortedData.slice(startIndex, endIndex);
 
     return {
-      revenueData,
-      total: revenueData.length,
+      revenueData: paginatedData,
+      total: sortedData.length,
     };
   } catch (error) {
-    console.error("매출 내역 가져오기 실패:", error);
-    message.error("매출 내역을 가져오는데 실패했습니다.");
+    console.error("수익 배분 기록 가져오기 실패:", error);
+    message.error("수익 배분 기록을 가져오는데 실패했습니다.");
     return {
       revenueData: [],
       total: 0,
@@ -180,44 +238,46 @@ const getRevenueData = async (
 
 const AdminRevenue = () => {
   // 수익 데이터 초기값
-  const initialRevenueData: Array<{
-    key: string;
-    date: string;
-    totalRevenue: number;
-    nftCount: number;
-    activeUsers: number;
-    stakingRewards: number;
-  }> = [];
+  const initialRevenueData: DistributionRecordWithDetails[] = [];
 
+  // 테이블 컬럼 정의 수정
   const columns = [
     {
+      title: "배분 ID",
+      dataIndex: "id",
+      key: "id",
+      width: 100,
+      render: (id: number) => `#${id}`,
+    },
+    {
       title: "날짜",
-      dataIndex: "date",
-      key: "date",
+      dataIndex: "dateFormatted",
+      key: "dateFormatted",
+      width: 200,
     },
     {
-      title: "총 수익",
-      dataIndex: "totalRevenue",
-      key: "totalRevenue",
-      render: (value: number) => `${value.toFixed(2)} PGC`,
+      title: "총 배분 금액",
+      dataIndex: "totalAmount",
+      key: "totalAmount",
+      render: (value: number) => `${formatTokenDisplayForUI(value)} PGC`,
+      width: 200,
     },
     {
-      title: "활성 NFT 수",
-      dataIndex: "nftCount",
-      key: "nftCount",
-      render: (value: number) => `${value}개`,
-    },
-    {
-      title: "활성 사용자 수",
-      dataIndex: "activeUsers",
-      key: "activeUsers",
+      title: "수신자 수",
+      dataIndex: "recipientCount",
+      key: "recipientCount",
       render: (value: number) => `${value}명`,
+      width: 150,
     },
     {
-      title: "스테이킹 보상",
-      dataIndex: "stakingRewards",
-      key: "stakingRewards",
-      render: (value: number) => `${value.toFixed(2)} PGC`,
+      title: "배분자",
+      dataIndex: "distributedBy",
+      key: "distributedBy",
+      render: (value: string) =>
+        value.length > 15
+          ? `${value.substring(0, 6)}...${value.substring(value.length - 6)}`
+          : value,
+      width: 200,
     },
   ];
 
@@ -474,7 +534,7 @@ const AdminRevenue = () => {
       <div className="search-box">
         <div className="search-input-wrapper">
           <StyledInput
-            placeholder="수익 내역 검색..."
+            placeholder="배분 기록 검색..."
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
             value={searchText}
@@ -495,6 +555,10 @@ const AdminRevenue = () => {
         </div>
       </div>
 
+      {/* 수익 배분 기록 테이블 */}
+      <h2 className="font-display text-2xl font-bold mb-4 mt-8">
+        수익 배분 기록
+      </h2>
       <StyledTable
         columns={columns}
         dataSource={revenueData}
@@ -508,6 +572,9 @@ const AdminRevenue = () => {
             if (pageSize) setPageSize(pageSize);
             fetchRevenue(page, pageSize);
           },
+          showTotal: (total) => `총 ${total}개의 배분 기록`,
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50"],
         }}
         loading={loading}
       />

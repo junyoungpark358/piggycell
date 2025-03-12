@@ -1642,6 +1642,11 @@ actor Main {
         revenueManager.getDistributionRecord(id)
     };
 
+    // 특정 배분 ID에 대한 유니크한 사용자 수 조회
+    public query func getDistributionUniqueUserCount(distributionId: Nat) : async Nat {
+        revenueManager.getDistributionUniqueUserCount(distributionId)
+    };
+
     // ICRC-3 인터페이스 노출
     public query func icrc3_get_blocks(args: RevenueDistribution.GetBlocksArgs) : async RevenueDistribution.GetBlocksResult {
         revenueManager.icrc3_get_blocks(args)
