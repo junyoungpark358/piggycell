@@ -126,7 +126,7 @@ export class AuthManager {
       const principal = identity.getPrincipal();
       return (
         principal.toString() ===
-        "7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe"
+        "dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae"
       );
     } catch (error) {
       console.error("관리자 권한 확인 중 오류 발생:", error);

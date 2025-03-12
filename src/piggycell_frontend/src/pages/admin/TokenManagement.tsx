@@ -117,9 +117,9 @@ const TokenManagement: React.FC = () => {
     // 가상의 토큰 소유자 데이터
     const mockOwners: TokenOwner[] = [
       {
-        key: "7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe",
+        key: "dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae",
         address:
-          "7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe",
+          "dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae",
         balance: 1, // 1 PGC로 수정
       },
       {

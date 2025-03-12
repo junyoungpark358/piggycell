@@ -1,16 +1,18 @@
+import React, { useState, useEffect } from "react";
 import { Row, Col, message } from "antd";
 import {
   LineChartOutlined,
   RiseOutlined,
   SearchOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 import "./Revenue.css";
 import { StatCard } from "../../components/StatCard";
 import { StyledTable } from "../../components/common/StyledTable";
 import { StyledButton } from "../../components/common/StyledButton";
 import { StyledInput } from "../../components/common/StyledInput";
-import { useEffect, useState } from "react";
+import { createActor } from "../../utils/statsApi";
 
 // 임시 데이터를 반환하는 API 함수
 const getRevenueStats = async () => {
@@ -118,6 +120,7 @@ const AdminRevenue = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchText, setSearchText] = useState("");
+  const [isDistributing, setIsDistributing] = useState(false);
 
   const fetchRevenue = async (
     newPage?: number,
@@ -188,6 +191,38 @@ const AdminRevenue = () => {
     }
   };
 
+  const triggerRevenueDistribution = async () => {
+    console.log("[Revenue] 수익 배분 시작");
+    setIsDistributing(true);
+    try {
+      console.log("[Revenue] 백엔드 액터 가져오기 시도");
+      const actor = await createActor();
+      console.log("[Revenue] 백엔드 액터 생성 완료");
+
+      console.log("[Revenue] executeDistribution 함수 호출 시작");
+      const result = await actor.executeDistribution();
+      console.log("[Revenue] executeDistribution 함수 결과:", result);
+
+      if ("ok" in result) {
+        console.log("[Revenue] 수익 배분 성공");
+        message.success("일일 수익 배분이 성공적으로 실행되었습니다.");
+      } else {
+        console.error("[Revenue] 수익 배분 실패:", result.err);
+        message.error(`수익 배분 오류: ${result.err}`);
+      }
+    } catch (error) {
+      console.error("[Revenue] 수익 배분 중 오류 발생:", error);
+      console.error(
+        "[Revenue] 오류 세부 정보:",
+        JSON.stringify(error, Object.getOwnPropertyNames(error))
+      );
+      message.error("수익 배분 실행 중 오류가 발생했습니다.");
+    } finally {
+      console.log("[Revenue] 수익 배분 작업 완료");
+      setIsDistributing(false);
+    }
+  };
+
   useEffect(() => {
     // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
     fetchRevenue(1, pageSize, "", false);
@@ -242,6 +277,17 @@ const AdminRevenue = () => {
             prefix={<SearchOutlined style={{ color: "#0284c7" }} />}
             customSize="md"
           />
+        </div>
+        <div className="action-wrapper">
+          <StyledButton
+            customVariant="primary"
+            customSize="md"
+            onClick={triggerRevenueDistribution}
+            loading={isDistributing}
+            icon={<ThunderboltOutlined />}
+          >
+            일일 수익 배분 실행
+          </StyledButton>
         </div>
       </div>
 

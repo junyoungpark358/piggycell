@@ -17,6 +17,8 @@ import Blob "mo:base/Blob";   // ICRC-3 구현을 위해 추가
 import Text "mo:base/Text";   // 날짜 변환을 위해 추가
 import Timer "mo:base/Timer"; // 타이머 기능을 위해 추가
 import Nat64 "mo:base/Nat64"; // Nat64 변환을 위해 추가
+import Debug "mo:base/Debug"; // Debug 모듈을 추가
+import Bool "mo:base/Bool";   // Bool 모듈을 추가
 
 module {
     //-----------------------------------------------------------------------------
@@ -332,50 +334,15 @@ module {
         //-----------------------------------------------------------------------------
         
         // 매일 분배되는 토큰 양
-        private var dailyDistributionAmount: Nat = 100; // 기본값 100 PGC
+        private var dailyDistributionAmount: Nat = 10_000_000_000; // 100 PGC (decimals=8)
         
-        // 타이머 ID 저장 변수
+        // 타이머 ID 저장 변수 - 현재 타이머 제약으로 인해 사용하지 않음
         private var timerId: ?Nat = null;
         
         // 마지막 분배 날짜 (일 단위)
         private var lastDistributionDay: Int = 0;
         
-        // 타이머 초기화 함수
-        public func setupDailyDistribution() : async () {
-            cancelCurrentTimer(); // 기존 타이머 취소
-            
-            // 현재 시간 및 날짜 정보 가져오기
-            let now = Time.now();
-            let nowDate = Date.fromTime(now);
-            
-            // 다음 자정 계산
-            let nextMidnight = Date.toTime({
-                year = nowDate.year;
-                month = nowDate.month;
-                day = nowDate.day + 1;
-                hour = 0;
-                minute = 0;
-                second = 0;
-            });
-            
-            // 다음 자정까지 남은 시간 (밀리초)
-            let timeUntilMidnight = (nextMidnight - now) / 1_000_000; // 나노초를 밀리초로 변환
-            
-            // 타이머 설정 (밀리초 단위로 설정)
-            let durationMs = Int.abs(timeUntilMidnight);
-            
-            // 타이머 설정 (최소 1초, 최대 60분으로 제한)
-            let boundedDuration = Nat.max(1, Nat.min(3600, durationMs / 1_000_000)); // 초 단위로 변환
-            
-            timerId := ?Timer.setTimer<system>(
-                #seconds(boundedDuration), 
-                func() : async () {
-                    await executeDailyDistribution();
-                }
-            );
-        };
-        
-        // 기존 타이머 취소 함수
+        // 타이머 취소 함수 - 사용하지 않음
         private func cancelCurrentTimer() {
             switch (timerId) {
                 case (?id) {
@@ -386,82 +353,95 @@ module {
             };
         };
         
-        // 일일 수익 분배 실행 함수
-        private func executeDailyDistribution() : async () {
+        // 테스트용: 수동으로 호출하여 분배 실행
+        public func executeDistribution() : async Result.Result<(), Text> {
+            Debug.print("[RevenueDistribution] executeDistribution 함수 시작");
+            
             // 현재 날짜 확인
             let now = Time.now();
             let currentDay = Int.abs(now) / (86400 * 1_000_000_000);
+            Debug.print("[RevenueDistribution] 현재 일자: " # Int.toText(currentDay));
             
+            // 테스트 모드: 날짜 확인 로직 비활성화
             // 이미 오늘 실행했는지 확인 (중복 실행 방지)
-            if (currentDay <= lastDistributionDay) {
-                // 이미 오늘 실행했다면 다음 자정으로 타이머 재설정만 진행
-                await setupDailyDistribution();
-                return;
-            };
+            // if (currentDay <= lastDistributionDay) {
+            //    return;
+            // };
+            
+            // 항상 실행되도록 함
             
             // 스테이킹된 NFT 확인
             let stakedTokenIds = stakingManager.getAllStakedTokenIds();
+            Debug.print("[RevenueDistribution] 스테이킹된 NFT 개수: " # Nat.toText(stakedTokenIds.size()));
             
             if (stakedTokenIds.size() > 0) {
-                // 스테이킹된 NFT가 있으면 시스템 계정을 통해 토큰 민팅 및 분배 실행
-                
-                // 시스템 계정 생성 (토큰 민팅용)
-                let systemAccount : PiggyCellToken.Account = {
-                    owner = Principal.fromText("aaaaa-aa");
-                    subaccount = null;
-                };
+                Debug.print("[RevenueDistribution] 스테이킹된 NFT 발견, 배분 시작");
                 
                 // 분배할 토큰 금액 (매일 100 PGC)
                 let distributionAmount = dailyDistributionAmount;
+                Debug.print("[RevenueDistribution] 배분할 금액: " # Nat.toText(distributionAmount));
                 
-                // 시스템 계정에 토큰 민팅
-                let mintResult = token.mint(systemAccount, distributionAmount);
+                // 민팅 로직 제거 - 시스템 계정에 토큰을 민팅하지 않음
                 
-                // 민팅 결과에 따라 처리
-                switch (mintResult) {
-                    case (#Ok(_)) {
-                        // 민팅 성공 시 분배 실행
-                        let result = distributeRevenue(Principal.fromText("aaaaa-aa"), distributionAmount);
-                        switch (result) {
-                            case (#ok(_)) {
-                                // 성공 시 기본 분배량으로 리셋
-                                dailyDistributionAmount := 100;
-                            };
-                            case (#err(error)) {
-                                // 오류 발생 시에도 기본값으로 리셋 (로깅 로직 추가 가능)
-                                dailyDistributionAmount := 100;
-                            };
-                        };
+                // 분배 실행 (슈퍼 관리자 사용)
+                Debug.print("[RevenueDistribution] distributeRevenue 함수 호출");
+                let result = distributeRevenue(adminManager.getSuperAdmin(), distributionAmount);
+                Debug.print("[RevenueDistribution] distributeRevenue 결과: " # debug_show(result));
+                
+                switch (result) {
+                    case (#ok(_)) {
+                        Debug.print("[RevenueDistribution] 수익 배분 성공");
+                        // 성공 시 기본 분배량으로 리셋
+                        dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
+                        // 마지막 분배 날짜 업데이트
+                        lastDistributionDay := currentDay;
+                        return #ok(());
                     };
-                    case (#Err(error)) {
-                        // 민팅 실패 시 로그 기록 (실제 구현에서는 더 상세한 오류 처리 필요)
-                        // 오류가 발생해도 기본 분배량으로 리셋하지 않고 기존 금액 유지
+                    case (#err(error)) {
+                        Debug.print("[RevenueDistribution] 수익 배분 실패: " # debug_show(error));
+                        // 오류 발생 시에도 기본값으로 리셋 (로깅 로직 추가 가능)
+                        dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
+                        return #err("수익 분배 중 오류가 발생했습니다: " # debug_show(error));
                     };
                 };
             } else {
+                Debug.print("[RevenueDistribution] 스테이킹된 NFT 없음");
                 // 스테이킹된 NFT가 없으면 누적하지 않고 다음날에는 항상 기본값인 100 PGC로 시작
-                dailyDistributionAmount := 100;
+                dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
+                // 마지막 분배 날짜 업데이트
+                lastDistributionDay := currentDay;
+                Debug.print("[RevenueDistribution] 기본값 100 PGC로 설정됨");
+                return #ok(());
             };
             
             // 마지막 분배 날짜 업데이트
             lastDistributionDay := currentDay;
+            Debug.print("[RevenueDistribution] executeDistribution 함수 종료");
             
-            // 다음 날 자정에 다시 실행되도록 타이머 재설정
-            await setupDailyDistribution();
+            // 기본 성공 반환
+            #ok(())
+        };
+        
+        // 원래 타이머 설정 함수 (사용하지 않음)
+        public func setupDailyDistribution() : async () {
+            // 타이머 제약으로 인해 사용하지 않음
+            // 실제 배포 시 올바른 타이머 구현 필요
         };
         
         // 금액 조회 함수
-        public query func getDailyDistributionAmount() : async Nat {
+        public func getDailyDistributionAmount() : Nat {
             dailyDistributionAmount
         };
         
         // 수동으로 타이머 재설정 (관리자용)
-        public func reinitializeTimer(caller: Principal) : async Result.Result<(), DistributionError> {
+        public func reinitializeTimer(caller: Principal) : Result.Result<(), DistributionError> {
             if (not isAdmin(caller)) {
                 return #err(#NotAuthorized);
             };
             
-            await setupDailyDistribution();
+            // 타이머 설정 로직 - 현재는 불필요
+            // setupDailyDistribution 호출 제거
+            
             return #ok(());
         };
         
@@ -601,24 +581,34 @@ module {
         
         // 전체 수익 입력 및 분배 (관리자만 호출 가능)
         public func distributeRevenue(caller: Principal, totalAmount: Nat) : Result.Result<Nat, DistributionError> {
-            // 관리자 권한 확인
-            if (not isAdmin(caller)) {
+            Debug.print("[RevenueDistribution] distributeRevenue 함수 시작: caller=" # Principal.toText(caller) # ", amount=" # Nat.toText(totalAmount));
+            
+            // 관리자 권한 확인 (isAdmin 함수는 슈퍼 관리자도 자동으로 true 반환)
+            let isAdminResult = isAdmin(caller);
+            Debug.print("[RevenueDistribution] 관리자 권한 확인: " # Bool.toText(isAdminResult));
+            
+            if (not isAdminResult) {
+                Debug.print("[RevenueDistribution] 권한 없음: NotAuthorized");
                 return #err(#NotAuthorized);
             };
             
             // 금액 유효성 확인
             if (totalAmount == 0) {
+                Debug.print("[RevenueDistribution] 금액이 0: InvalidAmount");
                 return #err(#InvalidAmount);
             };
             
             // 스테이킹된 모든 NFT ID 목록 수집
             let stakedTokenIds = stakingManager.getAllStakedTokenIds();
+            Debug.print("[RevenueDistribution] 스테이킹된 NFT 개수: " # Nat.toText(stakedTokenIds.size()));
             
             // 총 스테이킹 가치 계산
             let totalStakedValue = stakingManager.getTotalStakedValue();
+            Debug.print("[RevenueDistribution] 총 스테이킹 가치: " # Nat.toText(totalStakedValue));
             
             // 총 스테이킹 가치가 0인 경우
             if (totalStakedValue == 0) {
+                Debug.print("[RevenueDistribution] 총 스테이킹 가치가 0: InvalidAmount");
                 return #err(#InvalidAmount);
             };
             
@@ -635,9 +625,12 @@ module {
             };
             
             distributionRecords.put(distributionId, record);
+            Debug.print("[RevenueDistribution] 배분 기록 생성 완료, ID: " # Nat.toText(distributionId));
             
             // 각 NFT별 수익 계산 및 분배
+            Debug.print("[RevenueDistribution] NFT별 수익 계산 및 분배 시작");
             for (tokenId in stakedTokenIds.vals()) {
+                Debug.print("[RevenueDistribution] TokenID: " # Nat.toText(tokenId) # " 처리 중");
                 switch (stakingManager.getStakingInfo(tokenId)) {
                     case (?stakingInfo) {
                         // 가중치에 따른 수익 계산
@@ -645,22 +638,31 @@ module {
                         let amount = Int.abs(Float.toInt(shareRatio * Float.fromInt(totalAmount)));
                         
                         let owner = stakingInfo.owner;
+                        Debug.print("[RevenueDistribution] TokenID: " # Nat.toText(tokenId) # 
+                                  ", 소유자: " # Principal.toText(owner) # 
+                                  ", 금액: " # Nat.toText(amount));
                         
                         // 자동 배분 - 사용자 선호도 없이 즉시 배분
                         distributeToUser(owner, tokenId, amount, distributionId, now);
                     };
                     case (null) {
+                        Debug.print("[RevenueDistribution] TokenID: " # Nat.toText(tokenId) # "에 대한 스테이킹 정보 없음");
                         // 스테이킹 정보가 없는 경우 (이론상 발생하지 않아야 함)
                         // 빈 블록으로 처리
                     }
                 };
             };
             
+            Debug.print("[RevenueDistribution] distributeRevenue 함수 종료: 성공");
             #ok(distributionId)
         };
         
         // 개별 사용자에게 수익 배분하기
         private func distributeToUser(user: Principal, tokenId: Nat, amount: Nat, recordId: Nat, timestamp: Int) {
+            Debug.print("[RevenueDistribution] distributeToUser 시작: user=" # Principal.toText(user) # 
+                      ", tokenId=" # Nat.toText(tokenId) # 
+                      ", amount=" # Nat.toText(amount));
+            
             // 사용자 계정 생성
             let userAccount: PiggyCellToken.Account = {
                 owner = user;
@@ -668,8 +670,10 @@ module {
             };
             
             // 토큰 민팅으로 수익 배분
+            Debug.print("[RevenueDistribution] 사용자에게 토큰 민팅 시도");
             switch (token.mint(userAccount, amount)) {
                 case (#Ok(_)) {
+                    Debug.print("[RevenueDistribution] 토큰 민팅 성공");
                     // 성공 - 사용자 배분 기록 생성
                     let userDistId = nextUserDistributionId;
                     nextUserDistributionId += 1;
@@ -685,18 +689,22 @@ module {
                     };
                     
                     userDistributionRecords.put(userDistId, userRecord);
+                    Debug.print("[RevenueDistribution] 사용자 배분 기록 생성 완료, ID: " # Nat.toText(userDistId));
                     
                     // 통계 인덱스 업데이트
                     updateStatIndices(userRecord);
                     
                     // ICRC-3 수익 배분 블록 추가 (PiggyCellToken의 addRevenueDistributionBlock 사용)
                     token.addRevenueDistributionBlock(userAccount, amount, tokenId, recordId);
+                    Debug.print("[RevenueDistribution] ICRC-3 블록 추가 완료");
                 };
-                case (#Err(_)) {
+                case (#Err(error)) {
+                    Debug.print("[RevenueDistribution] 토큰 민팅 실패: " # debug_show(error));
                     // 실패 - 로그만 기록하고 계속 진행
                     // 민팅 실패에 대한 로그나 알림 기능을 여기에 추가할 수 있음
                 };
             };
+            Debug.print("[RevenueDistribution] distributeToUser 종료");
         };
         
         //-----------------------------------------------------------------------------

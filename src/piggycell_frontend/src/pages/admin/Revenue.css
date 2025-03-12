@@ -24,8 +24,27 @@
 
 .search-box {
   margin: 24px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   width: 100%;
-  max-width: 600px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  margin-right: 16px;
+}
+
+.action-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.action-description {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
 }
 
 .search-box .ant-input-affix-wrapper {
@@ -72,5 +91,16 @@
 
   .search-box {
     margin: 16px 0;
+    flex-direction: column;
+  }
+
+  .search-input-wrapper {
+    margin-right: 0;
+    margin-bottom: 12px;
+    width: 100%;
+  }
+
+  .action-wrapper {
+    width: 100%;
   }
 }

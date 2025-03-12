@@ -14,7 +14,7 @@ module {
 
     public class AdminManager() {
         private let admins = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
-        private var superAdmin : Principal = Principal.fromText("7w7wy-vsfhb-af2eo-h7in2-rtrji-k4lpn-day6t-jnjdc-oimk2-4fnhy-xqe");
+        private var superAdmin : Principal = Principal.fromText("dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae");
 
         // 슈퍼 관리자 확인
         public func isSuperAdmin(caller: Principal) : Bool {
@@ -77,6 +77,11 @@ module {
         public func getAllAdmins() : [Principal] {
             let adminArray = Iter.toArray(admins.keys());
             Array.append<Principal>([superAdmin], adminArray)
+        };
+        
+        // 슈퍼 관리자 ID 반환
+        public func getSuperAdmin() : Principal {
+            superAdmin
         };
     };
 }; 

@@ -2,6 +2,7 @@ import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
+import Error "mo:base/Error";
 import Hash "mo:base/Hash";
 import Int "mo:base/Int";
 import Iter "mo:base/Iter";
@@ -1680,5 +1681,26 @@ actor Main {
     // 수익 대시보드 데이터 조회
     public query func getRevenueDashboardData() : async RevenueDistribution.DashboardData {
         revenueManager.getDashboardData()
+    };
+
+    // 관리자용: 일일 수익 배분 수동 실행
+    public shared({ caller }) func executeDistribution() : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller)) {
+            return #err("Not authorized. Admin access required.");
+        };
+        
+        try {
+            let result = await revenueManager.executeDistribution();
+            switch (result) {
+                case (#ok(_)) {
+                    return #ok(());
+                };
+                case (#err(errorMsg)) {
+                    return #err(errorMsg);
+                };
+            };
+        } catch (e) {
+            return #err("Error executing distribution: " # Debug.trap(Error.message(e)));
+        };
     };
 };
