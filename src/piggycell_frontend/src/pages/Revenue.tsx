@@ -410,6 +410,8 @@ const Revenue = () => {
   );
   // 지난 30일 수익 상태 관리
   const [last30DaysRevenue, setLast30DaysRevenue] = useState<number>(0);
+  // 총 수익 상태 관리
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
   // 최근 분배 금액 상태 관리
   const [lastDistributionAmount, setLastDistributionAmount] =
     useState<number>(0);
@@ -490,10 +492,65 @@ const Revenue = () => {
 
       // 지난 30일 수익 계산
       const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const revenueInLast30Days = userStats.revenueHistory
-        .filter((item) => toSafeNumber(item.timestamp) > thirtyDaysAgo)
+      console.log(
+        `[Revenue] 30일 전 시간(밀리초): ${thirtyDaysAgo}, 현재 시간: ${Date.now()}`
+      );
+
+      // 수익 내역 로깅
+      console.log(
+        `[Revenue] 총 수익 내역 갯수: ${userStats.revenueHistory.length}`
+      );
+      console.log(`[Revenue] 백엔드 원본 데이터:`, userStats);
+      userStats.revenueHistory.forEach((item, index) => {
+        const timestamp = toSafeNumber(item.timestamp);
+        const millisTimestamp = timestamp / 1_000_000;
+        const isRecent = millisTimestamp > thirtyDaysAgo;
+        console.log(
+          `[Revenue] 내역 #${index}: 타임스탬프=${timestamp}(나노초) → ${millisTimestamp}(밀리초), ` +
+            `금액=${toSafeNumber(item.amount)}, 최근 30일=${
+              isRecent ? "예" : "아니오"
+            }`
+        );
+      });
+
+      // 실제 계산
+      const backendTotalRevenue = toSafeNumber(userStats.totalRevenue);
+
+      // 히스토리에서 계산된 값
+      const calculatedTotalRevenue = userStats.revenueHistory.reduce(
+        (acc, curr) => acc + toSafeNumber(curr.amount),
+        0
+      );
+
+      // 히스토리에서 30일 수익 계산
+      const calculatedLast30DaysRevenue = userStats.revenueHistory
+        .filter(
+          (item) => toSafeNumber(item.timestamp) / 1_000_000 > thirtyDaysAgo
+        )
         .reduce((acc, curr) => acc + toSafeNumber(curr.amount), 0);
-      setLast30DaysRevenue(revenueInLast30Days);
+
+      // 백엔드 총액과 계산된 총액 간의 비율 계산
+      const revenueFactor =
+        calculatedTotalRevenue > 0
+          ? backendTotalRevenue / calculatedTotalRevenue
+          : 1;
+
+      // 30일 수익을 비율에 맞게 조정
+      const adjustedLast30DaysRevenue =
+        calculatedLast30DaysRevenue * revenueFactor;
+
+      console.log(
+        `[Revenue] 히스토리에서 계산된 총 수익: ${calculatedTotalRevenue}, 백엔드 총 수익: ${backendTotalRevenue}, 비율: ${revenueFactor}`
+      );
+      console.log(
+        `[Revenue] 히스토리에서 계산된 30일 수익: ${calculatedLast30DaysRevenue}, 조정된 30일 수익: ${adjustedLast30DaysRevenue}`
+      );
+
+      // 조정된 30일 수익 설정
+      setLast30DaysRevenue(adjustedLast30DaysRevenue);
+
+      // 총 수익 설정
+      setTotalRevenue(backendTotalRevenue);
 
       // 최근 분배 금액 설정 (가장 최근의 거래)
       if (userStats.revenueHistory.length > 0) {
@@ -864,7 +921,7 @@ const Revenue = () => {
         <Col xs={12} sm={6} md={6}>
           <StatCard
             title="총 누적 수익"
-            value={formatTokenDisplayForUI(revenueStats?.totalRevenue || 0)}
+            value={formatTokenDisplayForUI(totalRevenue)}
             prefix={<WalletOutlined />}
             suffix="PGC"
             loading={loading}
@@ -913,7 +970,13 @@ const Revenue = () => {
               {distributions.map((record, index) => {
                 const isLastElement = distributions.length === index + 1;
                 return (
-                  <Col key={record.recordId} xs={24} sm={12} md={8} lg={6}>
+                  <Col
+                    key={`${record.recordId}-${record.tokenId}`}
+                    xs={24}
+                    sm={12}
+                    md={8}
+                    lg={6}
+                  >
                     <div
                       ref={isLastElement ? lastDistributionElementRef : null}
                     >

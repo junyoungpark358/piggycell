@@ -888,8 +888,8 @@ module {
                 nftBreakdownBuffer.add(nftStat);
             };
             
-            // 수익 이력 계산 (최근 10개)
-            let revenueHistoryBuffer = Buffer.Buffer<UserRevenuePoint>(10);
+            // 수익 이력 계산 (최근 30개)
+            let revenueHistoryBuffer = Buffer.Buffer<UserRevenuePoint>(30);
             let userRecords = getUserDistributionRecords(user);
             let sortedRecords = Array.sort(userRecords, func(a: UserDistributionRecord, b: UserDistributionRecord) : {#less; #equal; #greater} {
                 if (a.distributedAt > b.distributedAt) { #less }
