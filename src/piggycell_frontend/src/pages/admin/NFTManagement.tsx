@@ -1001,7 +1001,7 @@ const NFTManagement = () => {
                   <StyledInput
                     type="number"
                     min={0}
-                    placeholder="전송할 PGC 수량 (raw units)"
+                    placeholder="판매할 NFT 가격 (raw units)"
                     customSize="md"
                     noRotate={true}
                   />
