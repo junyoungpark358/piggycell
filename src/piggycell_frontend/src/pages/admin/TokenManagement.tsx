@@ -75,79 +75,6 @@ const TokenManagement: React.FC = () => {
     total: 0,
   });
 
-  // 현재 사용자의 Principal ID와 관리자 상태 확인
-  const checkAdminStatus = async () => {
-    try {
-      const authManager = AuthManager.getInstance();
-      const principal = await authManager.getPrincipal();
-
-      if (principal) {
-        const principalStr = principal.toString();
-        setCurrentPrincipal(principalStr);
-        console.log("현재 로그인한 사용자의 Principal ID:", principalStr);
-
-        const isAdmin = await authManager.isAdmin();
-        console.log("프론트엔드에서의 관리자 권한 여부:", isAdmin);
-
-        // 백엔드에서 관리자 여부 확인 (이 함수가 존재하는 경우)
-        try {
-          // 백엔드에 관리자 여부를 확인하는 API가 있다면 호출
-          // 예시: const backendIsAdmin = await piggycell_backend.check_is_admin(principal);
-          // console.log("백엔드에서의 관리자 권한 여부:", backendIsAdmin);
-          // 현재 백엔드에 이러한 API가 없으므로 주석 처리
-        } catch (error) {
-          console.error("백엔드 관리자 확인 중 오류:", error);
-        }
-
-        if (!isAdmin) {
-          message.warning(
-            `현재 계정(${principalStr})은 프론트엔드에서 관리자로 인식되지 않습니다.`
-          );
-        }
-      } else {
-        console.log("로그인되지 않았거나 Principal을 가져올 수 없습니다.");
-      }
-    } catch (error) {
-      console.error("관리자 상태 확인 중 오류:", error);
-    }
-  };
-
-  // 가상의 데이터 생성 함수
-  const generateMockData = () => {
-    // 가상의 토큰 소유자 데이터
-    const mockOwners: TokenOwner[] = [
-      {
-        key: "dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae",
-        address:
-          "dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae",
-        balance: 1, // 1 PGC로 수정
-      },
-      {
-        key: "cd5wa-o3kaa-caaaa-qaaka-cai",
-        address: "cd5wa-o3kaa-caaaa-qaaka-cai",
-        balance: 2.5, // 2.5 PGC로 수정
-      },
-      {
-        key: "example-principal-3",
-        address: "example-principal-3",
-        balance: 0.75, // 0.75 PGC로 수정
-      },
-    ];
-
-    setTokenOwners(mockOwners);
-    setTokenStats({
-      totalSupply: 4.25, // 4.25 PGC로 수정
-      totalHolders: mockOwners.length,
-      transactionCount: 25,
-    });
-
-    // 페이지네이션 총 개수 설정
-    setPagination((prev) => ({
-      ...prev,
-      total: mockOwners.length,
-    }));
-  };
-
   const fetchTokenStats = async () => {
     try {
       setLoading(true);
@@ -187,9 +114,6 @@ const TokenManagement: React.FC = () => {
     } catch (error) {
       console.error("PGC 통계 데이터를 가져오는 중 오류 발생:", error);
       message.error("PGC 통계 데이터를 가져오는 중 오류가 발생했습니다.");
-
-      // 오류 발생 시 백업으로 가상 데이터 생성
-      generateMockData();
     } finally {
       setLoading(false);
     }
@@ -203,29 +127,22 @@ const TokenManagement: React.FC = () => {
       type: typeof piggycell_backend,
       hasMintTokens: "mint_tokens" in piggycell_backend,
     });
+
+    // 현재 사용자의 Principal ID 가져오기
+    const getCurrentPrincipal = async () => {
+      try {
+        const authManager = AuthManager.getInstance();
+        const principal = await authManager.getPrincipal();
+        if (principal) {
+          setCurrentPrincipal(principal.toString());
+        }
+      } catch (error) {
+        console.error("Principal ID 가져오기 실패:", error);
+      }
+    };
+
+    getCurrentPrincipal();
   }, []);
-
-  // piggycell_backend 액터의 속성 확인 함수
-  const checkActorProperties = () => {
-    try {
-      // Actor 객체 속성 확인 (개발용)
-      const actorProps = Object.getOwnPropertyNames(piggycell_backend);
-      console.log("[Actor 디버깅] piggycell_backend 속성:", actorProps);
-
-      // Agent 직접 접근 시도
-      // 참고: 이 부분은 내부 구현이 변경될 수 있어 동작하지 않을 수 있음
-      const agent = (piggycell_backend as any)._agent || null;
-      console.log(
-        "[Actor 디버깅] agent 접근 결과:",
-        agent ? "agent 존재" : "agent 없음"
-      );
-
-      return "Actor 속성 확인 완료";
-    } catch (error) {
-      console.error("[Actor 디버깅] 에러:", error);
-      return "Actor 속성 확인 실패";
-    }
-  };
 
   const handleTransferToken = async (values: any) => {
     try {

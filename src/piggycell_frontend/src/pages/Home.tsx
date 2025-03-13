@@ -35,6 +35,7 @@ const Home = () => {
   const [stakingInProgress, setStakingInProgress] = useState<bigint | null>(
     null
   );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState({
     ownedCount: 0,
     stakedCount: 0,
@@ -100,6 +101,15 @@ const Home = () => {
     }
   };
 
+  // 인증 상태 확인 함수
+  const checkAuthentication = async () => {
+    const authManager = AuthManager.getInstance();
+    const identity = await authManager.getIdentity();
+    const authenticated = !!identity;
+    setIsAuthenticated(authenticated);
+    return authenticated;
+  };
+
   const handleStake = async (nftId: bigint) => {
     try {
       setStakingInProgress(nftId);
@@ -154,6 +164,8 @@ const Home = () => {
   };
 
   useEffect(() => {
+    // 인증 상태 확인
+    checkAuthentication();
     // 초기 데이터 로딩
     fetchNFTs();
   }, []);
@@ -212,6 +224,7 @@ const Home = () => {
                         onBuy={() => handleStake(nft.id)}
                         loading={stakingInProgress === nft.id}
                         primaryButtonText="스테이킹"
+                        isAuthenticated={isAuthenticated}
                       />
                     </Col>
                   ))
@@ -240,6 +253,7 @@ const Home = () => {
                         onBuy={() => handleUnstake(nft.id)}
                         loading={stakingInProgress === nft.id}
                         primaryButtonText="언스테이킹"
+                        isAuthenticated={isAuthenticated}
                       />
                     </Col>
                   ))
