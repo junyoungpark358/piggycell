@@ -11,6 +11,7 @@ import {
   LineChartOutlined,
   PlusOutlined,
   UserAddOutlined,
+  UserDeleteOutlined,
 } from "@ant-design/icons";
 import type { FilterValue, SorterResult } from "antd/es/table/interface";
 import "./Dashboard.css";
@@ -32,6 +33,7 @@ import {
   TransactionDisplay,
   NFTStats,
   addAdmin,
+  removeAdmin,
 } from "../../utils/statsApi";
 
 // ICRC-3 트랜잭션 관련 타입 정의
@@ -71,7 +73,15 @@ const AdminDashboard = () => {
   const [isAddAdminModalVisible, setIsAddAdminModalVisible] = useState(false);
   const [adminPrincipalId, setAdminPrincipalId] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
+
+  // 관리자 삭제 모달 상태
+  const [isRemoveAdminModalVisible, setIsRemoveAdminModalVisible] =
+    useState(false);
+  const [removeAdminPrincipalId, setRemoveAdminPrincipalId] = useState("");
+  const [removingAdmin, setRemovingAdmin] = useState(false);
+
   const [form] = Form.useForm();
+  const [removeAdminForm] = Form.useForm();
 
   // 검색 핸들러 수정 - 타이머 추가
   const handleSearch = async (value: string) => {
@@ -369,6 +379,62 @@ const AdminDashboard = () => {
     }
   };
 
+  // 관리자 삭제 모달 표시
+  const showRemoveAdminModal = () => {
+    setIsRemoveAdminModalVisible(true);
+  };
+
+  // 관리자 삭제 모달 닫기
+  const handleRemoveAdminCancel = () => {
+    setIsRemoveAdminModalVisible(false);
+    setRemoveAdminPrincipalId("");
+    removeAdminForm.resetFields();
+  };
+
+  // 관리자 삭제 처리
+  const handleRemoveAdmin = async () => {
+    try {
+      if (!removeAdminPrincipalId.trim()) {
+        message.error("삭제할 관리자 Principal ID를 입력해주세요.");
+        return;
+      }
+
+      setRemovingAdmin(true);
+      message.loading({
+        content: "관리자를 삭제하는 중...",
+        key: "removeAdmin",
+        duration: 0,
+      });
+
+      // 관리자 삭제 API 호출
+      const result = await removeAdmin(removeAdminPrincipalId);
+
+      if (result.ok) {
+        message.success({
+          content: "관리자가 성공적으로 삭제되었습니다.",
+          key: "removeAdmin",
+          duration: 2,
+        });
+        handleRemoveAdminCancel();
+      } else {
+        message.error({
+          content: `관리자 삭제 실패: ${result.err}`,
+          key: "removeAdmin",
+          duration: 3,
+        });
+      }
+    } catch (error) {
+      console.error("[ERROR] 관리자 삭제 중 오류 발생:", error);
+      message.error({
+        content: "관리자 삭제 중 오류가 발생했습니다.",
+        key: "removeAdmin",
+        duration: 3,
+      });
+    } finally {
+      setRemovingAdmin(false);
+    }
+  };
+
   // 테이블 정의
   const columns: ColumnsType<TransactionDisplay> = [
     {
@@ -511,14 +577,24 @@ const AdminDashboard = () => {
             onChange={handleSearchInputChange}
           />
         </div>
-        <StyledButton
-          customVariant="primary"
-          customColor="primary"
-          onClick={showAddAdminModal}
-          icon={<UserAddOutlined />}
-        >
-          관리자 추가
-        </StyledButton>
+        <div className="admin-buttons">
+          <StyledButton
+            customVariant="primary"
+            customColor="primary"
+            onClick={showAddAdminModal}
+            icon={<UserAddOutlined />}
+          >
+            관리자 추가
+          </StyledButton>
+          <StyledButton
+            customVariant="primary"
+            customColor="error"
+            onClick={showRemoveAdminModal}
+            icon={<UserDeleteOutlined />}
+          >
+            관리자 삭제
+          </StyledButton>
+        </div>
       </div>
 
       <StyledTable
@@ -595,6 +671,68 @@ const AdminDashboard = () => {
           </Form.Item>
           <p className="form-description">
             관리자 추가는 슈퍼 관리자만 수행할 수 있습니다.
+          </p>
+        </Form>
+      </Modal>
+
+      {/* 관리자 삭제 모달 */}
+      <Modal
+        title="관리자 삭제"
+        open={isRemoveAdminModalVisible}
+        onCancel={handleRemoveAdminCancel}
+        className="admin-modal"
+        footer={[
+          <StyledButton
+            key="cancel"
+            customVariant="ghost"
+            customColor="primary"
+            onClick={handleRemoveAdminCancel}
+          >
+            취소
+          </StyledButton>,
+          <StyledButton
+            key="submit"
+            customVariant="primary"
+            customColor="error"
+            loading={removingAdmin}
+            onClick={handleRemoveAdmin}
+          >
+            삭제
+          </StyledButton>,
+        ]}
+      >
+        <Form
+          form={removeAdminForm}
+          layout="vertical"
+          name="removeAdminForm"
+          className="admin-form"
+          requiredMark={false}
+        >
+          <Form.Item
+            name="principalId"
+            label="삭제할 관리자 Principal ID"
+            rules={[
+              {
+                required: true,
+                message: "삭제할 관리자 Principal ID를 입력해주세요.",
+              },
+              {
+                pattern: /^[a-zA-Z0-9\-]+$/,
+                message: "유효한 Principal ID 형식이 아닙니다.",
+              },
+            ]}
+          >
+            <StyledInput
+              placeholder="삭제할 관리자의 Principal ID를 입력하세요"
+              value={removeAdminPrincipalId}
+              onChange={(e) => setRemoveAdminPrincipalId(e.target.value)}
+              customSize="md"
+              noRotate={true}
+            />
+          </Form.Item>
+          <p className="form-description">
+            관리자 삭제는 슈퍼 관리자만 수행할 수 있습니다. 이 작업은 되돌릴 수
+            없습니다.
           </p>
         </Form>
       </Modal>

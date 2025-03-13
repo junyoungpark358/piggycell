@@ -394,3 +394,8 @@
     width: 100%;
   }
 }
+
+.admin-buttons {
+  display: flex;
+  gap: 8px;
+}
