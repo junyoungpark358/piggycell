@@ -170,9 +170,7 @@ const Staking = () => {
 
       if ("ok" in result) {
         const reward = result.ok;
-        message.success(
-          `NFT 언스테이킹이 완료되었습니다. 받은 보상: ${reward} PGC`
-        );
+        message.success(`NFT 언스테이킹이 완료되었습니다.`);
         fetchStakedNFTs(); // 데이터 새로고침
       } else {
         message.error(`언스테이킹 실패: ${getErrorMessage(result.err)}`);
@@ -297,10 +295,8 @@ const Staking = () => {
                 price={nft.price}
                 status="available"
                 onBuy={() => handleUnstake(nft.id)}
-                onSecondaryAction={() => handleClaimReward(nft.id)}
                 loading={processingNFT === nft.id}
                 primaryButtonText="언스테이킹"
-                secondaryButtonText="보상 수령"
               />
             </Col>
           ))}

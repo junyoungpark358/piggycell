@@ -96,7 +96,7 @@ const Home = () => {
       if ("ok" in result) {
         message.success("NFT 스테이킹이 완료되었습니다.");
         // NFT 목록 새로고침
-        fetchNFTs(true);
+        fetchNFTs(false);
       } else {
         message.error(`스테이킹 실패: ${getErrorMessage(result.err)}`);
       }
@@ -116,11 +116,9 @@ const Home = () => {
 
       if ("ok" in result) {
         const reward = result.ok;
-        message.success(
-          `NFT 언스테이킹이 완료되었습니다. 받은 보상: ${reward} PGC`
-        );
+        message.success(`NFT 언스테이킹이 완료되었습니다.`);
         // NFT 목록 새로고침
-        fetchNFTs(true);
+        fetchNFTs(false);
       } else {
         message.error(`언스테이킹 실패: ${getErrorMessage(result.err)}`);
       }
@@ -176,15 +174,6 @@ const Home = () => {
             value={stats.totalChargerCount}
             prefix={<ThunderboltOutlined />}
             suffix="대"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={6} md={6}>
-          <StatCard
-            title="예상 월 수익"
-            value={formatTokenDisplayForUI(stats.estimatedMonthlyRevenue)}
-            prefix={<DollarOutlined />}
-            suffix="PGC"
             loading={loading}
           />
         </Col>
