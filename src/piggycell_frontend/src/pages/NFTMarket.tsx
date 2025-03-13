@@ -364,6 +364,9 @@ const NFTMarket = () => {
         activeUsers: 0,
       });
 
+      // 판매 완료된 NFT 목록도 함께 새로고침
+      await fetchSoldNFTs();
+
       // 성공 메시지는 showMessage가 true일 때만 표시
       if (showMessage) {
         message.success({
@@ -747,6 +750,7 @@ const NFTMarket = () => {
       </div>
 
       <Tabs
+        key={`nft-tabs-${nfts.length}-${soldNfts.length}`}
         defaultActiveKey="available"
         items={[
           {

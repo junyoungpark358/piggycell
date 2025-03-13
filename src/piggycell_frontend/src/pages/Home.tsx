@@ -59,9 +59,22 @@ const Home = () => {
       // statsApi의 getUserNFTs 함수 사용
       const userData = await getUserNFTs();
 
-      setOwnedNFTs(userData.ownedNFTs);
-      setStakedNFTs(userData.stakedNFTs);
-      setStats(userData.stats);
+      console.log("새로고침 데이터 받음:", {
+        ownedNFTs: userData.ownedNFTs.length,
+        stakedNFTs: userData.stakedNFTs.length,
+        stats: userData.stats,
+      });
+
+      // 상태 업데이트 전에 현재 상태 로깅
+      console.log("현재 상태:", {
+        ownedNFTs: ownedNFTs.length,
+        stakedNFTs: stakedNFTs.length,
+        stats,
+      });
+
+      setOwnedNFTs([...userData.ownedNFTs]);
+      setStakedNFTs([...userData.stakedNFTs]);
+      setStats({ ...userData.stats });
 
       // 성공 메시지도 showMessage가 true일 때만 표시
       if (showMessage) {
@@ -180,6 +193,7 @@ const Home = () => {
       </Row>
 
       <Tabs
+        key={`tabs-${ownedNFTs.length}-${stakedNFTs.length}`}
         items={[
           {
             key: "owned",
