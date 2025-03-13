@@ -10,15 +10,32 @@ module {
         #NotAuthorized;
         #AlreadyAdmin;
         #NotAdmin;
+        #SuperAdminAlreadySet;
     };
 
     public class AdminManager() {
         private let admins = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
-        private var superAdmin : Principal = Principal.fromText("dil3j-p2ir2-aqcvd-lqx2z-qlmxw-wuaut-drizs-nbgvn-3gk7d-qlbeg-vqe");
+        private var superAdmin : ?Principal = null;
 
-        // 슈퍼 관리자 확인
+        // 슈퍼 관리자 초기화 메소드 (최초 1회만 실행 가능)
+        public func initSuperAdmin(newSuperAdmin: Principal) : Result.Result<(), AdminError> {
+            switch (superAdmin) {
+                case (?_) {
+                    #err(#SuperAdminAlreadySet)
+                };
+                case (null) {
+                    superAdmin := ?newSuperAdmin;
+                    #ok(())
+                };
+            }
+        };
+
+        // 슈퍼 관리자 확인 (null 처리 추가)
         public func isSuperAdmin(caller: Principal) : Bool {
-            Principal.equal(caller, superAdmin)
+            switch (superAdmin) {
+                case (?admin) { Principal.equal(caller, admin) };
+                case (null) { false };
+            }
         };
 
         // 관리자 확인 - 슈퍼 관리자도 자동으로 관리자로 인식
@@ -69,18 +86,22 @@ module {
                 return #err(#NotAuthorized);
             };
             
-            superAdmin := newSuperAdmin;
+            superAdmin := ?newSuperAdmin;
             #ok(());
         };
         
         // 모든 관리자 목록 조회
         public func getAllAdmins() : [Principal] {
             let adminArray = Iter.toArray(admins.keys());
-            Array.append<Principal>([superAdmin], adminArray)
+            
+            switch (superAdmin) {
+                case (?admin) { Array.append<Principal>([admin], adminArray) };
+                case (null) { adminArray };
+            }
         };
         
         // 슈퍼 관리자 ID 반환
-        public func getSuperAdmin() : Principal {
+        public func getSuperAdmin() : ?Principal {
             superAdmin
         };
     };

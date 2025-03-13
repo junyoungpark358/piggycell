@@ -122,12 +122,26 @@ export class AuthManager {
     }
 
     try {
+      if (!this.actor) {
+        this.actor = await this.createActor();
+      }
+
       const identity = this.authClient.getIdentity();
       const principal = identity.getPrincipal();
-      return (
-        principal.toString() ===
-        "dil3j-p2ir2-aqcvd-lqx2z-qlmxw-wuaut-drizs-nbgvn-3gk7d-qlbeg-vqe"
+
+      // 백엔드 API를 통해 사용자가 관리자인지 확인 (슈퍼 관리자 또는 일반 관리자)
+      const isUserAdmin = await this.actor.isUserAdmin(principal);
+
+      if (isUserAdmin) {
+        console.log("관리자 권한 확인 성공 (슈퍼 관리자 또는 일반 관리자)");
+        return true;
+      }
+
+      console.log(
+        "현재 사용자는 관리자가 아님. 로그인 사용자:",
+        principal.toString()
       );
+      return false;
     } catch (error) {
       console.error("관리자 권한 확인 중 오류 발생:", error);
       return false;

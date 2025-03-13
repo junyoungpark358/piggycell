@@ -1727,4 +1727,41 @@ actor Main {
     public query func getRevenueDashboardData() : async RevenueDistribution.DashboardData {
         revenueManager.getDashboardData()
     };
+
+    // 최초 배포 후 실행할 수 있는 슈퍼 관리자 초기화 함수
+    public shared func initSuperAdmin(superAdminPrincipal: Principal) : async Result.Result<Text, Text> {
+        switch (adminManager.initSuperAdmin(superAdminPrincipal)) {
+            case (#ok()) {
+                // adminManager에 슈퍼관리자 설정 성공. 로그를 남깁니다.
+                Debug.print("슈퍼 관리자가 성공적으로 초기화되었습니다: " # Principal.toText(superAdminPrincipal));
+                #ok("슈퍼 관리자가 성공적으로 초기화되었습니다.")
+            };
+            case (#err(#SuperAdminAlreadySet)) {
+                Debug.print("슈퍼 관리자가 이미 설정되어 있습니다.");
+                #err("슈퍼 관리자가 이미 설정되어 있습니다.")
+            };
+            case (#err(_)) {
+                Debug.print("슈퍼 관리자 초기화 중 알 수 없는 오류가 발생했습니다.");
+                #err("슈퍼 관리자 초기화 중 알 수 없는 오류가 발생했습니다.")
+            };
+        }
+    };
+
+    // 슈퍼 관리자 조회 함수
+    public query func getSuperAdmin() : async ?Principal {
+        adminManager.getSuperAdmin()
+    };
+    
+    // 슈퍼 관리자 설정 여부 확인 함수 추가
+    public query func isSuperAdminSet() : async Bool {
+        switch (adminManager.getSuperAdmin()) {
+            case (?_) { true };
+            case (null) { false };
+        }
+    };
+
+    // 사용자가 관리자인지 확인하는 함수 추가 (일반 관리자 + 슈퍼 관리자)
+    public query func isUserAdmin(userPrincipal: Principal) : async Bool {
+        adminManager.isAdmin(userPrincipal)
+    };
 };

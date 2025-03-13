@@ -397,23 +397,35 @@ module {
                 
                 // 분배 실행 (슈퍼 관리자 사용)
                 Debug.print("[RevenueDistribution] distributeRevenue 함수 호출");
-                let result = distributeRevenue(adminManager.getSuperAdmin(), distributionAmount);
-                Debug.print("[RevenueDistribution] distributeRevenue 결과: " # debug_show(result));
                 
-                switch (result) {
-                    case (#ok(_)) {
-                        Debug.print("[RevenueDistribution] 수익 배분 성공");
-                        // 성공 시 기본 분배량으로 리셋
-                        dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
-                        // 마지막 분배 날짜 업데이트
-                        lastDistributionDay := currentDay;
-                        return #ok(());
+                // superAdmin이 ?Principal 타입으로 변경되었으므로, 처리 필요
+                switch (adminManager.getSuperAdmin()) {
+                    case (?superAdmin) {
+                        // 슈퍼 관리자가 설정된 경우
+                        let result = distributeRevenue(superAdmin, distributionAmount);
+                        Debug.print("[RevenueDistribution] distributeRevenue 결과: " # debug_show(result));
+                        
+                        switch (result) {
+                            case (#ok(_)) {
+                                Debug.print("[RevenueDistribution] 수익 배분 성공");
+                                // 성공 시 기본 분배량으로 리셋
+                                dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
+                                // 마지막 분배 날짜 업데이트
+                                lastDistributionDay := currentDay;
+                                return #ok(());
+                            };
+                            case (#err(error)) {
+                                Debug.print("[RevenueDistribution] 수익 배분 실패: " # debug_show(error));
+                                // 오류 발생 시에도 기본값으로 리셋 (로깅 로직 추가 가능)
+                                dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
+                                return #err("수익 분배 중 오류가 발생했습니다: " # debug_show(error));
+                            };
+                        };
                     };
-                    case (#err(error)) {
-                        Debug.print("[RevenueDistribution] 수익 배분 실패: " # debug_show(error));
-                        // 오류 발생 시에도 기본값으로 리셋 (로깅 로직 추가 가능)
-                        dailyDistributionAmount := 10_000_000_000; // 100 PGC (decimals=8)
-                        return #err("수익 분배 중 오류가 발생했습니다: " # debug_show(error));
+                    case (null) {
+                        // 슈퍼 관리자가 설정되지 않은 경우
+                        Debug.print("[RevenueDistribution] 슈퍼 관리자가 설정되지 않아 배분을 진행할 수 없습니다.");
+                        return #err("슈퍼 관리자가 설정되지 않아 배분을 진행할 수 없습니다.");
                     };
                 };
             } else {
@@ -1404,6 +1416,7 @@ module {
             // 결과 버퍼
             let resultBuffer = Buffer.Buffer<UserDistributionRecord>(blockIdsToLoad.size());
             
+            // 최적화된 배치 블록 검색 구현
             // 블록 정보 맵을 사용하여 효율적으로 결과 구성
             for (blockId in blockIdsToLoad.vals()) {
                 Debug.print("[RevenueDistribution] 블록 정보 맵에서 블록 조회: ID=" # Nat.toText(blockId));
