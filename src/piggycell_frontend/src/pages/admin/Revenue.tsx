@@ -405,7 +405,7 @@ const AdminRevenue = () => {
         );
 
         // 성공적으로 배분된 후 데이터 새로고침
-        fetchRevenue(1, pageSize, "", true);
+        fetchRevenue(1, pageSize, "", false);
       } else {
         console.error("[Revenue] 수익 배분 실패:", result.err);
         message.error(`수익 배분 오류: ${result.err}`);
