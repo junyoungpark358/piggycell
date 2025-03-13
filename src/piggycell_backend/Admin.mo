@@ -14,7 +14,7 @@ module {
 
     public class AdminManager() {
         private let admins = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
-        private var superAdmin : Principal = Principal.fromText("dexux-4pqfq-e625z-pb4pp-qlqam-fm4cu-iaueu-2lu2r-43ojg-6jmvd-zae");
+        private var superAdmin : Principal = Principal.fromText("dil3j-p2ir2-aqcvd-lqx2z-qlmxw-wuaut-drizs-nbgvn-3gk7d-qlbeg-vqe");
 
         // 슈퍼 관리자 확인
         public func isSuperAdmin(caller: Principal) : Bool {
