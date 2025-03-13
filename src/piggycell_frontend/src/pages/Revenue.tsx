@@ -447,12 +447,12 @@ const Revenue = () => {
 
   // NFT 메타데이터 캐시가 변경될 때 분배 내역 로드
   useEffect(() => {
-    // 메타데이터가 로드되고, 빈 객체가 아닐 때만 분배 내역 로드
-    if (metadataLoaded && Object.keys(nftMetadataCache).length > 0) {
+    // 메타데이터가 로드되면 분배 내역 로드 (모든 NFT를 언스테이킹해도 과거 내역은 보이도록)
+    if (metadataLoaded) {
       console.log("[Revenue] 메타데이터 로드 완료. 분배 내역 로드 시작...");
       loadMoreDistributions(true);
     }
-  }, [metadataLoaded, nftMetadataCache]);
+  }, [metadataLoaded]);
 
   // 백엔드에서 사용자 수익 통계를 가져오는 함수
   const fetchUserRevenueStats = async () => {
@@ -568,56 +568,59 @@ const Revenue = () => {
       // NFT 메타데이터 캐시 생성
       const metadataCache: Record<number, any> = {};
 
-      for (const nftId of stakedNFTs) {
-        try {
-          // NFT 메타데이터 가져오기
-          const nftMetadata = await actor.icrc7_token_metadata([nftId]);
+      // 스테이킹된 NFT가 있는 경우에만 메타데이터 가져오기
+      if (stakedNFTs.length > 0) {
+        for (const nftId of stakedNFTs) {
+          try {
+            // NFT 메타데이터 가져오기
+            const nftMetadata = await actor.icrc7_token_metadata([nftId]);
 
-          const metadata: Record<string, any> = {
-            name: `NFT #${nftId}`,
-            location: "",
-            chargerCount: 0,
-            price: 0,
-          };
+            const metadata: Record<string, any> = {
+              name: `NFT #${nftId}`,
+              location: "",
+              chargerCount: 0,
+              price: 0,
+            };
 
-          // 메타데이터에서 필요한 정보 추출
-          if (
-            nftMetadata &&
-            nftMetadata.length > 0 &&
-            nftMetadata[0] &&
-            nftMetadata[0][0]
-          ) {
-            const metadataFields = nftMetadata[0][0] as Array<
-              [string, { Text?: string; Nat?: bigint }]
-            >;
+            // 메타데이터에서 필요한 정보 추출
+            if (
+              nftMetadata &&
+              nftMetadata.length > 0 &&
+              nftMetadata[0] &&
+              nftMetadata[0][0]
+            ) {
+              const metadataFields = nftMetadata[0][0] as Array<
+                [string, { Text?: string; Nat?: bigint }]
+              >;
 
-            for (const [key, value] of metadataFields) {
-              if (key === "name" && value.Text) {
-                metadata.name = value.Text;
-              }
-              if (key === "location" && value.Text) {
-                metadata.location = value.Text;
-              }
-              if (key === "chargerCount" && value.Nat) {
-                metadata.chargerCount = Number(value.Nat);
-              }
-              if (key === "price" && value.Nat) {
-                metadata.price = Number(value.Nat);
+              for (const [key, value] of metadataFields) {
+                if (key === "name" && value.Text) {
+                  metadata.name = value.Text;
+                }
+                if (key === "location" && value.Text) {
+                  metadata.location = value.Text;
+                }
+                if (key === "chargerCount" && value.Nat) {
+                  metadata.chargerCount = Number(value.Nat);
+                }
+                if (key === "price" && value.Nat) {
+                  metadata.price = Number(value.Nat);
+                }
               }
             }
-          }
 
-          // 메타데이터 캐시에 저장
-          metadataCache[Number(nftId)] = metadata;
-        } catch (error) {
-          console.error(`NFT #${nftId} 정보 가져오기 실패:`, error);
+            // 메타데이터 캐시에 저장
+            metadataCache[Number(nftId)] = metadata;
+          } catch (error) {
+            console.error(`NFT #${nftId} 정보 가져오기 실패:`, error);
+          }
         }
       }
 
       // 메타데이터 캐시 상태 업데이트
       setNftMetadataCache(metadataCache);
 
-      // 메타데이터 로딩 완료 표시
+      // 메타데이터 로딩 완료 표시 (스테이킹된 NFT가 없어도 완료로 표시)
       setMetadataLoaded(true);
     } catch (error) {
       console.error("사용자 수익 통계 가져오기 실패:", error);
