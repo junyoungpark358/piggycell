@@ -11,6 +11,7 @@ import { formatTokenDisplayForUI } from "../utils/tokenUtils";
 import { formatPGCBalance } from "../utils/tokenUtils";
 import pgcLogo from "../assets/pgc.png";
 import { useTheme } from "../contexts/ThemeContext";
+import { message } from "antd";
 
 const CardContent = styled.div`
   display: flex;
@@ -92,6 +93,7 @@ export interface NFTCardProps {
   loading?: boolean;
   primaryButtonText?: string;
   secondaryButtonText?: string;
+  isAuthenticated?: boolean;
 }
 
 export const NFTCard: React.FC<NFTCardProps> = ({
@@ -105,8 +107,22 @@ export const NFTCard: React.FC<NFTCardProps> = ({
   loading,
   primaryButtonText = "구매하기",
   secondaryButtonText,
+  isAuthenticated = false,
 }) => {
   const { theme } = useTheme();
+
+  // 로그인하지 않은 상태에서 버튼 클릭 시 처리할 함수
+  const handleBuyClick = () => {
+    if (!isAuthenticated && status !== "sold") {
+      message.error({
+        content: "NFT를 구매하려면 로그인이 필요합니다.",
+        key: "loginRequired",
+        duration: 5,
+      });
+    } else if (onBuy) {
+      onBuy();
+    }
+  };
 
   return (
     <StyledCard customVariant="nft">
@@ -132,7 +148,7 @@ export const NFTCard: React.FC<NFTCardProps> = ({
           <StyledButton
             customVariant={status === "sold" ? "ghost" : "primary"}
             customColor="primary"
-            onClick={onBuy}
+            onClick={handleBuyClick}
             loading={loading}
             disabled={status === "sold"}
           >

@@ -78,6 +78,7 @@ const NFTMarket = () => {
   const [nextStart, setNextStart] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [buyingNFT, setBuyingNFT] = useState<bigint | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
   const lastNFTElementRef = useCallback(
     (node: HTMLDivElement) => {
@@ -391,7 +392,18 @@ const NFTMarket = () => {
     }
   };
 
+  // 인증 상태 확인 함수 추가
+  const checkAuthentication = async () => {
+    const authManager = AuthManager.getInstance();
+    const authenticated = await authManager.isAuthenticated();
+    setIsAuthenticated(authenticated);
+    return authenticated;
+  };
+
   useEffect(() => {
+    // 컴포넌트 마운트 시 인증 상태 확인
+    checkAuthentication();
+
     // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
     fetchInitialNFTs(false);
   }, []);
@@ -416,6 +428,20 @@ const NFTMarket = () => {
     try {
       console.log(`NFT 구매 시작 - NFT ID: ${nftId.toString()}`);
       setBuyingNFT(nftId);
+
+      // 로그인 상태 확인
+      const authenticated = await checkAuthentication();
+      if (!authenticated) {
+        // 로그인 요청 메시지 표시
+        message.error({
+          content: "NFT를 구매하려면 로그인이 필요합니다.",
+          key: "loginRequired",
+          duration: 5,
+        });
+        setBuyingNFT(null);
+        return;
+      }
+
       const actor = await createActor();
       console.log("백엔드 액터 생성 완료");
 
@@ -423,7 +449,12 @@ const NFTMarket = () => {
       const authManager = AuthManager.getInstance();
       const userPrincipal = await authManager.getPrincipal();
       if (!userPrincipal) {
-        message.error("로그인이 필요합니다.");
+        // 로그인 요청 메시지 표시 (key 추가 및 구체적인 메시지)
+        message.error({
+          content: "NFT를 구매하려면 로그인이 필요합니다.",
+          key: "loginRequired",
+          duration: 5,
+        });
         setBuyingNFT(null);
         return;
       }
@@ -438,9 +469,11 @@ const NFTMarket = () => {
 
       if (!isStillListed) {
         console.log(`NFT ID ${nftId.toString()}는 더 이상 판매 중이 아닙니다.`);
-        message.error(
-          "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다."
-        );
+        message.error({
+          content:
+            "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다.",
+          key: "nftNotAvailable",
+        });
         setBuyingNFT(null);
         return;
       }
@@ -778,6 +811,7 @@ const NFTMarket = () => {
                       onBuy={() => handleBuyNFT(nft.id)}
                       loading={buyingNFT === nft.id}
                       primaryButtonText="구매하기"
+                      isAuthenticated={isAuthenticated}
                     />
                   </Col>
                 ))}

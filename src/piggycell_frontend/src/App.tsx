@@ -17,6 +17,25 @@ import UserLayout from "./layouts/UserLayout";
 import { AuthManager } from "./utils/auth";
 import "./App.css";
 
+// 보호된 경로를 위한 컴포넌트
+interface ProtectedRouteProps {
+  isAuthenticated: boolean;
+  element: React.ReactNode;
+  redirectPath?: string;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  isAuthenticated,
+  element,
+  redirectPath = "/nft-market",
+}) => {
+  return isAuthenticated ? (
+    <>{element}</>
+  ) : (
+    <Navigate to={redirectPath} replace />
+  );
+};
+
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,22 +59,71 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route element={<UserLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<Home />}
+              />
+            }
+          />
           <Route path="/nft-market" element={<NFTMarket />} />
-          <Route path="/staking" element={<Staking />} />
-          <Route path="/revenue" element={<Revenue />} />
-          {isAuthenticated && (
-            <>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route
-                path="/admin/nft-market"
+          <Route
+            path="/staking"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<Staking />}
+              />
+            }
+          />
+          <Route
+            path="/revenue"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<Revenue />}
+              />
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<AdminDashboard />}
+              />
+            }
+          />
+          <Route
+            path="/admin/nft-market"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
                 element={<AdminNFTManagement />}
               />
-              <Route path="/admin/revenue" element={<AdminRevenue />} />
-              <Route path="/admin/token" element={<AdminTokenManagement />} />
-            </>
-          )}
-          <Route path="*" element={<Navigate to="/" replace />} />
+            }
+          />
+          <Route
+            path="/admin/revenue"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<AdminRevenue />}
+              />
+            }
+          />
+          <Route
+            path="/admin/token"
+            element={
+              <ProtectedRoute
+                isAuthenticated={isAuthenticated}
+                element={<AdminTokenManagement />}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/nft-market" replace />} />
         </Route>
       </Routes>
     </Router>
