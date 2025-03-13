@@ -1,4 +1,4 @@
-import { Col, Row, Tag, message, Tooltip } from "antd";
+import { Col, Row, Tag, message, Tooltip, Modal, Form } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 import {
@@ -9,6 +9,8 @@ import {
   BankOutlined,
   UserOutlined,
   LineChartOutlined,
+  PlusOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import type { FilterValue, SorterResult } from "antd/es/table/interface";
 import "./Dashboard.css";
@@ -29,6 +31,7 @@ import {
   TransactionFilter,
   TransactionDisplay,
   NFTStats,
+  addAdmin,
 } from "../../utils/statsApi";
 
 // ICRC-3 트랜잭션 관련 타입 정의
@@ -63,6 +66,12 @@ const AdminDashboard = () => {
   });
   const [searchText, setSearchText] = useState("");
   const [searchTimer, setSearchTimer] = useState<any>(null);
+
+  // 관리자 추가 모달 상태
+  const [isAddAdminModalVisible, setIsAddAdminModalVisible] = useState(false);
+  const [adminPrincipalId, setAdminPrincipalId] = useState("");
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [form] = Form.useForm();
 
   // 검색 핸들러 수정 - 타이머 추가
   const handleSearch = async (value: string) => {
@@ -304,6 +313,62 @@ const AdminDashboard = () => {
     }
   };
 
+  // 관리자 추가 모달 표시
+  const showAddAdminModal = () => {
+    setIsAddAdminModalVisible(true);
+  };
+
+  // 관리자 추가 모달 닫기
+  const handleAddAdminCancel = () => {
+    setIsAddAdminModalVisible(false);
+    setAdminPrincipalId("");
+    form.resetFields();
+  };
+
+  // 관리자 추가 처리
+  const handleAddAdmin = async () => {
+    try {
+      if (!adminPrincipalId.trim()) {
+        message.error("관리자 Principal ID를 입력해주세요.");
+        return;
+      }
+
+      setAddingAdmin(true);
+      message.loading({
+        content: "관리자를 추가하는 중...",
+        key: "addAdmin",
+        duration: 0,
+      });
+
+      // 관리자 추가 API 호출
+      const result = await addAdmin(adminPrincipalId);
+
+      if (result.ok) {
+        message.success({
+          content: "관리자가 성공적으로 추가되었습니다.",
+          key: "addAdmin",
+          duration: 2,
+        });
+        handleAddAdminCancel();
+      } else {
+        message.error({
+          content: `관리자 추가 실패: ${result.err}`,
+          key: "addAdmin",
+          duration: 3,
+        });
+      }
+    } catch (error) {
+      console.error("[ERROR] 관리자 추가 중 오류 발생:", error);
+      message.error({
+        content: "관리자 추가 중 오류가 발생했습니다.",
+        key: "addAdmin",
+        duration: 3,
+      });
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
   // 테이블 정의
   const columns: ColumnsType<TransactionDisplay> = [
     {
@@ -446,6 +511,14 @@ const AdminDashboard = () => {
             onChange={handleSearchInputChange}
           />
         </div>
+        <StyledButton
+          customVariant="primary"
+          customColor="primary"
+          onClick={showAddAdminModal}
+          icon={<UserAddOutlined />}
+        >
+          관리자 추가
+        </StyledButton>
       </div>
 
       <StyledTable
@@ -464,6 +537,67 @@ const AdminDashboard = () => {
         }}
         onChange={handleTableChange}
       />
+
+      {/* 관리자 추가 모달 */}
+      <Modal
+        title="관리자 추가"
+        open={isAddAdminModalVisible}
+        onCancel={handleAddAdminCancel}
+        className="admin-modal"
+        footer={[
+          <StyledButton
+            key="cancel"
+            customVariant="ghost"
+            customColor="primary"
+            onClick={handleAddAdminCancel}
+          >
+            취소
+          </StyledButton>,
+          <StyledButton
+            key="submit"
+            customVariant="primary"
+            customColor="primary"
+            loading={addingAdmin}
+            onClick={handleAddAdmin}
+          >
+            추가
+          </StyledButton>,
+        ]}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          name="addAdminForm"
+          className="admin-form"
+          requiredMark={false}
+        >
+          <Form.Item
+            name="principalId"
+            label="관리자 Principal ID"
+            rules={[
+              {
+                required: true,
+                message: "관리자 Principal ID를 입력해주세요.",
+              },
+              {
+                pattern: /^[a-zA-Z0-9\-]+$/,
+                message: "유효한 Principal ID 형식이 아닙니다.",
+              },
+            ]}
+          >
+            <StyledInput
+              placeholder="새 관리자의 Principal ID를 입력하세요"
+              value={adminPrincipalId}
+              onChange={(e) => setAdminPrincipalId(e.target.value)}
+              customSize="md"
+              noRotate={true}
+            />
+          </Form.Item>
+          <p className="form-description">
+            관리자 추가는 슈퍼 관리자만 수행할 수 있습니다.
+          </p>
+        </Form>
+      </Modal>
     </div>
   );
 };

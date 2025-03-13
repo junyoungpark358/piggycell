@@ -739,3 +739,32 @@ export const getUserBalance = async (): Promise<number> => {
     return 0;
   }
 };
+
+// 관리자 추가 함수
+export const addAdmin = async (
+  principalId: string
+): Promise<{ ok: string | null; err: string | null }> => {
+  try {
+    const actor = await createActor();
+    // 문자열을 Principal 타입으로 변환
+    const principal = Principal.fromText(principalId);
+    const result = await actor.addAdmin(principal);
+
+    if ("ok" in result) {
+      return { ok: "성공", err: null };
+    } else if ("err" in result) {
+      return { ok: null, err: result.err };
+    }
+
+    return { ok: null, err: "알 수 없는 오류가 발생했습니다." };
+  } catch (error) {
+    console.error("관리자 추가 중 오류 발생:", error);
+    return {
+      ok: null,
+      err:
+        error instanceof Error
+          ? error.message
+          : "알 수 없는 오류가 발생했습니다.",
+    };
+  }
+};
