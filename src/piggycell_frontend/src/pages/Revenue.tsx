@@ -692,6 +692,26 @@ const Revenue = () => {
       );
       console.log("[Revenue] 받은 레코드:", result);
 
+      // 누락된 NFT 메타데이터를 찾기 위한 Set 생성
+      const missingNftIds = new Set<number>();
+
+      // 기존 분배 내역에 있는 모든 토큰 ID를 확인하여 메타데이터가 없는 경우도 추가
+      if (!reset) {
+        distributions.forEach((dist) => {
+          const tokenId = dist.tokenId;
+          // nftInfo가 없거나 location이 "정보 로딩 중..."인 경우
+          if (
+            !nftMetadataCache[tokenId] ||
+            (dist.nftInfo && dist.nftInfo.location === "정보 로딩 중...")
+          ) {
+            missingNftIds.add(tokenId);
+            console.log(
+              `[Revenue] 기존 분배 내역에서 누락된 NFT 메타데이터 발견: tokenId=${tokenId}`
+            );
+          }
+        });
+      }
+
       // 결과 변환 및 상태 업데이트
       const formattedRecords: DistributionRecord[] = result.items.map(
         (record: UserDistributionRecord) => {
@@ -710,28 +730,32 @@ const Revenue = () => {
             } (밀리초) → ${dateString} (유효함: ${isValidDate})`
           );
 
-          const nftInfo = nftMetadataCache[toSafeNumber(record.tokenId)];
-          console.log(
-            `[Revenue] NFT 메타데이터: ${nftInfo ? "있음" : "없음"} (tokenId=${
-              record.tokenId
-            })`
-          );
+          const tokenId = toSafeNumber(record.tokenId);
+          const nftInfo = nftMetadataCache[tokenId];
+
+          // 메타데이터가 없는 경우 가져올 NFT ID 목록에 추가
+          if (!nftInfo) {
+            missingNftIds.add(tokenId);
+            console.log(
+              `[Revenue] 누락된 NFT 메타데이터 발견: tokenId=${tokenId}`
+            );
+          }
 
           return {
             recordId: toSafeNumber(record.recordId),
             userId: record.userId.toString(),
-            tokenId: toSafeNumber(record.tokenId),
+            tokenId: tokenId,
             amount: toSafeNumber(record.amount),
             distributedAt: rawTimestamp,
             nftInfo: nftInfo
               ? {
-                  name: nftInfo.name || `NFT #${record.tokenId}`,
+                  name: nftInfo.name || `NFT #${tokenId}`,
                   location: nftInfo.location || "",
                   chargerCount: nftInfo.chargerCount || 0,
                   price: nftInfo.price || 0,
                 }
               : {
-                  name: `NFT #${record.tokenId}`,
+                  name: `NFT #${tokenId}`,
                   location: "정보 로딩 중...",
                   chargerCount: 0,
                   price: 0,
@@ -763,15 +787,12 @@ const Revenue = () => {
         // 백엔드에서 반환한 hasMore 값 사용
         setHasMore(result.hasMore);
 
-        // NFT 메타데이터 업데이트 필요한 경우 로그 출력
-        for (const record of formattedRecords) {
-          if (!nftMetadataCache[record.tokenId]) {
-            console.log(
-              `[Revenue] NFT 메타데이터 캐시 없음: tokenId=${record.tokenId}`
-            );
-            // 누락된 NFT 메타데이터 가져오기 시도
-            fetchMissingNFTMetadata(record.tokenId);
-          }
+        // 누락된 NFT 메타데이터가 있으면 일괄 처리
+        if (missingNftIds.size > 0) {
+          console.log(
+            `[Revenue] 누락된 NFT 메타데이터 ${missingNftIds.size}개 가져오기 시작`
+          );
+          fetchMissingNFTMetadataBatch(Array.from(missingNftIds));
         }
       }
     } catch (error) {
@@ -780,6 +801,140 @@ const Revenue = () => {
     } finally {
       setDistributionsLoading(false);
       console.log("[Revenue] 수익 분배 내역 로딩 완료");
+    }
+  };
+
+  // 누락된 NFT 메타데이터를 일괄 가져오는 함수
+  const fetchMissingNFTMetadataBatch = async (tokenIds: number[]) => {
+    try {
+      if (tokenIds.length === 0) return;
+
+      console.log(
+        `[Revenue] 누락된 NFT 메타데이터 일괄 가져오기 시작: ${tokenIds.join(
+          ", "
+        )}`
+      );
+
+      // 로그인 상태 확인
+      const authManager = AuthManager.getInstance();
+      const identity = await authManager.getIdentity();
+      if (!identity) {
+        console.error("[Revenue] 로그인 없음: NFT 메타데이터 가져오기 실패");
+        return;
+      }
+
+      // 백엔드 액터 생성
+      const actor = await createActor();
+
+      // NFT ID를 BigInt로 변환
+      const bigIntTokenIds = tokenIds.map((id) => BigInt(id));
+
+      // NFT 메타데이터 일괄 가져오기
+      const nftMetadataResults = await actor.icrc7_token_metadata(
+        bigIntTokenIds
+      );
+
+      // 새 메타데이터 캐시 객체 생성
+      const newCacheEntries: Record<number, any> = {};
+
+      // 결과 처리
+      for (let i = 0; i < nftMetadataResults.length; i++) {
+        try {
+          const tokenId = tokenIds[i];
+          const nftMetadata = nftMetadataResults[i];
+
+          const metadata: Record<string, any> = {
+            name: `NFT #${tokenId}`,
+            location: "",
+            chargerCount: 0,
+            price: 0,
+          };
+
+          // 메타데이터에서 필요한 정보 추출
+          if (nftMetadata && nftMetadata[0]) {
+            const metadataFields = nftMetadata[0] as Array<
+              [string, { Text?: string; Nat?: bigint }]
+            >;
+
+            for (const [key, value] of metadataFields) {
+              if (key === "name" && value.Text) {
+                metadata.name = value.Text;
+              }
+              if (key === "location" && value.Text) {
+                metadata.location = value.Text;
+              }
+              if (key === "chargerCount" && value.Nat) {
+                metadata.chargerCount = Number(value.Nat);
+              }
+              if (key === "price" && value.Nat) {
+                metadata.price = Number(value.Nat);
+              }
+            }
+          }
+
+          // 메타데이터 캐시에 저장
+          newCacheEntries[tokenId] = metadata;
+          console.log(
+            `[Revenue] NFT #${tokenId} 메타데이터 가져오기 성공:`,
+            metadata
+          );
+        } catch (error) {
+          console.error(
+            `[Revenue] NFT #${tokenIds[i]} 메타데이터 처리 실패:`,
+            error
+          );
+        }
+      }
+
+      // 원자적(atomic) 업데이트를 위해 두 상태 업데이트를 순차적으로 실행
+      // 먼저 메타데이터 캐시 업데이트
+      const updatedCache = await new Promise<Record<number, any>>((resolve) => {
+        setNftMetadataCache((prevCache) => {
+          const mergedCache = {
+            ...prevCache,
+            ...newCacheEntries,
+          };
+          resolve(mergedCache); // 업데이트된 캐시 값을 프로미스로 전달
+          return mergedCache;
+        });
+      });
+
+      console.log(
+        `[Revenue] 메타데이터 캐시 업데이트 완료. 캐시 크기: ${
+          Object.keys(updatedCache).length
+        }`
+      );
+
+      // 전체 분배 내역에 대해 업데이트된 메타데이터 캐시를 기반으로 정보 업데이트
+      setDistributions((prevDistributions) => {
+        return prevDistributions.map((record) => {
+          const cachedInfo = updatedCache[record.tokenId];
+          // 캐시된 정보가 있으면 사용, 없으면 기존 정보 유지
+          if (cachedInfo) {
+            return {
+              ...record,
+              nftInfo: {
+                name: cachedInfo.name || `NFT #${record.tokenId}`,
+                location: cachedInfo.location || "",
+                chargerCount: cachedInfo.chargerCount || 0,
+                price: cachedInfo.price || 0,
+              },
+            };
+          }
+          return record;
+        });
+      });
+
+      console.log(
+        `[Revenue] 누락된 NFT 메타데이터 일괄 가져오기 완료: ${
+          Object.keys(newCacheEntries).length
+        }개 처리됨`
+      );
+    } catch (error) {
+      console.error(
+        "[Revenue] 누락된 NFT 메타데이터 일괄 가져오기 실패:",
+        error
+      );
     }
   };
 
@@ -845,76 +1000,56 @@ const Revenue = () => {
     handleRefresh(false);
   }, []);
 
-  // 누락된 NFT 메타데이터를 가져오는 함수
-  const fetchMissingNFTMetadata = async (tokenId: number) => {
-    try {
-      console.log(`[Revenue] 누락된 NFT #${tokenId} 메타데이터 가져오기 시작`);
+  // 메타데이터 캐시가 변경될 때마다 분배 내역을 업데이트하여 동기화 유지
+  useEffect(() => {
+    // 분배 내역이나 메타데이터 캐시가 비어있는 경우 무시
+    if (
+      distributions.length === 0 ||
+      Object.keys(nftMetadataCache).length === 0
+    ) {
+      return;
+    }
 
-      // 로그인 상태 확인
-      const authManager = AuthManager.getInstance();
-      const identity = await authManager.getIdentity();
-      if (!identity) {
-        console.error("[Revenue] 로그인 없음: NFT 메타데이터 가져오기 실패");
-        return;
-      }
+    console.log(
+      `[Revenue] 메타데이터 캐시 변경 감지: ${
+        Object.keys(nftMetadataCache).length
+      }개의 NFT 정보`
+    );
 
-      // 백엔드 액터 생성
-      const actor = await createActor();
+    // 메타데이터 캐시가 변경되면 모든 분배 내역을 업데이트
+    setDistributions((prevDistributions) => {
+      let updatedCount = 0;
 
-      // NFT 메타데이터 가져오기
-      const nftMetadata = await actor.icrc7_token_metadata([BigInt(tokenId)]);
+      const updatedDistributions = prevDistributions.map((record) => {
+        const cachedInfo = nftMetadataCache[record.tokenId];
 
-      const metadata: Record<string, any> = {
-        name: `NFT #${tokenId}`,
-        location: "",
-        chargerCount: 0,
-        price: 0,
-      };
-
-      // 메타데이터에서 필요한 정보 추출
-      if (
-        nftMetadata &&
-        nftMetadata.length > 0 &&
-        nftMetadata[0] &&
-        nftMetadata[0][0]
-      ) {
-        const metadataFields = nftMetadata[0][0] as Array<
-          [string, { Text?: string; Nat?: bigint }]
-        >;
-
-        for (const [key, value] of metadataFields) {
-          if (key === "name" && value.Text) {
-            metadata.name = value.Text;
-          }
-          if (key === "location" && value.Text) {
-            metadata.location = value.Text;
-          }
-          if (key === "chargerCount" && value.Nat) {
-            metadata.chargerCount = Number(value.Nat);
-          }
-          if (key === "price" && value.Nat) {
-            metadata.price = Number(value.Nat);
-          }
+        // 캐시된 정보가 있고, 현재 "정보 로딩 중..." 상태인 경우만 업데이트
+        if (
+          cachedInfo &&
+          (!record.nftInfo ||
+            record.nftInfo.location === "정보 로딩 중..." ||
+            record.nftInfo.location === "")
+        ) {
+          updatedCount++;
+          return {
+            ...record,
+            nftInfo: {
+              name: cachedInfo.name || `NFT #${record.tokenId}`,
+              location: cachedInfo.location || "",
+              chargerCount: cachedInfo.chargerCount || 0,
+              price: cachedInfo.price || 0,
+            },
+          };
         }
-      }
-
-      // 메타데이터 캐시 업데이트
-      setNftMetadataCache((prevCache) => ({
-        ...prevCache,
-        [tokenId]: metadata,
-      }));
+        return record;
+      });
 
       console.log(
-        `[Revenue] NFT #${tokenId} 메타데이터 가져오기 성공:`,
-        metadata
+        `[Revenue] 분배 내역 동기화 완료: ${updatedCount}개 레코드 업데이트됨`
       );
-    } catch (error) {
-      console.error(
-        `[Revenue] NFT #${tokenId} 메타데이터 가져오기 실패:`,
-        error
-      );
-    }
-  };
+      return updatedDistributions;
+    });
+  }, [nftMetadataCache]); // 메타데이터 캐시가 변경될 때마다 실행
 
   return (
     <div className="revenue-page">
