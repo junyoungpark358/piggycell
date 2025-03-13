@@ -417,7 +417,7 @@ const AdminDashboard = () => {
         </Col>
         <Col xs={12} sm={6} md={6}>
           <StatCard
-            title="활성 사용자"
+            title="NFT 소유자"
             value={nftStats.activeUsers}
             prefix={<UserOutlined style={{ color: "#0284c7" }} />}
             suffix="명"

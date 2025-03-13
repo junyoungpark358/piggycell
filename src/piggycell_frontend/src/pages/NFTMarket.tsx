@@ -418,6 +418,25 @@ const NFTMarket = () => {
       }
       console.log(`구매자 Principal: ${userPrincipal.toString()}`);
 
+      // 먼저 NFT가 여전히 판매 중인지 확인
+      console.log("NFT 판매 상태 확인 중...");
+      const listingsResult = await actor.getListings([], BigInt(999));
+      const isStillListed = listingsResult.items.some(
+        (listing) => listing.tokenId === nftId
+      );
+
+      if (!isStillListed) {
+        console.log(`NFT ID ${nftId.toString()}는 더 이상 판매 중이 아닙니다.`);
+        message.error(
+          "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다."
+        );
+        setBuyingNFT(null);
+        return;
+      }
+      console.log(
+        `NFT ID ${nftId.toString()}는 여전히 판매 중입니다. 구매 계속 진행...`
+      );
+
       // 현재 NFT 가격 확인
       const nftInfo = nfts.find((nft) => nft.id === nftId);
       if (!nftInfo) {
@@ -465,6 +484,24 @@ const NFTMarket = () => {
           `잔액이 부족합니다. 현재 잔액: ${formattedBalance.toFixed(
             2
           )} PGC, 필요한 금액: ${formattedPrice.toFixed(2)} PGC`
+        );
+        setBuyingNFT(null);
+        return;
+      }
+
+      // 한번 더 NFT가 여전히 판매 중인지 확인 (동시성 문제 대비)
+      console.log("NFT 판매 상태 재확인 중...");
+      const latestListingsResult = await actor.getListings([], BigInt(999));
+      const isStillAvailable = latestListingsResult.items.some(
+        (listing) => listing.tokenId === nftId
+      );
+
+      if (!isStillAvailable) {
+        console.log(
+          `재확인: NFT ID ${nftId.toString()}는 더 이상 판매 중이 아닙니다.`
+        );
+        message.error(
+          "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다."
         );
         setBuyingNFT(null);
         return;
@@ -534,6 +571,24 @@ const NFTMarket = () => {
         );
       }
 
+      // 마지막으로 NFT가 여전히 판매 중인지 최종 확인
+      console.log("NFT 판매 상태 최종 확인 중...");
+      const finalListingsResult = await actor.getListings([], BigInt(999));
+      const isFinallyAvailable = finalListingsResult.items.some(
+        (listing) => listing.tokenId === nftId
+      );
+
+      if (!isFinallyAvailable) {
+        console.log(
+          `최종 확인: NFT ID ${nftId.toString()}는 더 이상 판매 중이 아닙니다.`
+        );
+        message.error(
+          "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다."
+        );
+        setBuyingNFT(null);
+        return;
+      }
+
       // NFT 구매 시도
       message.loading({
         content: "NFT 구매 처리 중...",
@@ -595,6 +650,12 @@ const NFTMarket = () => {
             message.error({
               content:
                 "잔액이 부족합니다. 충분한 PGC 토큰을 보유하고 있는지 확인하세요.",
+              key: "buyMessage",
+            });
+          } else if ("NotListed" in result.err) {
+            message.error({
+              content:
+                "이 NFT는 더 이상 판매 중이 아닙니다. 다른 사용자가 이미 구매했을 수 있습니다.",
               key: "buyMessage",
             });
           } else {
