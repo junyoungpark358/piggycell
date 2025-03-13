@@ -55,6 +55,7 @@ const Staking = () => {
   });
   const [processingNFT, setProcessingNFT] = useState<bigint | null>(null);
   const [highlightedNFT, setHighlightedNFT] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const fetchStakedNFTs = async (showMessage = false) => {
     try {
@@ -76,6 +77,10 @@ const Staking = () => {
       if (!identity) {
         return;
       }
+
+      // 사용자가 인증되었는지 확인
+      const authenticated = await authManager.isAuthenticated();
+      setIsAuthenticated(authenticated);
 
       // 통계 데이터 가져오기
       const stats = await getStakingStats();
@@ -297,6 +302,7 @@ const Staking = () => {
                 onBuy={() => handleUnstake(nft.id)}
                 loading={processingNFT === nft.id}
                 primaryButtonText="언스테이킹"
+                isAuthenticated={isAuthenticated}
               />
             </Col>
           ))}
