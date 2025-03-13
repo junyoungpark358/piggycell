@@ -1395,3 +1395,41 @@ h6 {
   font-weight: 700 !important;
   text-shadow: 1px 1px 0 #fff !important;
 }
+
+/* 접근 거부 페이지 스타일 */
+.access-denied-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.access-denied-container h1 {
+  font-size: 2rem;
+  color: #f5222d;
+  margin-bottom: 1rem;
+}
+
+.access-denied-container p {
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 2rem;
+}
+
+.primary-button {
+  padding: 10px 20px;
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.primary-button:hover {
+  background-color: #096dd9;
+}
