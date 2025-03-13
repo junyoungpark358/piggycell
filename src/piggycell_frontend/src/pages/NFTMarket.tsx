@@ -198,17 +198,25 @@ const NFTMarket = () => {
         let chargerCount = 0;
         let price = BigInt(0);
 
-        if (metadata && metadata.length > 0 && metadata[0]) {
-          const metadataEntries = metadata[0] as Metadata;
-          for (const [key, value] of metadataEntries) {
-            if (key === "piggycell:location" && value.Text) {
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+          metadataFields.forEach(([key, value]) => {
+            if (key === "location" && value.Text) {
               location = value.Text;
-            } else if (key === "piggycell:charger_count" && value.Nat) {
+            } else if (key === "chargerCount" && value.Nat) {
               chargerCount = Number(value.Nat);
             } else if (key === "price" && value.Nat) {
               price = value.Nat;
             }
-          }
+            // 이전 형식의 키 이름도 처리
+            if (key === "piggycell:location" && value.Text) {
+              location = value.Text;
+            } else if (key === "piggycell:charger_count" && value.Nat) {
+              chargerCount = Number(value.Nat);
+            }
+          });
         }
 
         return {
