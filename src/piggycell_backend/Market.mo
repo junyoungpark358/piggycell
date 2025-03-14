@@ -8,13 +8,14 @@ import Buffer "mo:base/Buffer";
 import Hash "mo:base/Hash";
 import Nat64 "mo:base/Nat64";
 import Int "mo:base/Int";
+import Option "mo:base/Option";
 import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 import Debug "mo:base/Debug";
 import Array "mo:base/Array";
 import Iter "mo:base/Iter";
-import Option "mo:base/Option";
 import Error "mo:base/Error";
+import Admin "./Admin";
 
 module {
     // 리스팅 정보 타입
@@ -40,7 +41,7 @@ module {
         nextStart: ?Nat;
     };
 
-    public class MarketManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal) {
+    public class MarketManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal, adminManager: Admin.AdminManager) {
         // 맞춤형 해시 함수로 구현
         private func natHash(n: Nat) : Hash.Hash {
             Text.hash(Nat.toText(n))
@@ -49,6 +50,10 @@ module {
         private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, natHash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         private let listingsByTime = Buffer.Buffer<(Int, Nat)>(0); // (timestamp, tokenId) 쌍을 저장하는 버퍼
+        
+        // 판매 완료된 NFT 관리를 위한 데이터 구조 추가
+        private let soldNFTs = TrieMap.TrieMap<Nat, Int>(Nat.equal, natHash); // tokenId -> sellTime
+        private let soldNFTsByTime = Buffer.Buffer<(Int, Nat)>(0); // (판매시각, NFT ID) 저장
         
         // NFT 리스팅
         public func listNFT(caller: Principal, tokenId: Nat, price: Nat) : Result.Result<(), ListingError> {
@@ -63,7 +68,8 @@ module {
                         listedAt = Time.now();
                     };
                     listings.put(tokenId, listing);
-                    listingsByTime.add((listing.listedAt, tokenId));
+                    // 판매 항목도 맨 앞에 추가하여 최신 항목이 앞에 오도록 변경
+                    listingsByTime.insert(0, (listing.listedAt, tokenId));
                     if (tokenId > lastTokenId) { lastTokenId := tokenId };
                     #ok(())
                 };
@@ -102,131 +108,122 @@ module {
                 case (?listing) {
                     Debug.print("Listing 정보: 판매자=" # Principal.toText(listing.seller) # ", 가격=" # Nat.toText(listing.price));
                     
-                    // 1. 판매자 계정 생성
-                    let sellerAccount: PiggyCellToken.Account = {
-                        owner = listing.seller;
-                        subaccount = null;
-                    };
+                    // SuperAdmin 정보 가져오기
+                    let superAdminOpt = adminManager.getSuperAdmin();
                     
-                    // 2. 구매자 계정 생성
-                    let buyerAccount: PiggyCellToken.Account = {
-                        owner = caller;
-                        subaccount = null;
-                    };
-                    
-                    // 3. 마켓 계정 생성
-                    let marketAccount: PiggyCellToken.Account = {
-                        owner = marketCanister;
-                        subaccount = null;
-                    };
-                    
-                    // 4. 구매자가 마켓에 승인한 금액 확인
-                    let allowanceArgs: PiggyCellToken.AllowanceArgs = {
-                        account = buyerAccount;
-                        spender = marketAccount;
-                    };
-                    
-                    let allowanceResponse = token.icrc2_allowance(allowanceArgs);
-                    let allowanceAmount = allowanceResponse.allowance;
-                    Debug.print("승인된 금액: " # Nat.toText(allowanceAmount) # ", 필요 금액: " # Nat.toText(listing.price));
-                    
-                    if (allowanceAmount < listing.price) {
-                        Debug.print("승인 금액 부족: 승인=" # Nat.toText(allowanceAmount) # ", 필요=" # Nat.toText(listing.price));
-                        return #err(#InsufficientBalance);
-                    };
-                    
-                    // 5. 토큰 전송 (구매자 -> 판매자, 마켓이 대신 처리)
-                    let transferFromArgs: PiggyCellToken.TransferFromArgs = {
-                        spender_subaccount = null;
-                        from = buyerAccount;
-                        to = sellerAccount;
-                        amount = listing.price;
-                        fee = ?token.icrc1_fee();
-                        memo = null;
-                        created_at_time = null;
-                    };
-                    
-                    Debug.print("토큰 전송 시도(transfer_from): 금액=" # Nat.toText(listing.price) # ", 수수료=" # Nat.toText(token.icrc1_fee()));
-                    Debug.print("시간 값: 생략됨 (null)");
-                    
-                    // 승인된 토큰 전송 시도
-                    let tokenTransferResult = token.icrc2_transfer_from(marketCanister, transferFromArgs);
-                    
-                    switch(tokenTransferResult) {
-                        case (#Err(transferError)) {
-                            // 토큰 전송 실패 시 오류 정보 상세 로깅
-                            switch(transferError) {
-                                case (#InsufficientFunds({ balance })) { 
-                                    Debug.print("토큰 전송 실패: 잔액 부족 - 잔액=" # Nat.toText(balance));
-                                    return #err(#InsufficientBalance) 
-                                };
-                                case (#InsufficientAllowance({ allowance })) { 
-                                    Debug.print("토큰 전송 실패: 승인 잔액 부족 - 승인액=" # Nat.toText(allowance));
-                                    return #err(#InsufficientBalance) 
-                                };
-                                case (#BadFee({ expected_fee })) {
-                                    Debug.print("토큰 전송 실패: 잘못된 수수료 - 예상 수수료=" # Nat.toText(expected_fee));
-                                    return #err(#TransferError) 
-                                };
-                                case (_) { 
-                                    Debug.print("토큰 전송 실패: 기타 오류");
-                                    return #err(#TransferError) 
-                                };
-                            };
+                    // SuperAdmin이 설정되지 않았으면 오류 반환
+                    switch (superAdminOpt) {
+                        case (null) {
+                            Debug.print("SuperAdmin이 설정되지 않았습니다.");
+                            return #err(#TransferError);
                         };
-                        case (#Ok(_)) {
-                            Debug.print("토큰 전송 성공. NFT 전송 시작");
-                            // 토큰 전송 성공 시 NFT 전송 진행
-                            let nftTransferArg: ChargerHubNFT.TransferArg = {
-                                token_id = tokenId;
-                                from_subaccount = null;
-                                to = {
-                                    owner = caller;
-                                    subaccount = null;
-                                };
+                        case (?superAdmin) {
+                            // 1. SuperAdmin 계정 생성
+                            let superAdminAccount: PiggyCellToken.Account = {
+                                owner = superAdmin;
+                                subaccount = null;
+                            };
+                            
+                            // 2. 구매자 계정 생성
+                            let buyerAccount: PiggyCellToken.Account = {
+                                owner = caller;
+                                subaccount = null;
+                            };
+                            
+                            // 3. 마켓 계정 생성
+                            let marketAccount: PiggyCellToken.Account = {
+                                owner = marketCanister;
+                                subaccount = null;
+                            };
+                            
+                            // 4. 구매자가 마켓에 승인한 금액 확인
+                            let allowanceArgs: PiggyCellToken.AllowanceArgs = {
+                                account = buyerAccount;
+                                spender = marketAccount;
+                            };
+                            
+                            let allowanceResponse = token.icrc2_allowance(allowanceArgs);
+                            let allowanceAmount = allowanceResponse.allowance;
+                            Debug.print("승인된 금액: " # Nat.toText(allowanceAmount) # ", 필요 금액: " # Nat.toText(listing.price));
+                            
+                            if (allowanceAmount < listing.price) {
+                                Debug.print("승인 금액 부족: 승인=" # Nat.toText(allowanceAmount) # ", 필요=" # Nat.toText(listing.price));
+                                return #err(#InsufficientBalance);
+                            };
+                            
+                            // 5. 토큰 전송 (구매자 -> SuperAdmin, 마켓이 대신 처리)
+                            let transferFromArgs: PiggyCellToken.TransferFromArgs = {
+                                spender_subaccount = null;
+                                from = buyerAccount;
+                                to = superAdminAccount;  // SuperAdmin 계정으로 전송
+                                amount = listing.price;
+                                fee = ?token.icrc1_fee();
                                 memo = null;
-                                // 시간 처리 완전 생략 - 오버플로우 방지
                                 created_at_time = null;
                             };
-
-                            // NFT 전송 시도 (마켓 캐니스터가 소유자이므로 marketCanister로 전송)
-                            let transferResult = nft.icrc7_transfer(marketCanister, [nftTransferArg]);
-                            Debug.print("NFT 전송 시도 결과: " # debug_show(transferResult));
                             
-                            switch(transferResult[0]) {
-                                case (null) { 
-                                    Debug.print("NFT 전송 실패: 결과가 null");
-                                    #err(#TransferError) 
-                                };
-                                case (?result) {
-                                    switch(result) {
-                                        case (#Ok(_)) {
-                                            Debug.print("NFT 전송 성공. 리스팅 삭제 중");
+                            Debug.print("토큰 전송 시도(transfer_from): 금액=" # Nat.toText(listing.price) # ", 수수료=" # Nat.toText(token.icrc1_fee()));
+                            Debug.print("시간 값: 생략됨 (null)");
+                            
+                            // icrc2_transfer_from 함수 호출
+                            let transferFromResult = switch (token.icrc2_transfer_from(marketCanister, transferFromArgs)) {
+                                case (#Ok(blockIndex)) { #Ok(blockIndex) };
+                                case (#Err(error)) { #Err(error) };
+                            };
+                            
+                            Debug.print("transfer_from 결과: " # debug_show(transferFromResult));
+                            
+                            switch (transferFromResult) {
+                                case (#Ok(blockIndex)) {
+                                    Debug.print("토큰 전송 성공: 블록 인덱스 " # Nat.toText(blockIndex));
+                                    
+                                    // 6. NFT 전송 처리
+                                    // NFT 소유권을 구매자에게 이전
+                                    switch(nft.updateOwner(marketCanister, tokenId, caller)) {
+                                        case (#ok()) {
+                                            Debug.print("NFT 소유권 이전 성공: tokenId=" # Nat.toText(tokenId) # ", 새 소유자=" # Principal.toText(caller));
+                                            
+                                            // 7. 처리 완료 후 리스팅 제거
+                                            Debug.print("구매 완료, 리스팅 제거: tokenId=" # Nat.toText(tokenId));
                                             listings.delete(tokenId);
+                                            
                                             // listingsByTime에서도 제거
                                             var i = 0;
                                             label l while (i < listingsByTime.size()) {
                                                 let (_, tid) = listingsByTime.get(i);
                                                 if (tid == tokenId) {
                                                     let _ = listingsByTime.remove(i);
-                                                    Debug.print("리스팅 삭제 완료. 구매 성공!");
                                                     break l;
                                                 };
                                                 i += 1;
                                             };
+                                            
+                                            // 판매 완료된 NFT 추적 로직 추가
+                                            let sellTime = Time.now();
+                                            soldNFTs.put(tokenId, sellTime);
+                                            // 최신 판매 항목이 버퍼 앞에 오도록 맨 앞에 추가
+                                            soldNFTsByTime.insert(0, (sellTime, tokenId));
+                                            
                                             #ok(listing)
                                         };
-                                        case (#Err(nftError)) { 
-                                            Debug.print("NFT 전송 실패: " # debug_show(nftError));
-                                            #err(#TransferError) 
+                                        case (#err(error)) {
+                                            Debug.print("NFT 소유권 이전 실패: " # error);
+                                            #err(#TransferError)
                                         };
-                                    }
+                                    };
+                                };
+                                case (#Err(error)) {
+                                    Debug.print("토큰 전송 실패: " # debug_show(error));
+                                    #err(#TransferError)
                                 };
                             }
                         };
                     };
                 };
-                case null { #err(#NotListed) };
+                case (null) {
+                    Debug.print("NFT가 판매 중이 아님: tokenId=" # Nat.toText(tokenId));
+                    #err(#NotListed)
+                };
             }
         };
 
@@ -300,52 +297,118 @@ module {
             listings.size()
         };
 
-        // 페이지네이션을 지원하는 리스팅 조회 (최적화된 버전)
+        // 페이지네이션을 지원하는 리스팅 조회 (최신순 정렬 지원)
         public func getListings(start: ?Nat, limit: Nat) : PageResult {
             let buffer = Buffer.Buffer<Listing>(0);
             var count = 0;
             var nextStartValue: ?Nat = null;
             
+            // 시작 인덱스 계산
             let startIndex = switch (start) {
                 case (?s) { s };
-                case null { listingsByTime.size() };
+                case null { 0 }; // 첫 페이지는 가장 최신 NFT부터 시작
             };
 
-            // 안전한 endIndex 계산
-            let endIndex = if (startIndex < limit) { 
-                0 
-            } else { 
-                // 트랩 방지를 위한 안전한 계산
-                startIndex - limit 
-            };
+            // 끝 인덱스 계산
+            let endIndex = Nat.min(startIndex + limit, listingsByTime.size());
             
             var i = startIndex;
-            // 인덱스 범위 검증 및 언더플로우 방지
-            while (i > endIndex and i > 0 and i <= listingsByTime.size()) {
-                // 안전한 인덱스 감소
-                i -= 1;
-                
-                // 인덱스 범위 추가 검증
-                if (i < listingsByTime.size()) {
-                    let (_, tokenId) = listingsByTime.get(i);
-                    switch (listings.get(tokenId)) {
-                        case (?listing) {
-                            buffer.add(listing);
-                            count += 1;
-                            if (count == limit) {
-                                nextStartValue := ?i;
-                            };
-                        };
-                        case null { };
+            // 인덱스 범위 검증 
+            while (i < endIndex and i < listingsByTime.size()) {
+                // 최신 항목이 버퍼 앞에 있으므로 그대로 접근
+                let (_, tokenId) = listingsByTime.get(i);
+                switch (listings.get(tokenId)) {
+                    case (?listing) {
+                        buffer.add(listing);
+                        count += 1;
                     };
+                    case null { };
                 };
+                
+                i += 1;
             };
+
+            // 다음 페이지가 있는지 확인
+            let nextStart = if (i < listingsByTime.size()) { ?i } else { null };
 
             {
                 items = Buffer.toArray(buffer);
                 total = listings.size();
-                nextStart = nextStartValue;
+                nextStart = nextStart;
             }
+        };
+
+        // 판매 완료된 NFT 조회 API 개선 (최신순 정렬 자동 지원)
+        public func getSoldNFTs(start: ?Nat, limit: Nat) : PageResult {
+            let buffer = Buffer.Buffer<Listing>(0);
+            var count = 0;
+            var nextStartValue: ?Nat = null;
+            
+            // 시작 인덱스 계산
+            let startIndex = switch (start) {
+                case (?s) { s };
+                case null { 0 }; // 첫 페이지는 가장 최신 판매된 NFT부터 시작
+            };
+
+            // 끝 인덱스 계산
+            let endIndex = Nat.min(startIndex + limit, soldNFTsByTime.size());
+            
+            var i = startIndex;
+            // 인덱스 범위 검증 
+            while (i < endIndex and i < soldNFTsByTime.size()) {
+                // 최신 항목이 버퍼 앞에 있으므로 그대로 접근
+                let (sellTime, tokenId) = soldNFTsByTime.get(i);
+                
+                // NFT 소유자 확인 (소유자 정보가 있어야 판매 완료 정보를 제공)
+                let ownerResult = nft.icrc7_owner_of([tokenId]);
+                if (ownerResult.size() > 0 and ownerResult[0] != null) {
+                    let ownerAccount = Option.unwrap(ownerResult[0]);
+                    
+                    // 가격 정보를 얻기 위해 메타데이터를 조회해볼 수 있으나,
+                    // 여기서는 간단하게 판매자를 구매자로 대체하고 가격 정보는 0으로 설정
+                    let soldListing: Listing = {
+                        tokenId = tokenId;
+                        seller = ownerAccount.owner; // 현재 소유자를 판매자로 표시
+                        price = 0; // 판매 가격 정보가 없으므로 0으로 설정
+                        listedAt = sellTime; // 판매 시간으로 설정
+                    };
+                    
+                    buffer.add(soldListing);
+                    count += 1;
+                };
+                
+                i += 1;
+            };
+
+            // 다음 페이지가 있는지 확인
+            let nextStart = if (i < soldNFTsByTime.size()) { ?i } else { null };
+
+            {
+                items = Buffer.toArray(buffer);
+                total = soldNFTs.size();
+                nextStart = nextStart;
+            }
+        };
+
+        // 생성자 아래에 추가
+        public func migrateSoldNFTsOrder() : () {
+            // 기존 데이터를 임시 배열로 복사
+            let tempArray = Buffer.toArray(soldNFTsByTime);
+            
+            // 시간(첫 번째 요소)을 기준으로 내림차순 정렬
+            let sortedArray = Array.sort<(Int, Nat)>(tempArray, func(a, b) {
+                Int.compare(b.0, a.0) // 내림차순 정렬 (최신순)
+            });
+            
+            // soldNFTsByTime 버퍼 초기화
+            soldNFTsByTime.clear();
+            
+            // 정렬된 데이터를 다시 버퍼에 추가
+            for (item in sortedArray.vals()) {
+                soldNFTsByTime.add(item);
+            };
+            
+            Debug.print("판매 완료된 NFT 데이터 " # Nat.toText(soldNFTsByTime.size()) # "개가 최신순으로 재정렬되었습니다.");
         };
     };
 }; 

@@ -27,7 +27,7 @@ actor Main {
     private let adminManager = Admin.AdminManager();
     private let token = PiggyCellToken.PiggyCellToken();
     private let stakingManager = Staking.StakingManager(token, nft);
-    private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main));
+    private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main), adminManager);
     private let revenueManager = RevenueDistribution.RevenueDistributionManager(token, stakingManager, adminManager);
 
     // 거래 내역을 저장하기 위한 타입과 변수
@@ -865,6 +865,10 @@ actor Main {
 
     public query func getListings(start: ?Nat, limit: Nat) : async Market.PageResult {
         marketManager.getListings(start, limit)
+    };
+
+    public query func getSoldNFTs(start: ?Nat, limit: Nat) : async Market.PageResult {
+        marketManager.getSoldNFTs(start, limit)
     };
 
     public query func getListingsBySeller(seller: Principal, start: ?Nat, limit: Nat) : async Market.PageResult {

@@ -79,46 +79,215 @@ const NFTMarket = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [buyingNFT, setBuyingNFT] = useState<bigint | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const observer = useRef<IntersectionObserver | null>(null);
-  const lastNFTElementRef = useCallback(
-    (node: HTMLDivElement) => {
-      if (loading || loadingMore) return;
-      if (observer.current) observer.current.disconnect();
+  const [soldHasMore, setSoldHasMore] = useState(true);
+  const [soldNextStart, setSoldNextStart] = useState<number | null>(null);
+  const [loadingMoreSold, setLoadingMoreSold] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("available");
 
-      observer.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && hasMore) {
-            console.log("마지막 요소가 화면에 표시됨. 추가 데이터 로드 시작");
-            fetchMoreNFTs();
-          }
-        },
-        {
-          root: null,
-          rootMargin: "0px",
-          threshold: 0.1,
-        }
-      );
+  // 각 탭마다 별도의 Observer 관리
+  const observersRef = useRef<Map<string, IntersectionObserver>>(new Map());
+  // 스크롤 위치 감지를 위한 추가 이벤트 리스너 관리
+  const scrollListenerActive = useRef<boolean>(false);
+  // 마지막 로드 시간 추적 (너무 빈번한 호출 방지)
+  const lastLoadTime = useRef<{ available: number; sold: number }>({
+    available: 0,
+    sold: 0,
+  });
 
-      if (node) {
-        console.log("마지막 요소에 observer 연결됨");
-        observer.current.observe(node);
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      // 모든 observer 정리
+      observersRef.current.forEach((observer) => observer.disconnect());
+      observersRef.current.clear();
+
+      // 스크롤 이벤트 제거
+      if (scrollListenerActive.current) {
+        window.removeEventListener("scroll", handleScroll);
       }
+    };
+  }, []);
+
+  // 스크롤 이벤트 핸들러 - 스로틀링 적용
+  const handleScroll = useCallback(() => {
+    // 현재 시간
+    const now = Date.now();
+    // 스로틀링 - 마지막 로드 후 300ms 이내에는 다시 로드하지 않음
+    const throttleTime = 300;
+    const activeTabLastLoad =
+      activeTab === "available"
+        ? lastLoadTime.current.available
+        : lastLoadTime.current.sold;
+
+    if (now - activeTabLastLoad < throttleTime) {
+      return;
+    }
+
+    // 페이지가 거의 하단에 도달했는지 확인
+    const scrollPercent =
+      (window.innerHeight + window.scrollY) / document.body.offsetHeight;
+
+    // 페이지의 70% 이상을 스크롤한 경우 추가 로드
+    if (scrollPercent > 0.7) {
+      if (activeTab === "available" && hasMore && !loadingMore) {
+        console.log("스크롤이 70% 이상에 도달했습니다. 추가 NFT 로드");
+        lastLoadTime.current.available = now;
+        fetchMoreNFTs();
+      } else if (activeTab === "sold" && soldHasMore && !loadingMoreSold) {
+        console.log(
+          "스크롤이 70% 이상에 도달했습니다. 추가 판매 완료 NFT 로드"
+        );
+        lastLoadTime.current.sold = now;
+        fetchMoreSoldNFTs();
+      }
+    }
+  }, [activeTab, hasMore, loadingMore, soldHasMore, loadingMoreSold]);
+
+  // 탭 변경 시 스크롤 이벤트 리스너 업데이트
+  useEffect(() => {
+    // 이전 스크롤 이벤트 제거
+    if (scrollListenerActive.current) {
+      window.removeEventListener("scroll", handleScroll);
+      scrollListenerActive.current = false;
+    }
+
+    // 새 스크롤 이벤트 추가 (현재 탭에 더 불러올 데이터가 있는 경우만)
+    if (
+      (activeTab === "available" && hasMore) ||
+      (activeTab === "sold" && soldHasMore)
+    ) {
+      window.addEventListener("scroll", handleScroll, { passive: true });
+      scrollListenerActive.current = true;
+    }
+
+    return () => {
+      if (scrollListenerActive.current) {
+        window.removeEventListener("scroll", handleScroll);
+        scrollListenerActive.current = false;
+      }
+    };
+  }, [activeTab, hasMore, soldHasMore, handleScroll]);
+
+  // 개선된 NFT 관찰 함수 - 각 요소마다 별도의 observer 사용
+  const getNFTRefCallback = useCallback(
+    (index: number, total: number) => {
+      // 관찰할 요소 결정: 마지막 5개 요소를 모두 관찰
+      const observeCount = Math.min(5, total);
+      const shouldObserve = total > 0 && index >= total - observeCount;
+
+      if (!shouldObserve || loading || activeTab !== "available")
+        return undefined;
+
+      return (node: HTMLDivElement | null) => {
+        if (!node) return;
+
+        // 기존 observer 제거
+        const observerId = `available-${index}`;
+        if (observersRef.current.has(observerId)) {
+          const oldObserver = observersRef.current.get(observerId);
+          oldObserver?.disconnect();
+          observersRef.current.delete(observerId);
+        }
+
+        // 새 observer 생성
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting && hasMore && !loadingMore) {
+              console.log(
+                `Available 탭: ${index}번째 요소가 화면에 표시됨. 추가 데이터 로드 시작`
+              );
+              const now = Date.now();
+              if (now - lastLoadTime.current.available > 300) {
+                // 300ms 스로틀링
+                lastLoadTime.current.available = now;
+                fetchMoreNFTs();
+              }
+            }
+          },
+          {
+            root: null,
+            rootMargin: "200px", // 더 넓은 감지 영역
+            threshold: 0.1, // 작은 부분만 보여도 감지
+          }
+        );
+
+        observer.observe(node);
+        observersRef.current.set(observerId, observer);
+      };
     },
-    [loading, loadingMore, hasMore]
+    [loading, loadingMore, hasMore, activeTab]
   );
+
+  // 판매 완료된 NFT용 개선된 ref 콜백
+  const getSoldNFTRefCallback = useCallback(
+    (index: number, total: number) => {
+      // 관찰할 요소 결정: 마지막 5개 요소를 모두 관찰
+      const observeCount = Math.min(5, total);
+      const shouldObserve = total > 0 && index >= total - observeCount;
+
+      if (!shouldObserve || loading || activeTab !== "sold") return undefined;
+
+      return (node: HTMLDivElement | null) => {
+        if (!node) return;
+
+        // 기존 observer 제거
+        const observerId = `sold-${index}`;
+        if (observersRef.current.has(observerId)) {
+          const oldObserver = observersRef.current.get(observerId);
+          oldObserver?.disconnect();
+          observersRef.current.delete(observerId);
+        }
+
+        // 새 observer 생성
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting && soldHasMore && !loadingMoreSold) {
+              console.log(
+                `Sold 탭: ${index}번째 요소가 화면에 표시됨. 추가 데이터 로드 시작`
+              );
+              const now = Date.now();
+              if (now - lastLoadTime.current.sold > 300) {
+                // 300ms 스로틀링
+                lastLoadTime.current.sold = now;
+                fetchMoreSoldNFTs();
+              }
+            }
+          },
+          {
+            root: null,
+            rootMargin: "200px", // 더 넓은 감지 영역
+            threshold: 0.1, // 작은 부분만 보여도 감지
+          }
+        );
+
+        observer.observe(node);
+        observersRef.current.set(observerId, observer);
+      };
+    },
+    [loading, loadingMoreSold, soldHasMore, activeTab]
+  );
+
+  // 탭 변경 시 observer 정리
+  useEffect(() => {
+    // 모든 observer 정리
+    observersRef.current.forEach((observer) => observer.disconnect());
+    observersRef.current.clear();
+  }, [activeTab]);
 
   const fetchMoreNFTs = async () => {
     if (!hasMore || loadingMore) return;
 
     try {
       setLoadingMore(true);
+      console.log("추가 NFT 로드 시작, 현재 개수:", nfts.length);
       const actor = await createActor();
       const result = await actor.getListings(
         [BigInt(nextStart || 0)],
-        BigInt(5)
+        BigInt(12) // 더 많은 데이터를 한번에 가져오기
       );
 
       if (result.items.length === 0) {
+        console.log("더 이상 불러올 NFT가 없습니다.");
         setHasMore(false);
         setLoadingMore(false);
         return;
@@ -126,6 +295,15 @@ const NFTMarket = () => {
 
       const newNFTDataPromises = result.items.map(async (listing) => {
         const tokenId = listing.tokenId;
+        // 이미 로드된 NFT인지 확인
+        const isDuplicate = nfts.some(
+          (nft) => nft.id.toString() === tokenId.toString()
+        );
+        if (isDuplicate) {
+          console.log(`중복 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`);
+          return null;
+        }
+
         const metadata = await actor.icrc7_token_metadata([tokenId]);
 
         let location = "위치 정보 없음";
@@ -154,8 +332,40 @@ const NFTMarket = () => {
         };
       });
 
-      const newNFTData = await Promise.all(newNFTDataPromises);
-      setNfts((prev) => [...prev, ...newNFTData]);
+      const newNFTData = (await Promise.all(newNFTDataPromises)).filter(
+        Boolean
+      ) as NFTData[];
+      console.log(`새 NFT ${newNFTData.length}개 로드됨, 중복 제외`);
+
+      // 실제로 추가할 새 데이터가 없는 경우 더 이상 불러올 항목이 없음을 표시
+      if (newNFTData.length === 0) {
+        console.log("모든 새 NFT가 중복이므로 더 이상 불러올 항목이 없습니다.");
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      // 중복 확인 후 추가
+      setNfts((prev) => {
+        const uniqueNewNFTs = newNFTData.filter(
+          (newNFT) =>
+            !prev.some(
+              (existingNFT) =>
+                existingNFT.id.toString() === newNFT.id.toString()
+            )
+        );
+        console.log(`최종 추가되는 NFT 개수: ${uniqueNewNFTs.length}개`);
+
+        // 실제로 추가할 항목이 없는 경우 hasMore를 false로 설정
+        if (uniqueNewNFTs.length === 0) {
+          setHasMore(false);
+          return prev;
+        }
+
+        return [...prev, ...uniqueNewNFTs];
+      });
+
+      // nextStart가 없으면 더 이상 데이터가 없음
       setNextStart(result.nextStart ? Number(result.nextStart) : null);
       setHasMore(!!result.nextStart);
 
@@ -165,39 +375,60 @@ const NFTMarket = () => {
     } catch (error) {
       console.error("추가 NFT 데이터 로딩 실패:", error);
       message.error("추가 NFT 데이터를 불러오는데 실패했습니다.");
+      setHasMore(false); // 오류 발생 시 더 이상 로드하지 않음
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const fetchSoldNFTs = async () => {
+  const fetchMoreSoldNFTs = async () => {
+    if (!soldHasMore || loadingMoreSold) return;
+
     try {
+      setLoadingMoreSold(true);
+      console.log(
+        "판매 완료된 NFT 추가 로드 시작, 현재 개수:",
+        soldNfts.length
+      );
       const actor = await createActor();
-      const totalSupply = await actor.icrc7_total_supply();
 
-      // 모든 NFT ID 배열 생성
-      const allNftIds = Array.from({ length: Number(totalSupply) }, (_, i) =>
-        BigInt(i)
+      console.log(
+        `판매 완료된 NFT 추가 로드 시작, 시작 인덱스: ${soldNextStart}`
+      );
+      // @ts-ignore - 새로 추가된 메서드이므로 타입 정의가 아직 없음
+      const result = await actor.getSoldNFTs(
+        soldNextStart !== null ? [BigInt(soldNextStart)] : [],
+        BigInt(12) // 더 많은 데이터를 한번에 가져오기
       );
 
-      // 판매중인 NFT ID 목록 가져오기
-      const listings = await actor.getListings([], BigInt(9999));
-      const listedNftIds = new Set(
-        listings.items.map((item) => Number(item.tokenId))
-      );
+      console.log("판매 완료된 NFT 추가 로드 결과:", result);
+      console.log("결과에 포함된 아이템 수:", result.items.length);
 
-      // 판매중이 아닌 NFT ID 필터링
-      const soldNftIds = allNftIds.filter(
-        (id) => !listedNftIds.has(Number(id))
-      );
+      if (result.items.length === 0) {
+        console.log("더 이상 불러올 판매 완료 NFT가 없습니다.");
+        setSoldHasMore(false);
+        setLoadingMoreSold(false);
+        return;
+      }
 
-      // 판매 완료된 NFT 정보 조회
-      const soldNFTPromises = soldNftIds.map(async (tokenId) => {
+      const soldNFTDataPromises = result.items.map(async (listing: Listing) => {
+        const tokenId = listing.tokenId;
+        // 이미 로드된 NFT인지 확인
+        const isDuplicate = soldNfts.some(
+          (nft) => nft.id.toString() === tokenId.toString()
+        );
+        if (isDuplicate) {
+          console.log(
+            `중복 판매 완료 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`
+          );
+          return null;
+        }
+
         const metadata = await actor.icrc7_token_metadata([tokenId]);
 
         let location = "위치 정보 없음";
         let chargerCount = 0;
-        let price = BigInt(0);
+        let price = listing.price;
 
         if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
           const metadataFields = metadata[0][0] as Array<
@@ -211,7 +442,6 @@ const NFTMarket = () => {
             } else if (key === "price" && value.Nat) {
               price = value.Nat;
             }
-            // 이전 형식의 키 이름도 처리
             if (key === "piggycell:location" && value.Text) {
               location = value.Text;
             } else if (key === "piggycell:charger_count" && value.Nat) {
@@ -230,8 +460,169 @@ const NFTMarket = () => {
         };
       });
 
-      const soldNFTData = await Promise.all(soldNFTPromises);
-      setSoldNfts(soldNFTData);
+      const soldNFTData = (await Promise.all(soldNFTDataPromises)).filter(
+        Boolean
+      ) as NFTData[];
+      console.log(`새 판매 완료 NFT ${soldNFTData.length}개 로드됨, 중복 제외`);
+
+      // 실제로 추가할 새 데이터가 없는 경우 더 이상 불러올 항목이 없음을 표시
+      if (soldNFTData.length === 0) {
+        console.log(
+          "모든 새 판매 완료 NFT가 중복이므로 더 이상 불러올 항목이 없습니다."
+        );
+        setSoldHasMore(false);
+        setLoadingMoreSold(false);
+        return;
+      }
+
+      // 중복 확인 후 추가
+      setSoldNfts((prev) => {
+        const uniqueNewNFTs = soldNFTData.filter(
+          (newNFT) =>
+            !prev.some(
+              (existingNFT) =>
+                existingNFT.id.toString() === newNFT.id.toString()
+            )
+        );
+        console.log(
+          `최종 추가되는 판매 완료 NFT 개수: ${uniqueNewNFTs.length}개`
+        );
+
+        // 실제로 추가할 항목이 없는 경우 soldHasMore를 false로 설정
+        if (uniqueNewNFTs.length === 0) {
+          setSoldHasMore(false);
+          return prev;
+        }
+
+        return [...prev, ...uniqueNewNFTs];
+      });
+
+      // nextStart가 없으면 더 이상 데이터가 없음
+      setSoldNextStart(result.nextStart ? Number(result.nextStart) : null);
+      setSoldHasMore(!!result.nextStart);
+    } catch (error) {
+      console.error("판매 완료된 NFT 추가 데이터 로딩 실패:", error);
+      message.error("판매 완료된 NFT 추가 데이터를 불러오는데 실패했습니다.");
+      setSoldHasMore(false); // 오류 발생 시 더 이상 로드하지 않음
+    } finally {
+      setLoadingMoreSold(false);
+    }
+  };
+
+  const fetchSoldNFTs = async () => {
+    try {
+      console.log("판매 완료된 NFT 초기 로드 시작");
+      const actor = await createActor();
+
+      // 초기 상태에서는 첫 페이지부터 로드
+      const startIndex = soldNextStart !== null ? [BigInt(soldNextStart)] : [];
+      console.log(
+        `판매 완료 NFT 로드 시작 인덱스: ${
+          startIndex.length > 0 ? startIndex[0].toString() : "처음부터"
+        }`
+      );
+
+      // @ts-ignore - 새로 추가된 메서드이므로 타입 정의가 아직 없음
+      const result = await actor.getSoldNFTs(startIndex, BigInt(12));
+      console.log("판매 완료된 NFT 로드 결과:", result);
+      console.log("로드된 데이터 개수:", result.items.length);
+
+      if (result.items.length === 0) {
+        // 초기 로드일 경우(soldNextStart가 null)에만 배열 초기화
+        if (soldNextStart === null) {
+          setSoldNfts([]);
+        }
+        setSoldHasMore(false);
+        return;
+      }
+
+      const soldNFTDataPromises = result.items.map(async (listing: Listing) => {
+        const tokenId = listing.tokenId;
+        console.log(`판매 완료 NFT 정보 로드 중: ${tokenId.toString()}`);
+
+        // 초기 로드가 아닐 경우 중복 확인 (초기 로드일 때는 이미 상태가 비어있음)
+        if (soldNextStart !== null) {
+          const isDuplicate = soldNfts.some(
+            (nft) => nft.id.toString() === tokenId.toString()
+          );
+          if (isDuplicate) {
+            console.log(
+              `중복 판매 완료 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`
+            );
+            return null;
+          }
+        }
+
+        const metadata = await actor.icrc7_token_metadata([tokenId]);
+
+        let location = "위치 정보 없음";
+        let chargerCount = 0;
+        let price = listing.price;
+
+        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
+          const metadataFields = metadata[0][0] as Array<
+            [string, { Text?: string; Nat?: bigint }]
+          >;
+          metadataFields.forEach(([key, value]) => {
+            if (key === "location" && value.Text) {
+              location = value.Text;
+            } else if (key === "chargerCount" && value.Nat) {
+              chargerCount = Number(value.Nat);
+            } else if (key === "price" && value.Nat) {
+              price = value.Nat;
+            }
+            if (key === "piggycell:location" && value.Text) {
+              location = value.Text;
+            } else if (key === "piggycell:charger_count" && value.Nat) {
+              chargerCount = Number(value.Nat);
+            }
+          });
+        }
+
+        return {
+          id: tokenId,
+          name: `충전 허브 #${tokenId.toString()}`,
+          location,
+          price,
+          status: "sold",
+          chargerCount,
+        };
+      });
+
+      const soldNFTData = (await Promise.all(soldNFTDataPromises)).filter(
+        Boolean
+      ) as NFTData[];
+      console.log(`새 판매 완료 NFT ${soldNFTData.length}개 로드됨, 중복 제외`);
+
+      if (soldNFTData.length === 0) {
+        console.log("추가할 새 판매 완료 NFT가 없습니다.");
+        setSoldHasMore(false);
+        return;
+      }
+
+      // 판매 완료된 NFT 데이터 설정
+      setSoldNfts((prev) => {
+        // 첫 페이지 로드인 경우 이전 데이터를 모두 지우고 새로 설정
+        if (soldNextStart === null) {
+          console.log("판매 완료 NFT 목록을 처음부터 새로 로드합니다.");
+          return soldNFTData;
+        }
+
+        // 추가 로드의 경우 중복 제거 후 추가
+        const uniqueNewNFTs = soldNFTData.filter(
+          (newNFT) =>
+            !prev.some(
+              (existingNFT) =>
+                existingNFT.id.toString() === newNFT.id.toString()
+            )
+        );
+
+        return [...prev, ...uniqueNewNFTs];
+      });
+
+      // 다음 페이지 정보 업데이트
+      setSoldNextStart(result.nextStart ? Number(result.nextStart) : null);
+      setSoldHasMore(!!result.nextStart);
     } catch (error) {
       console.error("판매 완료된 NFT 데이터 로딩 실패:", error);
       message.error("판매 완료된 NFT 데이터를 불러오는데 실패했습니다.");
@@ -240,7 +631,6 @@ const NFTMarket = () => {
 
   const fetchInitialNFTs = async (showMessage = false) => {
     try {
-      // 로딩 메시지는 showMessage가 true일 때만 표시
       if (showMessage) {
         const messageKey = "refreshMessage";
         message.loading({
@@ -253,15 +643,12 @@ const NFTMarket = () => {
       setLoading(true);
       const actor = await createActor();
 
-      // 통계 데이터 가져오기
       const stats = await getMarketStats();
       setMarketStats(stats);
 
-      // 리스팅 데이터 가져오기
       console.log("초기 NFT 데이터 로딩 시작");
       console.log("Actor 생성 완료");
 
-      // 페이지 크기를 5에서 8로 증가
       const result = await actor.getListings([], BigInt(8));
       console.log("마켓 리스팅 결과:", result);
       console.log("마켓 리스팅 항목 수:", result.items.length);
@@ -274,11 +661,9 @@ const NFTMarket = () => {
         )
       );
 
-      // 전체 NFT 수 조회
       const totalSupply = await actor.icrc7_total_supply();
       console.log("전체 NFT 발행량:", Number(totalSupply));
 
-      // 총 거래량 조회
       const totalVolume = await actor.getTotalVolume();
       console.log("총 거래량:", Number(totalVolume));
 
@@ -295,7 +680,6 @@ const NFTMarket = () => {
         });
         setHasMore(false);
 
-        // 성공 메시지는 showMessage가 true일 때만 표시
         if (showMessage) {
           message.success({
             content: "새로고침 완료!",
@@ -343,7 +727,6 @@ const NFTMarket = () => {
       setNextStart(result.nextStart ? Number(result.nextStart) : null);
       setHasMore(!!result.nextStart);
 
-      // 통계 업데이트
       const avail = Number(result.total);
       const total = Number(totalSupply);
       const sold = total - avail;
@@ -365,10 +748,8 @@ const NFTMarket = () => {
         activeUsers: 0,
       });
 
-      // 판매 완료된 NFT 목록도 함께 새로고침
       await fetchSoldNFTs();
 
-      // 성공 메시지는 showMessage가 true일 때만 표시
       if (showMessage) {
         message.success({
           content: "새로고침 완료!",
@@ -379,7 +760,6 @@ const NFTMarket = () => {
     } catch (error) {
       console.error("NFT 데이터 로딩 실패:", error);
 
-      // 실패 메시지는 showMessage가 true일 때만 표시
       if (showMessage) {
         message.error({
           content: "NFT 데이터를 불러오는데 실패했습니다.",
@@ -392,7 +772,6 @@ const NFTMarket = () => {
     }
   };
 
-  // 인증 상태 확인 함수 추가
   const checkAuthentication = async () => {
     const authManager = AuthManager.getInstance();
     const authenticated = await authManager.isAuthenticated();
@@ -401,10 +780,7 @@ const NFTMarket = () => {
   };
 
   useEffect(() => {
-    // 컴포넌트 마운트 시 인증 상태 확인
     checkAuthentication();
-
-    // 초기 로딩 시에는 메시지를 표시하지 않음 (showMessage = false)
     fetchInitialNFTs(false);
   }, []);
 
@@ -429,10 +805,8 @@ const NFTMarket = () => {
       console.log(`NFT 구매 시작 - NFT ID: ${nftId.toString()}`);
       setBuyingNFT(nftId);
 
-      // 로그인 상태 확인
       const authenticated = await checkAuthentication();
       if (!authenticated) {
-        // 로그인 요청 메시지 표시
         message.error({
           content: "NFT를 구매하려면 로그인이 필요합니다.",
           key: "loginRequired",
@@ -445,11 +819,9 @@ const NFTMarket = () => {
       const actor = await createActor();
       console.log("백엔드 액터 생성 완료");
 
-      // 사용자 인증 정보 확인
       const authManager = AuthManager.getInstance();
       const userPrincipal = await authManager.getPrincipal();
       if (!userPrincipal) {
-        // 로그인 요청 메시지 표시 (key 추가 및 구체적인 메시지)
         message.error({
           content: "NFT를 구매하려면 로그인이 필요합니다.",
           key: "loginRequired",
@@ -460,7 +832,6 @@ const NFTMarket = () => {
       }
       console.log(`구매자 Principal: ${userPrincipal.toString()}`);
 
-      // 먼저 NFT가 여전히 판매 중인지 확인
       console.log("NFT 판매 상태 확인 중...");
       const listingsResult = await actor.getListings([], BigInt(999));
       const isStillListed = listingsResult.items.some(
@@ -481,7 +852,6 @@ const NFTMarket = () => {
         `NFT ID ${nftId.toString()}는 여전히 판매 중입니다. 구매 계속 진행...`
       );
 
-      // 현재 NFT 가격 확인
       const nftInfo = nfts.find((nft) => nft.id === nftId);
       if (!nftInfo) {
         message.error("NFT 정보를 찾을 수 없습니다.");
@@ -494,7 +864,6 @@ const NFTMarket = () => {
         }`
       );
 
-      // 마켓 캐니스터의 Principal 확인
       let marketCanisterPrincipal: Principal;
       try {
         marketCanisterPrincipal = await actor.getMarketCanisterPrincipal();
@@ -508,13 +877,13 @@ const NFTMarket = () => {
         return;
       }
 
-      // 사용자의 PGC 잔액 확인
       const account = {
         owner: userPrincipal,
         subaccount: [] as [] | [Uint8Array],
       };
       console.log("잔액 확인 요청 중...");
       const balance = await actor.icrc1_balance_of(account);
+      console.log(`잔액: ${balance.toString()}`);
       console.log(`구매 전 잔액: ${balance.toString()}`);
 
       // 잔액이 부족한 경우
@@ -672,13 +1041,15 @@ const NFTMarket = () => {
         // 판매 중인 NFT 목록에서 제거
         setNfts((prevNfts) => prevNfts.filter((nft) => nft.id !== nftId));
 
-        // 판매 완료된 NFT 목록에 추가
-        if (boughtNFT) {
-          setSoldNfts((prevSoldNfts) => [
-            ...prevSoldNfts,
-            { ...boughtNFT, status: "sold" },
-          ]);
-        }
+        // 방법 2: 판매 완료된 NFT 목록 전체 새로고침 (백엔드에서 정렬된 최신 데이터 가져오기)
+        // 판매 완료된 NFT 목록을 초기화하고 첫 페이지부터 다시 가져옵니다
+        setSoldNfts([]); // 기존 데이터 초기화
+        setSoldNextStart(null); // 첫 페이지부터 다시 가져오기
+        setSoldHasMore(true); // 더 불러올 수 있도록 설정
+        fetchSoldNFTs(); // 백엔드에서 최신 정렬된 데이터 가져오기
+
+        // 구매 완료 후 '판매 완료' 탭으로 전환
+        setActiveTab("sold");
 
         // 마켓 통계 업데이트 - 총 거래량도 함께 업데이트
         setMarketStats((prev) => ({
@@ -785,8 +1156,9 @@ const NFTMarket = () => {
       </div>
 
       <Tabs
-        key={`nft-tabs-${nfts.length}-${soldNfts.length}`}
-        defaultActiveKey="available"
+        key="nft-market-tabs"
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key)}
         items={[
           {
             key: "available",
@@ -800,9 +1172,8 @@ const NFTMarket = () => {
                     md={8}
                     lg={6}
                     key={nft.id.toString()}
-                    ref={
-                      index === nfts.length - 1 ? lastNFTElementRef : undefined
-                    }
+                    ref={getNFTRefCallback(index, nfts.length)}
+                    data-index={index}
                   >
                     <NFTCard
                       name={nft.name}
@@ -835,8 +1206,16 @@ const NFTMarket = () => {
             label: `판매 완료된 NFT (${marketStats.soldNFTs})`,
             children: (
               <Row gutter={[24, 24]} className="nft-grid">
-                {soldNfts.map((nft) => (
-                  <Col xs={24} sm={12} md={8} lg={6} key={nft.id.toString()}>
+                {soldNfts.map((nft, index) => (
+                  <Col
+                    xs={24}
+                    sm={12}
+                    md={8}
+                    lg={6}
+                    key={nft.id.toString()}
+                    ref={getSoldNFTRefCallback(index, soldNfts.length)}
+                    data-sold-index={index}
+                  >
                     <NFTCard
                       name={nft.name}
                       location={nft.location}
@@ -847,12 +1226,12 @@ const NFTMarket = () => {
                     />
                   </Col>
                 ))}
-                {loading && (
+                {(loading || loadingMoreSold) && (
                   <Col span={24} className="my-5 text-center">
                     <Spin size="large" />
                   </Col>
                 )}
-                {!loading && soldNfts.length === 0 && (
+                {!loading && !loadingMoreSold && soldNfts.length === 0 && (
                   <Col span={24} className="my-5 text-center">
                     <Empty description="판매 완료된 NFT가 없습니다" />
                   </Col>
@@ -864,14 +1243,28 @@ const NFTMarket = () => {
       />
 
       <div className="mt-6 text-center text-gray-500">
-        {hasMore ? (
-          loadingMore ? (
-            <p>추가 NFT 로딩 중...</p>
+        {activeTab === "available" ? (
+          hasMore ? (
+            loadingMore ? (
+              <p>추가 NFT 로딩 중...</p>
+            ) : (
+              nfts.length > 0 && (
+                <p>계속 스크롤하면 더 많은 NFT를 볼 수 있습니다</p>
+              )
+            )
           ) : (
-            <p>더 많은 NFT를 보려면 스크롤하세요</p>
+            nfts.length > 0 && <p>모든 NFT가 로드되었습니다</p>
+          )
+        ) : soldHasMore ? (
+          loadingMoreSold ? (
+            <p>추가 판매 완료 NFT 로딩 중...</p>
+          ) : (
+            soldNfts.length > 0 && (
+              <p>계속 스크롤하면 더 많은 판매 완료 NFT를 볼 수 있습니다</p>
+            )
           )
         ) : (
-          nfts.length > 0 && <p>모든 NFT가 로드되었습니다</p>
+          soldNfts.length > 0 && <p>모든 판매 완료 NFT가 로드되었습니다</p>
         )}
       </div>
     </div>
