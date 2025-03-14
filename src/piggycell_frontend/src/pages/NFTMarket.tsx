@@ -680,10 +680,12 @@ const NFTMarket = () => {
           ]);
         }
 
+        // 마켓 통계 업데이트 - 총 거래량도 함께 업데이트
         setMarketStats((prev) => ({
           ...prev,
           availableNFTs: (prev.availableNFTs || 0) - 1,
           soldNFTs: (prev.soldNFTs || 0) + 1,
+          totalVolume: (prev.totalVolume || 0) + Number(nftInfo.price),
         }));
       } else {
         console.error("NFT 구매 실패:", result.err);
