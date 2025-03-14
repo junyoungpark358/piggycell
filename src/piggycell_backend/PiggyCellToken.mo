@@ -270,7 +270,7 @@ module {
         // ICRC-3 블록 관련 변수
         private var blocks = Buffer.Buffer<Block>(100);       // 블록 저장소
         private var nextBlockId : Nat = 0;                   // 다음 블록 ID
-        private let maxBlocksToStore : Nat = 1000;           // 최대 저장할 블록 수 (메모리 관리용)
+        private let maxBlocksToStore : Nat = 50000;           // 최대 저장할 블록 수 (메모리 관리용)
         private var lastBlockHash : ?Blob = null;            // 마지막 블록 해시
         
         // 지원하는 블록 타입 목록
