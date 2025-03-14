@@ -9,6 +9,7 @@ import Buffer "mo:base/Buffer";
 import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 import Admin "./Admin";
+import Text "mo:base/Text";
 
 module {
     //-----------------------------------------------------------------------------
@@ -42,8 +43,13 @@ module {
         // 변수 및 초기화
         //-----------------------------------------------------------------------------
         
+        // 맞춤형 해시 함수로 구현
+        private func natHash(n: Nat) : Hash.Hash {
+            Text.hash(Nat.toText(n))
+        };
+        
         // 스테이킹 정보 저장소
-        private let stakingInfos = TrieMap.TrieMap<Nat, StakingInfo>(Nat.equal, Hash.hash);
+        private let stakingInfos = TrieMap.TrieMap<Nat, StakingInfo>(Nat.equal, natHash);
         
         //-----------------------------------------------------------------------------
         // 내부 유틸리티 함수
@@ -58,7 +64,7 @@ module {
         };
         
         // 사용자가 관리자인지 확인 - adminManager가 없으므로 항상 false 반환
-        private func isAdmin(user: Principal) : Bool {
+        private func _isAdmin(_: Principal) : Bool {
             false  // 관리자 체크를 하지 않음
         };
         

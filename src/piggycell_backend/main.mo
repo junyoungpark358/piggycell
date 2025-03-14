@@ -66,8 +66,13 @@ actor Main {
     // NFT ID를 저장하는 순서화된 배열 추가
     private var sortedNFTIds = Buffer.Buffer<Nat>(0);
     
+    // 맞춤형 해시 함수 구현
+    private func natHash(n: Nat) : Hash.Hash {
+        Text.hash(Nat.toText(n))
+    };
+    
     // NFT 상태를 추적하는 맵 추가
-    private let nftStatuses = TrieMap.TrieMap<Nat, Text>(Nat.equal, Hash.hash);
+    private let nftStatuses = TrieMap.TrieMap<Nat, Text>(Nat.equal, natHash);
 
     // NFT 상태 업데이트 함수
     private func updateNFTStatus(tokenId: Nat, status: Text) {
@@ -113,7 +118,7 @@ actor Main {
 
     // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자)
     public query func getActiveUsersCount() : async Nat {
-        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000_000); // 30일을 나노초로 변환
+        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000); // 30일을 나노초로 변환
         var count = 0;
         for ((_, lastActive) in activeUsers.entries()) {
             if (lastActive > thirtyDaysAgo) {
@@ -143,14 +148,32 @@ actor Main {
         // 시작 인덱스 계산 (최신 거래부터 표시)
         let startIndex = if (total == 0) { 0 } else {
             let offset = page * limit;
-            if (offset >= total) { 0 } else { total - Nat.min(offset + limit, total) };
+            if (offset >= total) { 
+                0 
+            } else { 
+                // 안전한 계산을 위한 정의
+                let remaining = Nat.min(offset + limit, total);
+                if (total >= remaining) {
+                    total - remaining
+                } else {
+                    0
+                }
+            };
         };
 
         // 페이지 크기 계산
         let pageSize = if (total == 0) { 0 } else {
-            let remaining = total - (page * limit);
-            if (remaining == 0) { 0 }
-            else { Nat.min(remaining, limit) };
+            // 페이지에 따른 오프셋 계산
+            let offset = page * limit;
+            // 안전한 계산을 위한 로직
+            if (offset >= total) {
+                0
+            } else {
+                // 남은 항목 수 계산 (언더플로우 방지)
+                let remaining = total - offset;
+                // 페이지 크기 제한
+                Nat.min(remaining, limit)
+            }
         };
 
         // 거래 내역 추출
@@ -164,6 +187,7 @@ actor Main {
             pageTransactions,
             func(tx: Transaction) : TransactionResponse {
                 let txType = switch (tx.txType) {
+                    case (#Mint) { "NFT 발행" };
                     case (#NFTSale) { "NFT 판매" };
                     case (#Stake) { "NFT 스테이킹" };
                     case (#Unstake) { "NFT 언스테이킹" };
@@ -1095,7 +1119,7 @@ actor Main {
                     // 상태에 따라 상태 변경 시간 결정
                     var statusChangedAt = Time.now(); // 기본값으로 현재 시간 설정
                     
-                    if (stakingManager.isStaked(id)) {
+                    if (isStaked) {
                         // 스테이킹된 경우, 스테이킹 시간 가져오기
                         let stakingInfo = stakingManager.getStakingInfo(id);
                         switch(stakingInfo) {

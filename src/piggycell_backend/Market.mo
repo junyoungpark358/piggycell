@@ -11,6 +11,10 @@ import Int "mo:base/Int";
 import PiggyCellToken "./PiggyCellToken";
 import ChargerHubNFT "./ChargerHubNFT";
 import Debug "mo:base/Debug";
+import Array "mo:base/Array";
+import Iter "mo:base/Iter";
+import Option "mo:base/Option";
+import Error "mo:base/Error";
 
 module {
     // 리스팅 정보 타입
@@ -37,7 +41,12 @@ module {
     };
 
     public class MarketManager(token: PiggyCellToken.PiggyCellToken, nft: ChargerHubNFT.NFTCanister, marketCanister: Principal) {
-        private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, Hash.hash);
+        // 맞춤형 해시 함수로 구현
+        private func natHash(n: Nat) : Hash.Hash {
+            Text.hash(Nat.toText(n))
+        };
+        
+        private let listings = TrieMap.TrieMap<Nat, Listing>(Nat.equal, natHash);
         private var lastTokenId: Nat = 0; // 마지막으로 리스팅된 토큰 ID 추적
         private let listingsByTime = Buffer.Buffer<(Int, Nat)>(0); // (timestamp, tokenId) 쌍을 저장하는 버퍼
         
@@ -302,11 +311,21 @@ module {
                 case null { listingsByTime.size() };
             };
 
-            let endIndex = if (startIndex < limit) { 0 } else { startIndex - limit };
+            // 안전한 endIndex 계산
+            let endIndex = if (startIndex < limit) { 
+                0 
+            } else { 
+                // 트랩 방지를 위한 안전한 계산
+                startIndex - limit 
+            };
             
             var i = startIndex;
-            while (i > endIndex and i > 0) {
+            // 인덱스 범위 검증 및 언더플로우 방지
+            while (i > endIndex and i > 0 and i <= listingsByTime.size()) {
+                // 안전한 인덱스 감소
                 i -= 1;
+                
+                // 인덱스 범위 추가 검증
                 if (i < listingsByTime.size()) {
                     let (_, tokenId) = listingsByTime.get(i);
                     switch (listings.get(tokenId)) {

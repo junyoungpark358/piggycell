@@ -83,14 +83,23 @@ module {
             let SECONDS_PER_MINUTE = 60;
             
             // 1970년부터의 일수 계산 (대략적)
-            let years = date.year - 1970;
+            // 안전한 계산을 위한 조건 확인
+            let years = if (date.year >= 1970) {
+                date.year - 1970
+            } else {
+                0  // 유효하지 않은 연도의 경우 기본값 사용
+            };
             let daysFromYears = years * 365;
             
             // 월별 일수 (매우 단순화)
-            let daysFromMonths = (date.month - 1) * 30;
+            let daysFromMonths = if (date.month > 1) {
+                (date.month - 1) * 30
+            } else {
+                0  // 유효하지 않은 월의 경우 기본값 사용
+            };
             
             // 총 일수
-            let days = daysFromYears + daysFromMonths + (date.day - 1);
+            let days = daysFromYears + daysFromMonths + (if (date.day > 0) { date.day - 1 } else { 0 });
             
             // 초 계산
             let seconds = days * SECONDS_PER_DAY +
@@ -298,11 +307,24 @@ module {
         // 다음 사용자 배분 기록 ID
         private var nextUserDistributionId: Nat = 1;
         
+        //-----------------------------------------------------------------------------
+        // 데이터 저장소
+        //-----------------------------------------------------------------------------
+        
+        // 맞춤형 해시 함수 구현
+        private func natHash(n: Nat) : Hash.Hash {
+            Text.hash(Nat.toText(n))
+        };
+        
+        private func intHash(n: Int) : Hash.Hash {
+            Text.hash(Int.toText(n))
+        };
+        
         // 수익 배분 기록 저장소
-        private let distributionRecords = TrieMap.TrieMap<Nat, DistributionRecord>(Nat.equal, Hash.hash);
+        private let distributionRecords = TrieMap.TrieMap<Nat, DistributionRecord>(Nat.equal, natHash);
         
         // 사용자별 수익 배분 기록 저장소
-        private let userDistributionRecords = TrieMap.TrieMap<Nat, UserDistributionRecord>(Nat.equal, Hash.hash);
+        private let userDistributionRecords = TrieMap.TrieMap<Nat, UserDistributionRecord>(Nat.equal, natHash);
         
         //-----------------------------------------------------------------------------
         // 통계 관련 변수
@@ -314,13 +336,13 @@ module {
         private var lastDistributionTimestamp: ?Int = null;
         
         // NFT별 누적 수익 인덱스
-        private let nftRevenueIndex = TrieMap.TrieMap<Nat, Nat>(Nat.equal, Hash.hash);
+        private let nftRevenueIndex = TrieMap.TrieMap<Nat, Nat>(Nat.equal, natHash);
         
         // NFT별 배분 횟수 인덱스
-        private let nftDistributionCountIndex = TrieMap.TrieMap<Nat, Nat>(Nat.equal, Hash.hash);
+        private let nftDistributionCountIndex = TrieMap.TrieMap<Nat, Nat>(Nat.equal, natHash);
         
         // NFT별 마지막 수익 시간 인덱스
-        private let nftLastRevenueIndex = TrieMap.TrieMap<Nat, Int>(Nat.equal, Hash.hash);
+        private let nftLastRevenueIndex = TrieMap.TrieMap<Nat, Int>(Nat.equal, natHash);
         
         // 사용자별 누적 수익 인덱스
         private let userRevenueIndex = TrieMap.TrieMap<Principal, Nat>(Principal.equal, Principal.hash);
@@ -332,13 +354,13 @@ module {
         private let userLastRevenueIndex = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
         
         // 일별 통계 저장소
-        private let dailyStats = TrieMap.TrieMap<Int, DailyStats>(Int.equal, Int.hash);
+        private let dailyStats = TrieMap.TrieMap<Int, DailyStats>(Int.equal, intHash);
         
         // 고유 사용자 ID 세트
         private let activeUsers = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
         
         // 고유 NFT ID 세트
-        private let activeNFTs = TrieMap.TrieMap<Nat, Bool>(Nat.equal, Hash.hash);
+        private let activeNFTs = TrieMap.TrieMap<Nat, Bool>(Nat.equal, natHash);
         
         //-----------------------------------------------------------------------------
         // 자동 수익 분배 관련 변수 및 함수
@@ -354,7 +376,7 @@ module {
         private var lastDistributionDay: Int = 0;
         
         // 타이머 취소 함수 - 사용하지 않음
-        private func cancelCurrentTimer() {
+        private func _cancelCurrentTimer() {
             switch (timerId) {
                 case (?id) {
                     Timer.cancelTimer(id);
@@ -731,7 +753,7 @@ module {
                     // 전체 수익 배분 블록 목록에도 추가
                     revenueBlockIds.add(blockId);
                     
-                    // 배포 블록 정보 맵에 저장
+                    // 블록 정보 맵에 저장
                     let blockInfo: BlockInfo = {
                         userId = user;
                         tokenId = tokenId;
@@ -869,7 +891,7 @@ module {
             
             // 사용자의 NFT별 분석 계산
             let nftBreakdownBuffer = Buffer.Buffer<UserNFTStat>(0);
-            let recordedNFTs = TrieMap.TrieMap<Nat, Nat>(Nat.equal, Hash.hash);
+            let recordedNFTs = TrieMap.TrieMap<Nat, Nat>(Nat.equal, natHash);
             
             // 사용자의 모든 배분 기록 검색하여 NFT별 수익 계산
             for ((_, record) in userDistributionRecords.entries()) {
@@ -1330,7 +1352,7 @@ module {
         private let revenueBlockIds = Buffer.Buffer<Nat>(100);
         
         // 블록 정보 맵 - Key: 블록 ID, Value: 블록 정보
-        private let distributionBlockInfoMap = TrieMap.TrieMap<Nat, BlockInfo>(Nat.equal, Hash.hash);
+        private let distributionBlockInfoMap = TrieMap.TrieMap<Nat, BlockInfo>(Nat.equal, natHash);
 
         // 블록 인덱스를 업데이트하는 함수 (내부용)
         private func updateBlockIndex(userId: Principal, blockId: Nat) {

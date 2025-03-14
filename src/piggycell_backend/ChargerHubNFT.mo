@@ -113,8 +113,12 @@ module {
 
     public class NFTCanister(init_owner: Principal) {
         private var owner: Principal = init_owner;
-        private var tokens = TrieMap.TrieMap<Nat, Account>(Nat.equal, Hash.hash);
-        private var metadata = TrieMap.TrieMap<Nat, [(Text, Value)]>(Nat.equal, Hash.hash);
+        // 맞춤형 해시 함수 구현
+        private func natHash(n: Nat) : Hash.Hash {
+            Text.hash(Nat.toText(n))
+        };
+        private var tokens = TrieMap.TrieMap<Nat, Account>(Nat.equal, natHash);
+        private var metadata = TrieMap.TrieMap<Nat, [(Text, Value)]>(Nat.equal, natHash);
         private var totalSupply: Nat = 0;
 
         // 트랜잭션 히스토리 저장
@@ -124,7 +128,7 @@ module {
             a.owner == b.owner and Option.equal(a.subaccount, b.subaccount, Blob.equal)
         };
 
-        private func accountHash(account: Account) : Nat32 {
+        private func _accountHash(account: Account) : Nat32 {
             let owner_hash = Principal.hash(account.owner);
             switch(account.subaccount) {
                 case(?subaccount) {
@@ -396,7 +400,7 @@ module {
                         
                         // 중복 트랜잭션 체크
                         switch(arg.created_at_time, arg.memo) {
-                            case(?created_at_time, ?memo) {
+                            case(?created_at_time, ?_memo) {
                                 let tx_key = Text.concat(
                                     Nat.toText(arg.token_id),
                                     Principal.toText(caller)
@@ -463,7 +467,7 @@ module {
             Buffer.toArray(results)
         };
 
-        public func mint(caller: Principal, args: MintArgs) : Result.Result<Nat, Text> {
+        public func mint(_caller: Principal, args: MintArgs) : Result.Result<Nat, Text> {
             // 민팅은 관리자만 가능 (관리자 체크는 main.mo에서 수행)
             switch (tokens.get(args.token_id)) {
                 case (?_) { return #err("Token ID already exists") };
@@ -569,10 +573,10 @@ module {
         };
 
         // NFT 소유자 직접 변경 (관리자만 가능)
-        public func updateOwner(caller: Principal, token_id: Nat, new_owner: Principal) : Result.Result<(), Text> {
+        public func updateOwner(_caller: Principal, token_id: Nat, new_owner: Principal) : Result.Result<(), Text> {
             // 관리자 체크는 main.mo에서 수행하므로 여기서는 체크하지 않음
             switch (tokens.get(token_id)) {
-                case (?current_owner) {
+                case (?_current_owner) {
                     tokens.put(token_id, { owner = new_owner; subaccount = null });
                     #ok()
                 };

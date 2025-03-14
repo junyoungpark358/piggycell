@@ -236,7 +236,7 @@ module {
         private func accountHash(account : Account) : Nat32 {
             let hash = Principal.hash(account.owner);
             switch (account.subaccount) {
-                case (?subaccount) {
+                case (?_subaccount) {
                     hash
                 };
                 case null {
@@ -253,13 +253,13 @@ module {
         private func allowancesHash(allowance : (Account, Account)) : Nat32 {
             let (owner, spender) = allowance;
             let ownerHash = accountHash(owner);
-            let spenderHash = accountHash(spender);
+            let _spenderHash = accountHash(spender);
             ownerHash
         };
         
         // 데이터 저장소
         private let ledger = TrieMap.TrieMap<Account, Nat>(accountsEqual, accountHash);
-        private let allowances = TrieMap.TrieMap<(Account, Account), Allowance>(allowancesEqual, allowancesHash);
+        private let _allowances = TrieMap.TrieMap<(Account, Account), Allowance>(allowancesEqual, allowancesHash);
         private var simpleAllowances = Buffer.Buffer<SimpleAllowance>(0);
         
         // 거래 이력을 위한 변수들
@@ -423,7 +423,7 @@ module {
             };
             
             // 간이 인증서 생성 (실제 구현에서는 IC API 사용)
-            let last_index = Nat64.fromNat(blocks.size() - 1);
+            let _last_index = Nat64.fromNat(blocks.size() - 1);
             let dummy_cert = Blob.fromArray([0, 1, 2, 3]); // 더미 인증서
             let dummy_tree = Blob.fromArray([4, 5, 6, 7]); // 더미 해시 트리
             
@@ -663,9 +663,24 @@ module {
             if (blocks.size() >= maxBlocksToStore) {
                 // 가장 오래된 블록 제거
                 let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
-                for (i in Iter.range(1, maxBlocksToStore - 1)) {
-                    tempBlocks.add(blocks.get(i));
+                // 안전한 계산으로 시작 인덱스 결정
+                var startIndex = 0;
+                if (blocks.size() > maxBlocksToStore) {
+                    // 음수 결과를 방지하기 위한 안전한 계산
+                    let blocksToSkip = blocks.size() - maxBlocksToStore;
+                    // 오버플로우 방지
+                    if (blocksToSkip < Nat.pow(2, 32)) {
+                        startIndex := blocksToSkip + 1;
+                    } else {
+                        startIndex := 1; // 너무 큰 값이면 기본값 사용
+                    };
                 };
+                
+                while (startIndex < blocks.size()) {
+                    tempBlocks.add(blocks.get(startIndex));
+                    startIndex += 1;
+                };
+                tempBlocks.add(newBlock);
                 blocks := tempBlocks;
             };
             
@@ -864,8 +879,16 @@ module {
             var i = 0;
             
             // 가장 최근 거래부터 (버퍼의 마지막부터) 가져옴
-            while (i < actualCount) {
-                let index = size - i - 1;
+            while (i < actualCount and i < size) {
+                // 안전한 인덱스 계산
+                var index = 0;
+                if (size > 0 and i < size) {
+                    // 역순으로 가져오기 위한 계산
+                    if (size > i) {
+                        index := size - 1 - i;
+                    };
+                };
+                
                 result.add(transactions.get(index));
                 i += 1;
             };
@@ -909,9 +932,24 @@ module {
             if (blocks.size() >= maxBlocksToStore) {
                 // 가장 오래된 블록 제거
                 let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
-                for (i in Iter.range(1, maxBlocksToStore - 1)) {
-                    tempBlocks.add(blocks.get(i));
+                // 안전한 계산으로 시작 인덱스 결정
+                var startIndex = 0;
+                if (blocks.size() > maxBlocksToStore) {
+                    // 음수 결과를 방지하기 위한 안전한 계산
+                    let blocksToSkip = blocks.size() - maxBlocksToStore;
+                    // 오버플로우 방지
+                    if (blocksToSkip < Nat.pow(2, 32)) {
+                        startIndex := blocksToSkip + 1;
+                    } else {
+                        startIndex := 1; // 너무 큰 값이면 기본값 사용
+                    };
                 };
+                
+                while (startIndex < blocks.size()) {
+                    tempBlocks.add(blocks.get(startIndex));
+                    startIndex += 1;
+                };
+                tempBlocks.add(newBlock);
                 blocks := tempBlocks;
             };
             
@@ -981,10 +1019,22 @@ module {
             if (blocks.size() >= maxBlocksToStore) {
                 // 가장 오래된 블록 제거
                 let tempBlocks = Buffer.Buffer<Block>(maxBlocksToStore);
-                var i = blocks.size() - maxBlocksToStore + 1;
-                while (i < blocks.size()) {
-                    tempBlocks.add(blocks.get(i));
-                    i += 1;
+                // 안전한 계산으로 시작 인덱스 결정
+                var startIndex = 0;
+                if (blocks.size() > maxBlocksToStore) {
+                    // 음수 결과를 방지하기 위한 안전한 계산
+                    let blocksToSkip = blocks.size() - maxBlocksToStore;
+                    // 오버플로우 방지
+                    if (blocksToSkip < Nat.pow(2, 32)) {
+                        startIndex := blocksToSkip + 1;
+                    } else {
+                        startIndex := 1; // 너무 큰 값이면 기본값 사용
+                    };
+                };
+                
+                while (startIndex < blocks.size()) {
+                    tempBlocks.add(blocks.get(startIndex));
+                    startIndex += 1;
                 };
                 tempBlocks.add(newBlock);
                 blocks := tempBlocks;
