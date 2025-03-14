@@ -109,8 +109,12 @@ export const createActor = async (): Promise<_SERVICE> => {
   }
 
   const agent = new HttpAgent({ identity });
-  if (process.env.NODE_ENV !== "production") {
+
+  // 로컬 환경에서 항상 fetchRootKey를 호출하도록 수정
+  try {
     await agent.fetchRootKey();
+  } catch (error) {
+    console.warn("statsApi - fetchRootKey 오류:", error);
   }
 
   const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;

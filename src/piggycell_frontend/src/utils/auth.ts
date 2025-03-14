@@ -42,9 +42,12 @@ export class AuthManager {
     const agent = new HttpAgent({ identity });
     console.log("[AuthManager] createActor - HttpAgent 생성됨");
 
-    if (process.env.NODE_ENV !== "production") {
+    // 로컬 환경에서 항상 fetchRootKey를 호출하도록 수정
+    try {
       await agent.fetchRootKey();
-      console.log("[AuthManager] createActor - Root key 가져옴 (개발 환경)");
+      console.log("[AuthManager] createActor - Root key 가져옴");
+    } catch (error) {
+      console.warn("[AuthManager] fetchRootKey 오류:", error);
     }
 
     const canisterId = process.env.CANISTER_ID_PIGGYCELL_BACKEND;
