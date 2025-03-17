@@ -174,18 +174,15 @@ export const getMarketStats = async (): Promise<NFTStats> => {
   try {
     const actor = await createActor();
 
-    // 총 발행량
-    const totalSupply = await actor.icrc7_total_supply();
+    // 모든 API 호출을 병렬로 처리하여 성능 향상
+    const [totalSupply, listings, totalVolume] = await Promise.all([
+      actor.icrc7_total_supply(),
+      actor.getListings([], BigInt(1)), // 1개만 조회하여 total 값만 확인
+      actor.getTotalVolume(),
+    ]);
 
-    // 판매중인 NFT 개수 조회
-    const listings = await actor.getListings([], BigInt(1)); // 1개만 조회하여 total 값만 확인
     const availableNFTs = Number(listings.total);
-
-    // 판매된 NFT 개수 계산
     const soldNFTs = Number(totalSupply) - availableNFTs;
-
-    // 총 거래량 조회
-    const totalVolume = await actor.getTotalVolume();
 
     return {
       totalSupply: Number(totalSupply),

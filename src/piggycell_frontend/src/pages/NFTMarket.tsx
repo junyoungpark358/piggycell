@@ -643,8 +643,10 @@ const NFTMarket = () => {
       setLoading(true);
       const actor = await createActor();
 
+      // 통계 데이터를 먼저 가져옴
       const stats = await getMarketStats();
       setMarketStats(stats);
+      console.log("통계 정보:", stats);
 
       console.log("초기 NFT 데이터 로딩 시작");
       console.log("Actor 생성 완료");
@@ -661,23 +663,14 @@ const NFTMarket = () => {
         )
       );
 
-      const totalSupply = await actor.icrc7_total_supply();
-      console.log("전체 NFT 발행량:", Number(totalSupply));
-
-      const totalVolume = await actor.getTotalVolume();
-      console.log("총 거래량:", Number(totalVolume));
+      // 중복 API 호출 제거 - 이미 getMarketStats에서 가져온 데이터 활용
+      console.log("전체 NFT 발행량:", stats.totalSupply);
+      console.log("총 거래량:", stats.totalVolume);
 
       if (result.items.length === 0) {
         console.log("판매 중인 NFT가 없음");
         setNfts([]);
-        setMarketStats({
-          totalSupply: Number(totalSupply),
-          availableNFTs: 0,
-          soldNFTs: Number(totalSupply),
-          totalVolume: Number(totalVolume),
-          stakedCount: 0,
-          activeUsers: 0,
-        });
+        // 이미 setMarketStats가 호출되었으므로 다시 설정할 필요 없음
         setHasMore(false);
 
         if (showMessage) {
@@ -728,7 +721,7 @@ const NFTMarket = () => {
       setHasMore(!!result.nextStart);
 
       const avail = Number(result.total);
-      const total = Number(totalSupply);
+      const total = Number(stats.totalSupply);
       const sold = total - avail;
 
       console.log("통계 계산 상세:", {
@@ -743,7 +736,7 @@ const NFTMarket = () => {
         totalSupply: total,
         availableNFTs: avail,
         soldNFTs: sold,
-        totalVolume: Number(totalVolume),
+        totalVolume: Number(stats.totalVolume),
         stakedCount: 0,
         activeUsers: 0,
       });

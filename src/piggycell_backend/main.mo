@@ -63,6 +63,22 @@ actor Main {
     private let transactions = Buffer.Buffer<Transaction>(0);
     private let activeUsers = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
 
+    // 누적 통계를 위한 변수 추가
+    private var cachedTotalVolume: Nat = 0;
+
+    // 초기화 함수 추가
+    private func initializeStats() {
+        // 기존 트랜잭션에서 거래량 계산
+        cachedTotalVolume := 0;
+        for (tx in transactions.vals()) {
+            switch (tx.txType) {
+                case (#NFTSale) { cachedTotalVolume += tx.amount };
+                case (_) {};
+            };
+        };
+        Debug.print("초기 통계 계산 완료: 총 거래량 = " # Nat.toText(cachedTotalVolume));
+    };
+
     // NFT ID를 저장하는 순서화된 배열 추가
     private var sortedNFTIds = Buffer.Buffer<Nat>(0);
     
@@ -109,6 +125,12 @@ actor Main {
             };
         };
 
+        // 통계 데이터 업데이트
+        if (txType == #NFTSale) {
+            cachedTotalVolume += amount;
+            Debug.print("거래량 업데이트: +" # Nat.toText(amount) # ", 새 총 거래량 = " # Nat.toText(cachedTotalVolume));
+        };
+
         // Mint 타입이 아닐 때만 활성 사용자로 기록
         switch (txType) {
             case (#Mint) { };
@@ -128,16 +150,9 @@ actor Main {
         count
     };
 
-    // 총 거래액 조회
+    // 총 거래액 조회 - 캐시된 값 반환
     public query func getTotalVolume() : async Nat {
-        var total = 0;
-        for (tx in transactions.vals()) {
-            switch (tx.txType) {
-                case (#NFTSale) { total += tx.amount };
-                case (_) {};
-            };
-        };
-        total
+        cachedTotalVolume
     };
 
     // 거래 내역 조회 (페이지네이션)
@@ -1792,4 +1807,7 @@ actor Main {
     public query func isUserAdmin(userPrincipal: Principal) : async Bool {
         adminManager.isAdmin(userPrincipal)
     };
+
+    // 시스템 초기화: 처음 생성 시 호출
+    initializeStats();
 };

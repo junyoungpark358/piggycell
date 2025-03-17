@@ -55,6 +55,20 @@ module {
         private let soldNFTs = TrieMap.TrieMap<Nat, Int>(Nat.equal, natHash); // tokenId -> sellTime
         private let soldNFTsByTime = Buffer.Buffer<(Int, Nat)>(0); // (판매시각, NFT ID) 저장
         
+        // 통계 데이터를 위한 캐시 변수 추가
+        private var cachedAvailableNFTs: Nat = 0;
+        private var cachedSoldNFTs: Nat = 0;
+        
+        // 초기화 함수 추가
+        public func initializeStats() {
+            cachedAvailableNFTs := listings.size();
+            cachedSoldNFTs := soldNFTs.size();
+            Debug.print("마켓 통계 초기화 완료: 판매중 NFT = " # Nat.toText(cachedAvailableNFTs) # ", 판매완료 NFT = " # Nat.toText(cachedSoldNFTs));
+        };
+        
+        // 생성자에서 초기화 호출
+        initializeStats();
+        
         // NFT 리스팅
         public func listNFT(caller: Principal, tokenId: Nat, price: Nat) : Result.Result<(), ListingError> {
             // 이미 리스팅된 NFT인지 확인
@@ -71,6 +85,11 @@ module {
                     // 판매 항목도 맨 앞에 추가하여 최신 항목이 앞에 오도록 변경
                     listingsByTime.insert(0, (listing.listedAt, tokenId));
                     if (tokenId > lastTokenId) { lastTokenId := tokenId };
+                    
+                    // 통계 업데이트
+                    cachedAvailableNFTs += 1;
+                    Debug.print("NFT 리스팅 통계 업데이트: 판매중 NFT = " # Nat.toText(cachedAvailableNFTs));
+                    
                     #ok(())
                 };
             }
@@ -94,6 +113,11 @@ module {
                         };
                         i += 1;
                     };
+                    
+                    // 통계 업데이트
+                    cachedAvailableNFTs := Nat.max(0, cachedAvailableNFTs - 1);
+                    Debug.print("NFT 리스팅 취소 통계 업데이트: 판매중 NFT = " # Nat.toText(cachedAvailableNFTs));
+                    
                     #ok(())
                 };
                 case null { #err(#NotListed) };
@@ -204,6 +228,11 @@ module {
                                             // 최신 판매 항목이 버퍼 앞에 오도록 맨 앞에 추가
                                             soldNFTsByTime.insert(0, (sellTime, tokenId));
                                             
+                                            // 통계 업데이트
+                                            cachedAvailableNFTs := Nat.max(0, cachedAvailableNFTs - 1);
+                                            cachedSoldNFTs += 1;
+                                            Debug.print("NFT 판매 통계 업데이트: 판매중 NFT = " # Nat.toText(cachedAvailableNFTs) # ", 판매완료 NFT = " # Nat.toText(cachedSoldNFTs));
+                                            
                                             #ok(listing)
                                         };
                                         case (#err(error)) {
@@ -294,7 +323,7 @@ module {
 
         // 리스팅된 총 NFT 수 조회
         public func getTotalListings() : Nat {
-            listings.size()
+            cachedAvailableNFTs
         };
 
         // 페이지네이션을 지원하는 리스팅 조회 (최신순 정렬 지원)
@@ -333,7 +362,7 @@ module {
 
             {
                 items = Buffer.toArray(buffer);
-                total = listings.size();
+                total = cachedAvailableNFTs; // 캐시된 값 사용
                 nextStart = nextStart;
             }
         };
@@ -385,7 +414,7 @@ module {
 
             {
                 items = Buffer.toArray(buffer);
-                total = soldNFTs.size();
+                total = cachedSoldNFTs; // 캐시된 값 사용
                 nextStart = nextStart;
             }
         };
