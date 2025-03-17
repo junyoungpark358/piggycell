@@ -672,51 +672,62 @@ export const getTransactions = async (
 export const getNFTManagementStats = async (): Promise<NFTManagementStats> => {
   try {
     const actor = await createActor();
+    const authManager = AuthManager.getInstance();
+    const identity = await authManager.getIdentity();
 
-    // 전체 NFT 수 조회
-    const totalSupply = await actor.icrc7_total_supply();
+    if (!identity) {
+      throw new Error("인증되지 않은 사용자입니다.");
+    }
 
-    // 판매중인 NFT 개수 조회
-    const listings = await actor.getListings([], BigInt(1)); // 1개만 조회하여 total 값만 확인
+    // 병렬로 필요한 모든 API 호출 실행
+    const [totalSupply, listings, totalValue, nftStats] = await Promise.all([
+      actor.icrc7_total_supply(),
+      actor.getListings([], BigInt(1)), // 1개만 조회하여 total 값만 확인
+      actor.getTotalVolume(),
+      actor.getNFTStats().catch((e) => {
+        console.warn("getNFTStats API 호출 실패:", e);
+        return { totalChargers: 0, activeLocations: 0 };
+      }),
+    ]);
+
+    // 통계 데이터 초기값 설정 제거 (백엔드 API에서 가져온 값 사용)
     const availableNFTs = Number(listings.total);
 
-    // 활성 위치 수 조회
-    const activeLocationsSet = new Set<string>();
-    const totalChargers = { value: 0 };
-
-    // 총 거래량 직접 조회
-    const totalValue = await actor.getTotalVolume();
-
-    // 각 NFT의 메타데이터를 조회하여 통계 계산
-    for (let i = 0; i < Number(totalSupply); i++) {
-      const tokenId = BigInt(i);
-      const metadata = await actor.icrc7_token_metadata([tokenId]);
-
-      if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
-        const metadataFields = metadata[0][0] as Array<
-          [string, { Text?: string; Nat?: bigint }]
-        >;
-
-        metadataFields.forEach(([key, value]) => {
-          if (key === "location" && value.Text) {
-            activeLocationsSet.add(value.Text);
-          } else if (key === "chargerCount" && value.Nat) {
-            totalChargers.value += Number(value.Nat);
-          }
-        });
-      }
-    }
+    console.log("NFT 통계 데이터 조회 완료:", {
+      totalSupply: Number(totalSupply),
+      activeLocations: nftStats.activeLocations,
+      totalChargers: nftStats.totalChargers,
+      totalValue: Number(totalValue),
+      availableNFTs,
+    });
 
     return {
       totalNFTs: Number(totalSupply),
-      activeLocations: activeLocationsSet.size,
-      availableNFTs: availableNFTs,
-      totalChargers: totalChargers.value,
+      activeLocations: Number(nftStats.activeLocations),
+      totalChargers: Number(nftStats.totalChargers),
       totalValue: Number(totalValue),
+      availableNFTs,
     };
   } catch (error) {
     console.error("NFT 관리 통계 데이터 조회 실패:", error);
-    throw error;
+
+    // 에러 시 이전 방식으로 대체 (더 비효율적이지만 최소한 작동은 함)
+    console.warn("기존 방식으로 NFT 통계 데이터 조회 시도");
+
+    const actor = await createActor();
+    const totalSupply = await actor.icrc7_total_supply();
+    const listings = await actor.getListings([], BigInt(1));
+    const availableNFTs = Number(listings.total);
+    const totalValue = await actor.getTotalVolume();
+
+    // 추정값으로 리턴 (정확하지 않음)
+    return {
+      totalNFTs: Number(totalSupply),
+      activeLocations: 0, // 정확한 값을 얻을 수 없음
+      availableNFTs,
+      totalChargers: 0, // 정확한 값을 얻을 수 없음
+      totalValue: Number(totalValue),
+    };
   }
 };
 

@@ -29,6 +29,9 @@ actor Main {
     private let stakingManager = Staking.StakingManager(token, nft);
     private let marketManager = Market.MarketManager(token, nft, Principal.fromActor(Main), adminManager);
     private let revenueManager = RevenueDistribution.RevenueDistributionManager(token, stakingManager, adminManager);
+    
+    // Value 타입 별칭
+    type Value = ChargerHubNFT.Value;
 
     // 거래 내역을 저장하기 위한 타입과 변수
     type TransactionType = {
@@ -65,6 +68,8 @@ actor Main {
     // 누적 집계를 위한 변수 추가
     private var cachedActiveUserCount: Nat = 0;
     private var cachedTotalVolume: Nat = 0;
+    private var cachedTotalChargers: Nat = 0;
+    private var cachedActiveLocations = TrieMap.TrieMap<Text, Bool>(Text.equal, Text.hash);
 
     // 초기화 함수 추가
     private func initializeStats() {
@@ -80,6 +85,45 @@ actor Main {
         
         // 활성 사용자 통계 초기화
         initializeActiveUserStats();
+        
+        // 충전기 및 위치 통계 초기화
+        initializeNFTStats();
+    };
+    
+    // 충전기 및 위치 통계 초기화 함수
+    private func initializeNFTStats() {
+        cachedTotalChargers := 0;
+        // TrieMap을 비우는 대신 새로 생성
+        cachedActiveLocations := TrieMap.TrieMap<Text, Bool>(Text.equal, Text.hash);
+        
+        // 초기화는 간단하게 0으로 설정
+        // 실제 값은 NFT가 생성될 때마다 업데이트됨
+        Debug.print("NFT 통계 초기화 완료");
+    };
+    
+    // NFT 민팅 시 통계 업데이트
+    private func updateNFTStats(metadata: [(Text, Value)]) {
+        for ((key, value) in metadata.vals()) {
+            switch (key, value) {
+                case ("location", #Text(location)) {
+                    if (location != "") {
+                        cachedActiveLocations.put(location, true);
+                    };
+                };
+                case ("chargerCount", #Nat(count)) {
+                    cachedTotalChargers += count;
+                };
+                case _ {};
+            };
+        };
+    };
+    
+    // NFT 통계 조회 공개 함수
+    public query func getNFTStats() : async { totalChargers: Nat; activeLocations: Nat } {
+        {
+            totalChargers = cachedTotalChargers;
+            activeLocations = cachedActiveLocations.size();
+        }
     };
 
     // NFT ID를 저장하는 순서화된 배열 추가
@@ -295,7 +339,7 @@ actor Main {
     };
 
     // ICRC-7 표준 메소드
-    public query func icrc7_collection_metadata() : async [(Text, ChargerHubNFT.Value)] {
+    public query func icrc7_collection_metadata() : async [(Text, Value)] {
         nft.icrc7_collection_metadata()
     };
 
@@ -355,7 +399,7 @@ actor Main {
         nft.icrc7_permitted_drift()
     };
 
-    public query func icrc7_token_metadata(token_ids: [Nat]) : async [?[(Text, ChargerHubNFT.Value)]] {
+    public query func icrc7_token_metadata(token_ids: [Nat]) : async [?[(Text, Value)]] {
         nft.icrc7_token_metadata(token_ids)
     };
 
@@ -712,7 +756,46 @@ actor Main {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 NFT를 발행할 수 있습니다.");
         };
-
+        
+        // 거래 내역 추가 및 활성 사용자 업데이트
+        addTransaction(#Mint, ?args.token_id, caller, 0);
+        
+        // 활성 사용자 업데이트 - 직접 구현
+        let prevActivity = activeUsers.get(caller);
+        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
+        
+        // 사용자가 처음 활동하거나 30일 이상 비활성 상태였다가 다시 활동한 경우
+        switch (prevActivity) {
+            case (null) {
+                // 새 사용자 활동
+                activeUsers.put(caller, Time.now());
+                cachedActiveUserCount += 1;
+            };
+            case (?lastActive) {
+                if (lastActive <= thirtyDaysAgo) {
+                    // 30일 이상 비활성이었다가 다시 활성화된 사용자
+                    cachedActiveUserCount += 1;
+                };
+                // 마지막 활동 시간 업데이트
+                activeUsers.put(caller, Time.now());
+            };
+        };
+        
+        // NFT 메타데이터에서 통계 정보 추출하여 업데이트
+        for ((key, value) in args.metadata.vals()) {
+            switch (key, value) {
+                case ("location", #Text(location)) {
+                    if (location != "") {
+                        cachedActiveLocations.put(location, true);
+                    };
+                };
+                case ("chargerCount", #Nat(count)) {
+                    cachedTotalChargers += count;
+                };
+                case _ {};
+            };
+        };
+        
         // 가격 정보를 메타데이터에 추가
         let metadata = switch(price) {
             case (?p) { 
@@ -720,21 +803,19 @@ actor Main {
             };
             case null { args.metadata };
         };
-
+        
         let mintArgs: ChargerHubNFT.MintArgs = {
             to = args.to;
             token_id = args.token_id;
             metadata = metadata;
         };
 
+        // NFT 민팅 - ChargerHubNFT의 mint 함수가 async가 아니므로 await 없이 호출
         switch(nft.mint(caller, mintArgs)) {
             case (#ok(token_id)) {
                 // 생성된 NFT ID를 정렬된 배열의 맨 앞에 추가 (최신 NFT를 맨 앞에 배치)
                 sortedNFTIds.insert(0, token_id);
 
-                // NFT 발행 거래 내역 추가
-                addTransaction(#Mint, ?token_id, caller, 0);
-                
                 // NFT 상태를 "created"로 설정
                 updateNFTStatus(token_id, "created");
 
@@ -773,10 +854,10 @@ actor Main {
             case (#err(error)) {
                 #err(error)
             };
-        }
+        };
     };
 
-    public shared({ caller }) func updateMetadata(token_id: Nat, new_metadata: [(Text, ChargerHubNFT.Value)]) : async Result.Result<(), Text> {
+    public shared({ caller }) func updateMetadata(token_id: Nat, new_metadata: [(Text, Value)]) : async Result.Result<(), Text> {
         if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
             return #err("관리자만 메타데이터를 수정할 수 있습니다.");
         };
@@ -1848,3 +1929,4 @@ actor Main {
     // 시스템 초기화: 함수 정의 후 호출
     initializeStats();
 };
+
