@@ -135,28 +135,37 @@ export const createActor = async (): Promise<_SERVICE> => {
 export const getBasicNFTStats = async (): Promise<NFTStats> => {
   try {
     const actor = await createActor();
-
-    // NFT 총 발행량 조회
-    const totalSupply = await actor.icrc7_total_supply();
-
-    // 스테이킹된 NFT 수 조회
     const authManager = AuthManager.getInstance();
     const identity = await authManager.getIdentity();
+
     if (!identity) {
       throw new Error("인증되지 않은 사용자입니다.");
     }
-    const stakedNFTs = await actor.getStakedNFTs(identity.getPrincipal());
-    const stakedCount = stakedNFTs.length;
 
-    // 활성 사용자 수 조회
-    const activeUsers = await actor.getActiveUsersCount();
+    // 병렬로 API 호출
+    // getTotalStakedCount API가 있는지 확인 (안전한 방식으로)
+    let stakedCountPromise;
+    try {
+      // @ts-ignore - 백엔드 업그레이드 후 타입이 업데이트될 예정
+      stakedCountPromise = actor.getTotalStakedCount();
+    } catch (e) {
+      // API가 없으면 기존 방식 사용
+      stakedCountPromise = actor
+        .getStakedNFTs(identity.getPrincipal())
+        .then((tokens) => tokens.length);
+    }
 
-    // 총 거래액 조회
-    const totalVolume = await actor.getTotalVolume();
+    const [totalSupply, stakedCount, activeUsers, totalVolume] =
+      await Promise.all([
+        actor.icrc7_total_supply(),
+        stakedCountPromise,
+        actor.getActiveUsersCount(),
+        actor.getTotalVolume(),
+      ]);
 
     return {
       totalSupply: Number(totalSupply),
-      stakedCount,
+      stakedCount: Number(stakedCount),
       activeUsers: Number(activeUsers),
       totalVolume: Number(totalVolume),
     };
@@ -264,36 +273,29 @@ export const getAdminDashboardStats = async (): Promise<NFTStats> => {
   try {
     const actor = await createActor();
 
-    // 총 발행량 조회
-    const totalSupply = await actor.icrc7_total_supply();
-    const totalSupplyNum = Number(totalSupply);
-
-    // 스테이킹된 NFT 수 계산 (전체 조회)
-    let stakedCount = 0;
-    for (let i = 0; i < totalSupplyNum; i++) {
-      try {
-        const tokenId = BigInt(i);
-        const isStaked = await actor.isNFTStaked(tokenId);
-        if (isStaked) {
-          stakedCount++;
-        }
-      } catch (e) {
-        console.warn(`NFT #${i} 스테이킹 상태 확인 실패:`, e);
-      }
+    // getTotalStakedCount API가 있는지 확인 (안전한 방식으로)
+    let stakedCountPromise;
+    try {
+      // @ts-ignore - 백엔드 업그레이드 후 타입이 업데이트될 예정
+      stakedCountPromise = actor.getTotalStakedCount();
+    } catch (e) {
+      // API가 없으면 레거시 방식 사용
+      stakedCountPromise = getStakedCountLegacy(actor);
     }
 
-    // 활성 사용자 수 조회
-    const activeUsers = await actor.getActiveUsersCount();
-
-    // 총 거래액 조회
-    const totalVolume = await actor.getTotalVolume();
-
-    // 마켓 통계 조회
-    const marketStats = await getMarketStats();
+    // 모든 API 호출을 병렬로 처리하여 성능 향상
+    const [totalSupply, stakedCount, activeUsers, totalVolume, marketStats] =
+      await Promise.all([
+        actor.icrc7_total_supply(),
+        stakedCountPromise,
+        actor.getActiveUsersCount(),
+        actor.getTotalVolume(), // 이미 캐시된 값을 사용하도록 변경됨
+        getMarketStats(), // 마켓 통계 가져오기
+      ]);
 
     return {
-      totalSupply: totalSupplyNum,
-      stakedCount: stakedCount,
+      totalSupply: Number(totalSupply),
+      stakedCount: Number(stakedCount),
       activeUsers: Number(activeUsers),
       totalVolume: Number(totalVolume),
       availableNFTs: marketStats.availableNFTs,
@@ -317,6 +319,31 @@ export const getAdminDashboardStats = async (): Promise<NFTStats> => {
     }
   }
 };
+
+// 레거시 방식으로 스테이킹된 NFT 수 계산 (백엔드 업그레이드 전 호환성 유지)
+async function getStakedCountLegacy(actor: _SERVICE): Promise<number> {
+  // 총 발행량 조회
+  const totalSupply = await actor.icrc7_total_supply();
+  const totalSupplyNum = Number(totalSupply);
+
+  let stakedCount = 0;
+
+  // 각 NFT에 대해 스테이킹 상태 확인 (비효율적이지만 호환성 유지)
+  // 실제 NFT 수가 많으면 매우 느릴 수 있음
+  for (let i = 0; i < totalSupplyNum; i++) {
+    try {
+      const tokenId = BigInt(i);
+      const isStaked = await actor.isNFTStaked(tokenId);
+      if (isStaked) {
+        stakedCount++;
+      }
+    } catch (e) {
+      console.warn(`NFT #${i} 스테이킹 상태 확인 실패:`, e);
+    }
+  }
+
+  return stakedCount;
+}
 
 /**
  * 사용자별 커스텀 통계 정보 가져오기 (필요한 통계만 선택적으로 조회)

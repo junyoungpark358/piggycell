@@ -51,6 +51,17 @@ module {
         // 스테이킹 정보 저장소
         private let stakingInfos = TrieMap.TrieMap<Nat, StakingInfo>(Nat.equal, natHash);
         
+        // 누적 집계를 위한 변수 추가
+        private var cachedStakedCount: Nat = 0;
+        
+        // 캐시 초기화 함수
+        private func initializeStats() {
+            cachedStakedCount := stakingInfos.size();
+        };
+        
+        // 생성자에서 초기화 호출
+        initializeStats();
+        
         //-----------------------------------------------------------------------------
         // 내부 유틸리티 함수
         //-----------------------------------------------------------------------------
@@ -99,6 +110,10 @@ module {
                         price = price;  // 가격 정보 저장
                     };
                     stakingInfos.put(tokenId, stakingInfo);
+                    
+                    // 스테이킹 통계 업데이트
+                    cachedStakedCount += 1;
+                    
                     #ok(())
                 };
             }
@@ -137,6 +152,10 @@ module {
 
                     // 스테이킹 정보 삭제
                     stakingInfos.delete(tokenId);
+                    
+                    // 스테이킹 통계 업데이트
+                    cachedStakedCount := Nat.max(0, cachedStakedCount - 1);
+                    
                     #ok(reward)
                 };
                 case null {
@@ -271,6 +290,11 @@ module {
                     #err(#NotStaked)
                 };
             }
+        };
+
+        // 총 스테이킹된 NFT 개수 조회 함수 추가
+        public func getTotalStakedCount() : Nat {
+            cachedStakedCount
         };
     };
 }; 

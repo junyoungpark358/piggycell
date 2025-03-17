@@ -62,8 +62,8 @@ actor Main {
 
     private let transactions = Buffer.Buffer<Transaction>(0);
     private let activeUsers = TrieMap.TrieMap<Principal, Int>(Principal.equal, Principal.hash);
-
-    // 누적 통계를 위한 변수 추가
+    // 누적 집계를 위한 변수 추가
+    private var cachedActiveUserCount: Nat = 0;
     private var cachedTotalVolume: Nat = 0;
 
     // 초기화 함수 추가
@@ -77,6 +77,9 @@ actor Main {
             };
         };
         Debug.print("초기 통계 계산 완료: 총 거래량 = " # Nat.toText(cachedTotalVolume));
+        
+        // 활성 사용자 통계 초기화
+        initializeActiveUserStats();
     };
 
     // NFT ID를 저장하는 순서화된 배열 추가
@@ -134,20 +137,35 @@ actor Main {
         // Mint 타입이 아닐 때만 활성 사용자로 기록
         switch (txType) {
             case (#Mint) { };
-            case (_) { activeUsers.put(user, Time.now()) };
+            case (_) { 
+                let prevActivity = activeUsers.get(user);
+                let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
+                
+                // 사용자가 처음 활동하거나 30일 이상 비활성 상태였다가 다시 활동한 경우
+                switch (prevActivity) {
+                    case (null) {
+                        // 새 사용자 활동
+                        activeUsers.put(user, Time.now());
+                        cachedActiveUserCount += 1;
+                        Debug.print("신규 활성 사용자 추가: 총 " # Nat.toText(cachedActiveUserCount) # "명");
+                    };
+                    case (?lastActive) {
+                        if (lastActive <= thirtyDaysAgo) {
+                            // 30일 이상 비활성이었다가 다시 활성화된 사용자
+                            cachedActiveUserCount += 1;
+                            Debug.print("비활성 사용자가 다시 활성화됨: 총 " # Nat.toText(cachedActiveUserCount) # "명");
+                        };
+                        // 마지막 활동 시간 업데이트
+                        activeUsers.put(user, Time.now());
+                    };
+                };
+            };
         };
     };
 
-    // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자)
+    // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자) - 캐시된 값 반환
     public query func getActiveUsersCount() : async Nat {
-        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000); // 30일을 나노초로 변환
-        var count = 0;
-        for ((_, lastActive) in activeUsers.entries()) {
-            if (lastActive > thirtyDaysAgo) {
-                count += 1;
-            };
-        };
-        count
+        cachedActiveUserCount
     };
 
     // 총 거래액 조회 - 캐시된 값 반환
@@ -905,6 +923,11 @@ actor Main {
 
     public query func getEstimatedStakingReward(tokenId: Nat) : async Result.Result<Nat, Staking.StakingError> {
         stakingManager.getEstimatedReward(tokenId)
+    };
+
+    // 총 스테이킹된 NFT 개수 조회 API 추가
+    public query func getTotalStakedCount() : async Nat {
+        stakingManager.getTotalStakedCount()
     };
 
     // 관리자용 토큰 발행/소각 기능
@@ -1808,6 +1831,20 @@ actor Main {
         adminManager.isAdmin(userPrincipal)
     };
 
-    // 시스템 초기화: 처음 생성 시 호출
+    // 누적 집계 초기화 함수
+    private func initializeActiveUserStats() {
+        // 30일 내 활성 사용자 계산
+        let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
+        var count = 0;
+        for ((_, lastActive) in activeUsers.entries()) {
+            if (lastActive > thirtyDaysAgo) {
+                count += 1;
+            };
+        };
+        cachedActiveUserCount := count;
+        Debug.print("활성 사용자 통계 초기화 완료: " # Nat.toText(cachedActiveUserCount) # "명");
+    };
+    
+    // 시스템 초기화: 함수 정의 후 호출
     initializeStats();
 };
