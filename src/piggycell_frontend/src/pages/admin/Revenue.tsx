@@ -472,24 +472,6 @@ const AdminRevenue = () => {
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={8} md={6}>
           <StatCard
-            title="활성 NFT 수"
-            value={revenueStats.activeNFTCount}
-            prefix={<ShoppingCartOutlined />}
-            suffix="개"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={8} md={6}>
-          <StatCard
-            title="활성 사용자 수"
-            value={revenueStats.activeUserCount}
-            prefix={<UserOutlined />}
-            suffix="명"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={12} sm={8} md={6}>
-          <StatCard
             title="총 배분 횟수"
             value={revenueStats.totalDistributions}
             prefix={<ThunderboltOutlined />}

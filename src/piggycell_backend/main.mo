@@ -129,6 +129,63 @@ actor Main {
         }
     };
 
+    // 관리자 전용: 통계 데이터 재계산 함수
+    public shared({ caller }) func recalculateNFTStats() : async Result.Result<(), Text> {
+        if (not adminManager.isAdmin(caller) and not adminManager.isSuperAdmin(caller)) {
+            return #err("관리자만 통계 데이터를 재계산할 수 있습니다.");
+        };
+        
+        // 통계 데이터 초기화
+        cachedTotalChargers := 0;
+        cachedActiveLocations := TrieMap.TrieMap<Text, Bool>(Text.equal, Text.hash);
+        
+        // 모든 토큰 ID 목록 가져오기 (전체 토큰 목록)
+        let allTokens = nft.icrc7_tokens(null, null);
+        Debug.print("NFT 통계 재계산 시작: 총 " # Nat.toText(allTokens.size()) # "개의 NFT 확인");
+        
+        // 모든 토큰의 메타데이터를 조회하여 통계 재계산
+        for (tokenId in allTokens.vals()) {
+            let metadataResult = nft.icrc7_token_metadata([tokenId]);
+            
+            if (metadataResult.size() > 0) {
+                switch (metadataResult[0]) {
+                    case (?metadata) {
+                        for ((key, value) in metadata.vals()) {
+                            switch (key, value) {
+                                case ("piggycell:location", #Text(location)) {
+                                    if (location != "") {
+                                        cachedActiveLocations.put(location, true);
+                                    };
+                                };
+                                case ("piggycell:charger_count", #Nat(count)) {
+                                    cachedTotalChargers += count;
+                                    Debug.print("토큰 #" # Nat.toText(tokenId) # " - piggycell:charger_count: " # Nat.toText(count));
+                                };
+                                case ("location", #Text(location)) {
+                                    if (location != "") {
+                                        cachedActiveLocations.put(location, true);
+                                    };
+                                };
+                                case ("chargerCount", #Nat(count)) {
+                                    cachedTotalChargers += count;
+                                    Debug.print("토큰 #" # Nat.toText(tokenId) # " - chargerCount: " # Nat.toText(count));
+                                };
+                                case _ {};
+                            };
+                        };
+                    };
+                    case (null) {
+                        // 메타데이터가 없는 경우 무시
+                        Debug.print("토큰 #" # Nat.toText(tokenId) # "의 메타데이터 없음");
+                    };
+                };
+            };
+        };
+        
+        Debug.print("통계 데이터 재계산 완료: 총 충전기 = " # Nat.toText(cachedTotalChargers) # ", 활성 위치 = " # Nat.toText(cachedActiveLocations.size()));
+        return #ok();
+    };
+
     // NFT ID를 저장하는 순서화된 배열 추가
     private var sortedNFTIds = Buffer.Buffer<Nat>(0);
     
