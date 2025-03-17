@@ -458,7 +458,7 @@ const AdminRevenue = () => {
   return (
     <div className="revenue-management">
       <div className="page-header">
-        <h1 className="text-5xl font-extrabold text-sky-600">매출 관리</h1>
+        <h1 className="text-5xl font-extrabold text-sky-600">수익 관리</h1>
         <StyledButton
           customVariant="primary"
           customSize="md"

@@ -1053,7 +1053,7 @@ const Revenue = () => {
 
   return (
     <div className="revenue-page">
-      <PageHeader title="수익 관리" onRefresh={() => handleRefresh(true)} />
+      <PageHeader title="수익 현황" onRefresh={() => handleRefresh(true)} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
