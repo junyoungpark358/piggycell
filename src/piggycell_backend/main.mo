@@ -70,6 +70,9 @@ actor Main {
     private var cachedTotalVolume: Nat = 0;
     private var cachedTotalChargers: Nat = 0;
     private var cachedActiveLocations = TrieMap.TrieMap<Text, Bool>(Text.equal, Text.hash);
+    // NFT 소유자 추적을 위한 변수 추가
+    private let nftOwners = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
+    private var cachedNFTOwnerCount: Nat = 0;
 
     // 초기화 함수 추가
     private func initializeStats() {
@@ -144,38 +147,20 @@ actor Main {
 
     // 정렬된 상태로 트랜잭션 추가
     private func addTransaction(txType: TransactionType, nftId: ?Nat, user: Principal, amount: Nat) {
-        let newTx = {
+        // 기존 거래 내역 추가
+        let tx = {
             txType = txType;
             nftId = nftId;
             user = user;
             amount = amount;
             timestamp = Time.now();
         };
-        
-        // 버퍼가 비어있거나 새 트랜잭션이 가장 최신인 경우
-        if (transactions.size() == 0 or newTx.timestamp > transactions.get(0).timestamp) {
-            transactions.insert(0, newTx);
-        } else {
-            // 적절한 위치 찾아서 삽입
-            var i = 0;
-            label l loop {
-                if (i >= transactions.size()) break l;
-                if (newTx.timestamp > transactions.get(i).timestamp) {
-                    transactions.insert(i, newTx);
-                    break l;
-                };
-                i += 1;
-            };
-            
-            if (i >= transactions.size()) {
-                transactions.add(newTx);
-            };
-        };
+        transactions.add(tx);
 
-        // 통계 데이터 업데이트
-        if (txType == #NFTSale) {
-            cachedTotalVolume += amount;
-            Debug.print("거래량 업데이트: +" # Nat.toText(amount) # ", 새 총 거래량 = " # Nat.toText(cachedTotalVolume));
+        // 거래 유형에 따른 처리
+        switch (txType) {
+            case (#NFTSale) { cachedTotalVolume += amount };
+            case (_) {};
         };
 
         // Mint 타입이 아닐 때만 활성 사용자로 기록
@@ -185,24 +170,10 @@ actor Main {
                 let prevActivity = activeUsers.get(user);
                 let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
                 
-                // 사용자가 처음 활동하거나 30일 이상 비활성 상태였다가 다시 활동한 경우
-                switch (prevActivity) {
-                    case (null) {
-                        // 새 사용자 활동
-                        activeUsers.put(user, Time.now());
-                        cachedActiveUserCount += 1;
-                        Debug.print("신규 활성 사용자 추가: 총 " # Nat.toText(cachedActiveUserCount) # "명");
-                    };
-                    case (?lastActive) {
-                        if (lastActive <= thirtyDaysAgo) {
-                            // 30일 이상 비활성이었다가 다시 활성화된 사용자
-                            cachedActiveUserCount += 1;
-                            Debug.print("비활성 사용자가 다시 활성화됨: 총 " # Nat.toText(cachedActiveUserCount) # "명");
-                        };
-                        // 마지막 활동 시간 업데이트
-                        activeUsers.put(user, Time.now());
-                    };
-                };
+                // 사용자 활동 시간만 업데이트
+                activeUsers.put(user, Time.now());
+                
+                // 소유자 통계는 initializeActiveUserStats에서 계산하므로 여기서는 계산하지 않음
             };
         };
     };
@@ -210,6 +181,11 @@ actor Main {
     // 활성 사용자 수 조회 (최근 30일 이내 거래한 사용자) - 캐시된 값 반환
     public query func getActiveUsersCount() : async Nat {
         cachedActiveUserCount
+    };
+
+    // NFT 소유자 수 조회 - 캐시된 값 반환
+    public query func getNFTOwnerCount() : async Nat {
+        cachedNFTOwnerCount
     };
 
     // 총 거래액 조회 - 캐시된 값 반환
@@ -764,22 +740,8 @@ actor Main {
         let prevActivity = activeUsers.get(caller);
         let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
         
-        // 사용자가 처음 활동하거나 30일 이상 비활성 상태였다가 다시 활동한 경우
-        switch (prevActivity) {
-            case (null) {
-                // 새 사용자 활동
-                activeUsers.put(caller, Time.now());
-                cachedActiveUserCount += 1;
-            };
-            case (?lastActive) {
-                if (lastActive <= thirtyDaysAgo) {
-                    // 30일 이상 비활성이었다가 다시 활성화된 사용자
-                    cachedActiveUserCount += 1;
-                };
-                // 마지막 활동 시간 업데이트
-                activeUsers.put(caller, Time.now());
-            };
-        };
+        // 사용자 활동 시간만 업데이트
+        activeUsers.put(caller, Time.now());
         
         // NFT 메타데이터에서 통계 정보 추출하여 업데이트
         for ((key, value) in args.metadata.vals()) {
@@ -966,6 +928,19 @@ actor Main {
                 
                 // NFT 상태를 "sold"로 변경
                 updateNFTStatus(tokenId, "sold");
+                
+                // NFT 소유자 통계 업데이트 - 새 소유자인 경우에만 카운트 증가
+                switch (nftOwners.get(caller)) {
+                    case (null) {
+                        // 새 소유자인 경우
+                        nftOwners.put(caller, true);
+                        cachedNFTOwnerCount += 1;
+                        Debug.print("새로운 NFT 소유자 추가: " # Principal.toText(caller) # ", 현재 소유자 수: " # Nat.toText(cachedNFTOwnerCount));
+                    };
+                    case (?_) {
+                        // 이미 소유자인 경우
+                    };
+                };
                 
                 #ok(listing)
             };
@@ -1914,16 +1889,58 @@ actor Main {
 
     // 누적 집계 초기화 함수
     private func initializeActiveUserStats() {
-        // 30일 내 활성 사용자 계산
+        // 활성 사용자 통계 초기화
+        let activeUserSet = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
+        
+        // 최근 30일 이내 활동한 사용자 집계
         let thirtyDaysAgo = Time.now() - (30 * 24 * 60 * 60 * 1_000_000);
-        var count = 0;
-        for ((_, lastActive) in activeUsers.entries()) {
-            if (lastActive > thirtyDaysAgo) {
-                count += 1;
+        
+        for ((user, lastActivity) in activeUsers.entries()) {
+            if (lastActivity >= thirtyDaysAgo) {
+                activeUserSet.put(user, true);
             };
         };
-        cachedActiveUserCount := count;
+        
+        cachedActiveUserCount := activeUserSet.size();
         Debug.print("활성 사용자 통계 초기화 완료: " # Nat.toText(cachedActiveUserCount) # "명");
+        
+        // NFT 소유자 통계 초기화 (기존의 코드 재활용하되 이름만 변경)
+        initializeNFTOwnerStats();
+    };
+    
+    // NFT 소유자 통계 초기화 함수 (별도로 분리)
+    private func initializeNFTOwnerStats() {
+        // 기존의 nftOwners를 초기화
+        for (owner in nftOwners.keys()) {
+            nftOwners.delete(owner);
+        };
+        
+        // 모든 토큰 ID 가져오기
+        let totalTokens = nft.icrc7_total_supply();
+        
+        // NFT가 있는 경우에만 처리
+        if (totalTokens > 0) {
+            // 각 토큰의 소유자 정보 수집
+            for (tokenId in Iter.range(0, Nat.sub(totalTokens, 1))) {
+                let ownerResults = nft.icrc7_owner_of([tokenId]);
+                
+                if (ownerResults.size() > 0) {
+                    switch(ownerResults[0]) {
+                        case (?owner) {
+                            // 백엔드 캐니스터가 아닌 실제 사용자만 포함
+                            if (owner.owner != Principal.fromActor(Main)) {
+                                nftOwners.put(owner.owner, true);
+                            };
+                        };
+                        case (null) { };
+                    };
+                };
+            };
+        };
+        
+        // 고유한 NFT 소유자 수를 계산
+        cachedNFTOwnerCount := nftOwners.size();
+        Debug.print("NFT 소유자 통계 초기화 완료: " # Nat.toText(cachedNFTOwnerCount) # "명");
     };
     
     // 시스템 초기화: 함수 정의 후 호출

@@ -159,7 +159,7 @@ export const getBasicNFTStats = async (): Promise<NFTStats> => {
       await Promise.all([
         actor.icrc7_total_supply(),
         stakedCountPromise,
-        actor.getActiveUsersCount(),
+        (actor as any).getNFTOwnerCount(),
         actor.getTotalVolume(),
       ]);
 
@@ -288,7 +288,7 @@ export const getAdminDashboardStats = async (): Promise<NFTStats> => {
       await Promise.all([
         actor.icrc7_total_supply(),
         stakedCountPromise,
-        actor.getActiveUsersCount(),
+        (actor as any).getNFTOwnerCount(),
         actor.getTotalVolume(), // 이미 캐시된 값을 사용하도록 변경됨
         getMarketStats(), // 마켓 통계 가져오기
       ]);
@@ -380,7 +380,7 @@ export const getCustomStats = async (options: {
     }
 
     if (options.includeActiveUsers) {
-      const activeUsers = await actor.getActiveUsersCount();
+      const activeUsers = await (actor as any).getNFTOwnerCount();
       result.activeUsers = Number(activeUsers);
     }
 
