@@ -1041,9 +1041,6 @@ const NFTMarket = () => {
         setSoldHasMore(true); // 더 불러올 수 있도록 설정
         fetchSoldNFTs(); // 백엔드에서 최신 정렬된 데이터 가져오기
 
-        // 구매 완료 후 '판매 완료' 탭으로 전환
-        setActiveTab("sold");
-
         // 마켓 통계 업데이트 - 총 거래량도 함께 업데이트
         setMarketStats((prev) => ({
           ...prev,

@@ -36,6 +36,7 @@ const Home = () => {
     null
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("owned");
   const [stats, setStats] = useState({
     ownedCount: 0,
     stakedCount: 0,
@@ -205,7 +206,8 @@ const Home = () => {
       </Row>
 
       <Tabs
-        key={`tabs-${ownedNFTs.length}-${stakedNFTs.length}`}
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key)}
         items={[
           {
             key: "owned",
