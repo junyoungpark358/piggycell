@@ -256,7 +256,7 @@ const Staking = () => {
       <PageHeader title="스테이킹" onRefresh={handleRefresh} />
 
       <Row gutter={[16, 16]} className="stats-row">
-        <Col xs={24} sm={8} md={8}>
+        <Col xs={24} sm={12} md={12}>
           <StatCard
             title="스테이킹된 NFT"
             value={stakingStats.stakedCount}
@@ -265,25 +265,12 @@ const Staking = () => {
             loading={loading}
           />
         </Col>
-        <Col xs={24} sm={8} md={8}>
+        <Col xs={24} sm={12} md={12}>
           <StatCard
             title="충전기 수"
             value={stakingStats.totalChargers || 0}
             prefix={<ThunderboltOutlined />}
             suffix="개"
-            loading={loading}
-          />
-        </Col>
-        <Col xs={24} sm={8} md={8}>
-          <StatCard
-            title="예상 보상"
-            value={
-              stakingStats.totalEstimatedRewards
-                ? formatTokenDisplayForUI(stakingStats.totalEstimatedRewards)
-                : 0
-            }
-            prefix={<DollarOutlined />}
-            suffix="PGC"
             loading={loading}
           />
         </Col>
