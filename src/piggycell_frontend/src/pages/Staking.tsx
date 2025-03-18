@@ -234,9 +234,26 @@ const Staking = () => {
     }
   }, [location]);
 
+  // 새로고침 핸들러 함수 추가
+  const handleRefresh = () => {
+    // 현재 데이터 초기화
+    setStakedNFTs([]);
+    // 통계 정보 초기화
+    setStakingStats({
+      totalSupply: 0,
+      stakedCount: 0,
+      activeUsers: 0,
+      totalVolume: 0,
+      totalChargers: 0,
+      totalEstimatedRewards: BigInt(0),
+    });
+    // 새로고침 실행
+    fetchStakedNFTs(true);
+  };
+
   return (
     <div className="staking-page">
-      <PageHeader title="스테이킹" onRefresh={() => fetchStakedNFTs(true)} />
+      <PageHeader title="스테이킹" onRefresh={handleRefresh} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={24} sm={8} md={8}>

@@ -171,9 +171,25 @@ const Home = () => {
     fetchNFTs();
   }, []);
 
+  // 새로고침 핸들러 함수 추가
+  const handleRefresh = () => {
+    // 현재 데이터 초기화
+    setOwnedNFTs([]);
+    setStakedNFTs([]);
+    // 통계 정보 초기화 (기본값으로)
+    setStats({
+      ownedCount: 0,
+      stakedCount: 0,
+      totalChargerCount: 0,
+      estimatedMonthlyRevenue: 0,
+    });
+    // 새로고침 실행
+    fetchNFTs(true);
+  };
+
   return (
     <div className="home-page">
-      <PageHeader title="PiggyCell" onRefresh={() => fetchNFTs(true)} />
+      <PageHeader title="PiggyCell" onRefresh={handleRefresh} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>

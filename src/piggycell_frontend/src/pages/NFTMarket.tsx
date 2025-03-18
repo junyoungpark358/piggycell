@@ -754,6 +754,21 @@ const NFTMarket = () => {
     fetchSoldNFTs();
   }, []);
 
+  // 새로고침 핸들러 함수 추가
+  const handleRefresh = () => {
+    // 현재 데이터 초기화
+    setNfts([]);
+    setSoldNfts([]);
+    // 페이지 정보 초기화
+    setNextStart(null);
+    setSoldNextStart(null);
+    // 상태 초기화
+    setHasMore(true);
+    setSoldHasMore(true);
+    // 새로고침 실행
+    fetchInitialNFTs(true);
+  };
+
   const getErrorMessage = (error: any) => {
     if (typeof error === "object" && error !== null) {
       if ("NotOwner" in error) return "판매자가 아닙니다.";
@@ -1065,10 +1080,7 @@ const NFTMarket = () => {
 
   return (
     <div className="nft-market-page">
-      <PageHeader
-        title="마켓플레이스"
-        onRefresh={() => fetchInitialNFTs(true)}
-      />
+      <PageHeader title="마켓플레이스" onRefresh={handleRefresh} />
 
       <Row gutter={[16, 16]} className="stats-row">
         <Col xs={12} sm={6} md={6}>
