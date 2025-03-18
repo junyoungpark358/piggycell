@@ -14,43 +14,33 @@ sequenceDiagram
     participant Revenue
 
     %% Core Flow 1: NFT Creation & Listing
-    rect rgb(240, 240, 255)
     Note over Admin, Market: 1️⃣ NFT Creation & Listing
     Admin->>NFT: Mint Charger Hub NFT
     NFT-->>Admin: NFT Created
     Admin->>Market: List NFT for Sale
-    end
 
     %% Core Flow 2: Purchase & Ownership
-    rect rgb(255, 240, 240)
     Note over User, NFT: 2️⃣ Purchase & Ownership
     User->>Market: Browse & Purchase NFT
     Market->>NFT: Transfer Ownership
     NFT-->>User: NFT Ownership Confirmed
-    end
 
     %% Core Flow 3: Staking
-    rect rgb(240, 255, 240)
     Note over User, Staking: 3️⃣ Staking
     User->>Staking: Stake NFT
     Staking-->>User: Staking Confirmed
-    end
 
     %% Core Flow 4: Revenue Distribution
-    rect rgb(255, 240, 255)
     Note over Admin, User: 4️⃣ Revenue Distribution
     Admin->>Revenue: Report Charger Usage
     Revenue->>Revenue: Calculate Rewards
     Revenue->>User: Automatically Transfer Rewards
     Note right of User: No claim required
-    end
 
     %% Optional Flow: Unstaking
-    rect rgb(255, 255, 220)
     Note over User, Staking: 5️⃣ Unstaking (Optional)
     User->>Staking: Unstake NFT
     Staking-->>User: NFT Returned
-    end
 ```
 
 ## Features
