@@ -1,59 +1,138 @@
-# `piggycell`
+# PiggyCell - Web3-based Decentralized Charging Infrastructure Platform
 
-Welcome to your new `piggycell` project and to the Internet Computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+PiggyCell is a Web3-based decentralized charging infrastructure platform that tokenizes mobile phone charging hubs into NFTs (Non-Fungible Tokens) and provides a staking mechanism for user participation and rewards. This project builds a system that issues NFTs linked to charging hubs and allows users to stake these NFTs to receive a portion of the revenue generated from charger usage. This enables anyone to invest in charging infrastructure and earn profits, presenting a transparent and efficient revenue distribution model.
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+## Service Flow
 
-To learn more before you start working with `piggycell`, see the following documentation available online:
+```mermaid
+sequenceDiagram
+    actor Admin
+    actor User
+    participant NFT
+    participant Market
+    participant Staking
+    participant Revenue
 
-- [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
-- [SDK Developer Tools](https://internetcomputer.org/docs/current/developer-docs/setup/install)
-- [Motoko Programming Language Guide](https://internetcomputer.org/docs/current/motoko/main/motoko)
-- [Motoko Language Quick Reference](https://internetcomputer.org/docs/current/motoko/main/language-manual)
+    %% Core Flow 1: NFT Creation & Listing
+    rect rgb(240, 240, 255)
+    Note over Admin, Market: 1️⃣ NFT Creation & Listing
+    Admin->>NFT: Mint Charger Hub NFT
+    NFT-->>Admin: NFT Created
+    Admin->>Market: List NFT for Sale
+    end
 
-If you want to start working on your project right away, you might want to try the following commands:
+    %% Core Flow 2: Purchase & Ownership
+    rect rgb(255, 240, 240)
+    Note over User, NFT: 2️⃣ Purchase & Ownership
+    User->>Market: Browse & Purchase NFT
+    Market->>NFT: Transfer Ownership
+    NFT-->>User: NFT Ownership Confirmed
+    end
 
-```bash
-cd piggycell/
-dfx help
-dfx canister --help
+    %% Core Flow 3: Staking
+    rect rgb(240, 255, 240)
+    Note over User, Staking: 3️⃣ Staking
+    User->>Staking: Stake NFT
+    Staking-->>User: Staking Confirmed
+    end
+
+    %% Core Flow 4: Revenue Distribution
+    rect rgb(255, 240, 255)
+    Note over Admin, User: 4️⃣ Revenue Distribution
+    Admin->>Revenue: Report Charger Usage
+    Revenue->>Revenue: Calculate Rewards
+    Revenue->>User: Automatically Transfer Rewards
+    Note right of User: No claim required
+    end
+
+    %% Optional Flow: Unstaking
+    rect rgb(255, 255, 220)
+    Note over User, Staking: 5️⃣ Unstaking (Optional)
+    User->>Staking: Unstake NFT
+    Staking-->>User: NFT Returned
+    end
 ```
 
-## Running the project locally
+## Features
 
-If you want to test your project locally, you can use the following commands:
+- **NFT Management**: Create and manage NFTs representing real-world charging hubs using the ICRC-7 standard
+- **Token System**: Utilize the ICRC-1 and ICRC-2 standards for the platform's token economy
+- **Staking Mechanism**: Allow users to stake their NFTs to participate in revenue sharing
+- **Automatic Revenue Distribution**: Calculate and automatically distribute revenue from charger usage to NFT stakers without requiring claims
+- **Admin Controls**: Secured administrative functions for platform management
+- **Initial NFT Marketplace**: Purchase charging hub NFTs from the platform (initial sales only)
+
+## Tech Stack
+
+- **Backend**: Motoko on Internet Computer
+- **Frontend**: React.js
+- **Standards**: ICRC-1, ICRC-2, ICRC-3, ICRC-7
+- **Authentication**: Internet Identity
+
+## Project Structure
+
+```
+piggycell/
+├── src/
+│   ├── piggycell_backend/     # Motoko canisters
+│   │   ├── main.mo            # Main canister
+│   │   ├── ChargerHubNFT.mo   # NFT implementation
+│   │   ├── PiggyCellToken.mo  # Token implementation
+│   │   ├── Staking.mo         # Staking logic
+│   │   ├── Market.mo          # Marketplace functions
+│   │   ├── RevenueDistribution.mo # Revenue distribution
+│   │   └── Admin.mo           # Admin functions
+│   │
+│   └── piggycell_frontend/    # Frontend UI
+│       ├── src/               # React components and logic
+│       ├── public/            # Static assets
+│       └── ...                # Configuration files
+│
+├── dfx.json                   # Project configuration
+└── ...                        # Other configuration files
+```
+
+## Running the Project Locally
+
+To test the project locally, use the following commands:
 
 ```bash
-# Starts the replica, running in the background
+# Start the replica in the background
 dfx start --background
 
-# Deploys your canisters to the replica and generates your candid interface
+# Deploy canisters to the replica and generate candid interface
 dfx deploy
 ```
 
-Once the job completes, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
+After completion, your application will be available at `http://localhost:4943?canisterId={asset_canister_id}`.
 
-If you have made changes to your backend canister, you can generate a new candid interface with
+If you've made changes to your backend canister, generate a new candid interface with:
 
 ```bash
 npm run generate
 ```
 
-at any time. This is recommended before starting the frontend development server, and will be run automatically any time you run `dfx deploy`.
-
-If you are making frontend changes, you can start a development server with
+For frontend development, start a development server with:
 
 ```bash
 npm start
 ```
 
-Which will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
+This will start a server at `http://localhost:8080`, proxying API requests to the replica at port 4943.
 
-### Note on frontend environment variables
+## Frontend Environment Variables
 
-If you are hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project does not fetch the root key in production:
+If you're hosting frontend code somewhere without using DFX, you may need to make one of the following adjustments to ensure your project doesn't fetch the root key in production:
 
-- set`DFX_NETWORK` to `ic` if you are using Webpack
-- use your own preferred method to replace `process.env.DFX_NETWORK` in the autogenerated declarations
-  - Setting `canisters -> {asset_canister_id} -> declarations -> env_override to a string` in `dfx.json` will replace `process.env.DFX_NETWORK` with the string in the autogenerated declarations
+- Set `DFX_NETWORK` to `ic` if you're using Webpack
+- Use your own preferred method to replace `process.env.DFX_NETWORK` in the autogenerated declarations
+  - Setting `canisters -> {asset_canister_id} -> declarations -> env_override` to a string in `dfx.json` will replace `process.env.DFX_NETWORK` with that string in autogenerated declarations
 - Write your own `createActor` constructor
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contact
+
+For questions or inquiries, please open an issue in this repository.
