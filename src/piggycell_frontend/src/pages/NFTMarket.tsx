@@ -293,85 +293,69 @@ const NFTMarket = () => {
         return;
       }
 
-      const newNFTDataPromises = result.items.map(async (listing) => {
-        const tokenId = listing.tokenId;
-        // 이미 로드된 NFT인지 확인
-        const isDuplicate = nfts.some(
-          (nft) => nft.id.toString() === tokenId.toString()
-        );
-        if (isDuplicate) {
-          console.log(`중복 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`);
-          return null;
-        }
+      // 현재 로드된 NFT ID 집합 생성
+      const existingIds = new Set(nfts.map((nft) => nft.id.toString()));
 
-        const metadata = await actor.icrc7_token_metadata([tokenId]);
+      // 중복 ID 제외하고 새로운 ID만 추출
+      const uniqueTokenIds = result.items
+        .map((listing) => listing.tokenId)
+        .filter((tokenId) => !existingIds.has(tokenId.toString()));
 
-        let location = "위치 정보 없음";
-        let chargerCount = 0;
-
-        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
-          const metadataFields = metadata[0][0] as Array<
-            [string, { Text?: string; Nat?: bigint }]
-          >;
-          metadataFields.forEach(([key, value]) => {
-            if (key === "location" && value.Text) {
-              location = value.Text;
-            } else if (key === "chargerCount" && value.Nat) {
-              chargerCount = Number(value.Nat);
-            }
-          });
-        }
-
-        return {
-          id: tokenId,
-          name: `충전 허브 #${tokenId.toString()}`,
-          location,
-          price: listing.price,
-          status: "available",
-          chargerCount,
-        };
-      });
-
-      const newNFTData = (await Promise.all(newNFTDataPromises)).filter(
-        Boolean
-      ) as NFTData[];
-      console.log(`새 NFT ${newNFTData.length}개 로드됨, 중복 제외`);
-
-      // 실제로 추가할 새 데이터가 없는 경우 더 이상 불러올 항목이 없음을 표시
-      if (newNFTData.length === 0) {
+      if (uniqueTokenIds.length === 0) {
         console.log("모든 새 NFT가 중복이므로 더 이상 불러올 항목이 없습니다.");
         setHasMore(false);
         setLoadingMore(false);
         return;
       }
 
-      // 중복 확인 후 추가
-      setNfts((prev) => {
-        const uniqueNewNFTs = newNFTData.filter(
-          (newNFT) =>
-            !prev.some(
-              (existingNFT) =>
-                existingNFT.id.toString() === newNFT.id.toString()
-            )
-        );
-        console.log(`최종 추가되는 NFT 개수: ${uniqueNewNFTs.length}개`);
+      // 한 번의 API 호출로 모든 메타데이터 가져오기
+      const batchMetadata = await actor.icrc7_token_metadata(uniqueTokenIds);
 
-        // 실제로 추가할 항목이 없는 경우 hasMore를 false로 설정
-        if (uniqueNewNFTs.length === 0) {
-          setHasMore(false);
-          return prev;
-        }
+      // 메타데이터 처리
+      const newNFTData = uniqueTokenIds
+        .map((tokenId, index) => {
+          const listing = result.items.find(
+            (item) => item.tokenId.toString() === tokenId.toString()
+          );
+          if (!listing) return null;
 
-        return [...prev, ...uniqueNewNFTs];
-      });
+          const metadata = batchMetadata[index];
+
+          let location = "위치 정보 없음";
+          let chargerCount = 0;
+
+          if (metadata && metadata[0]) {
+            const metadataFields = metadata[0] as Array<
+              [string, { Text?: string; Nat?: bigint }]
+            >;
+            metadataFields.forEach(([key, value]) => {
+              if (key === "location" && value.Text) {
+                location = value.Text;
+              } else if (key === "chargerCount" && value.Nat) {
+                chargerCount = Number(value.Nat);
+              }
+            });
+          }
+
+          return {
+            id: tokenId,
+            name: `충전 허브 #${tokenId.toString()}`,
+            location,
+            price: listing.price,
+            status: "available",
+            chargerCount,
+          };
+        })
+        .filter(Boolean) as NFTData[];
+
+      console.log(`새 NFT ${newNFTData.length}개 로드됨, 중복 제외`);
+
+      // 중복 확인 불필요 (이미 위에서 처리함)
+      setNfts((prev) => [...prev, ...newNFTData]);
 
       // nextStart가 없으면 더 이상 데이터가 없음
       setNextStart(result.nextStart ? Number(result.nextStart) : null);
       setHasMore(!!result.nextStart);
-
-      // 통계 업데이트
-      const stats = await getMarketStats();
-      setMarketStats(stats);
     } catch (error) {
       console.error("추가 NFT 데이터 로딩 실패:", error);
       message.error("추가 NFT 데이터를 불러오는데 실패했습니다.");
@@ -411,62 +395,18 @@ const NFTMarket = () => {
         return;
       }
 
-      const soldNFTDataPromises = result.items.map(async (listing: Listing) => {
-        const tokenId = listing.tokenId;
-        // 이미 로드된 NFT인지 확인
-        const isDuplicate = soldNfts.some(
-          (nft) => nft.id.toString() === tokenId.toString()
-        );
-        if (isDuplicate) {
-          console.log(
-            `중복 판매 완료 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`
-          );
-          return null;
-        }
+      // 메타데이터를 더 효율적으로 가져오기 위해 한 번에 모든 토큰 ID 배열을 구성
+      const tokenIds = result.items.map((listing) => listing.tokenId);
 
-        const metadata = await actor.icrc7_token_metadata([tokenId]);
+      // 중복 체크를 위한 현재 로드된 NFT ID 집합 생성
+      const existingIds = new Set(soldNfts.map((nft) => nft.id.toString()));
 
-        let location = "위치 정보 없음";
-        let chargerCount = 0;
-        let price = listing.price;
+      // 중복 ID를 필터링
+      const uniqueTokenIds = tokenIds.filter(
+        (id) => !existingIds.has(id.toString())
+      );
 
-        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
-          const metadataFields = metadata[0][0] as Array<
-            [string, { Text?: string; Nat?: bigint }]
-          >;
-          metadataFields.forEach(([key, value]) => {
-            if (key === "location" && value.Text) {
-              location = value.Text;
-            } else if (key === "chargerCount" && value.Nat) {
-              chargerCount = Number(value.Nat);
-            } else if (key === "price" && value.Nat) {
-              price = value.Nat;
-            }
-            if (key === "piggycell:location" && value.Text) {
-              location = value.Text;
-            } else if (key === "piggycell:charger_count" && value.Nat) {
-              chargerCount = Number(value.Nat);
-            }
-          });
-        }
-
-        return {
-          id: tokenId,
-          name: `충전 허브 #${tokenId.toString()}`,
-          location,
-          price,
-          status: "sold",
-          chargerCount,
-        };
-      });
-
-      const soldNFTData = (await Promise.all(soldNFTDataPromises)).filter(
-        Boolean
-      ) as NFTData[];
-      console.log(`새 판매 완료 NFT ${soldNFTData.length}개 로드됨, 중복 제외`);
-
-      // 실제로 추가할 새 데이터가 없는 경우 더 이상 불러올 항목이 없음을 표시
-      if (soldNFTData.length === 0) {
+      if (uniqueTokenIds.length === 0) {
         console.log(
           "모든 새 판매 완료 NFT가 중복이므로 더 이상 불러올 항목이 없습니다."
         );
@@ -475,29 +415,70 @@ const NFTMarket = () => {
         return;
       }
 
-      // 중복 확인 후 추가
-      setSoldNfts((prev) => {
-        const uniqueNewNFTs = soldNFTData.filter(
-          (newNFT) =>
-            !prev.some(
-              (existingNFT) =>
-                existingNFT.id.toString() === newNFT.id.toString()
-            )
-        );
-        console.log(
-          `최종 추가되는 판매 완료 NFT 개수: ${uniqueNewNFTs.length}개`
-        );
+      // 중복이 아닌 NFT만 메타데이터 가져오기
+      const batchMetadata = await actor.icrc7_token_metadata(uniqueTokenIds);
 
-        // 실제로 추가할 항목이 없는 경우 soldHasMore를 false로 설정
-        if (uniqueNewNFTs.length === 0) {
-          setSoldHasMore(false);
-          return prev;
-        }
+      // 결과 매핑
+      const soldNFTData = uniqueTokenIds
+        .map((tokenId, index) => {
+          const listing = result.items.find(
+            (item) => item.tokenId.toString() === tokenId.toString()
+          );
+          if (!listing) return null;
 
-        return [...prev, ...uniqueNewNFTs];
-      });
+          console.log(`중복 아닌 판매 완료 NFT 처리: ${tokenId.toString()}`);
 
-      // nextStart가 없으면 더 이상 데이터가 없음
+          // 배치로 가져온 메타데이터 사용
+          const metadata = batchMetadata[index];
+
+          let location = "위치 정보 없음";
+          let chargerCount = 0;
+          let price = listing.price;
+
+          if (metadata && metadata[0]) {
+            const metadataFields = metadata[0] as Array<
+              [string, { Text?: string; Nat?: bigint }]
+            >;
+            metadataFields.forEach(([key, value]) => {
+              if (key === "location" && value.Text) {
+                location = value.Text;
+              } else if (key === "chargerCount" && value.Nat) {
+                chargerCount = Number(value.Nat);
+              } else if (key === "price" && value.Nat) {
+                price = value.Nat;
+              }
+              if (key === "piggycell:location" && value.Text) {
+                location = value.Text;
+              } else if (key === "piggycell:charger_count" && value.Nat) {
+                chargerCount = Number(value.Nat);
+              }
+            });
+          }
+
+          return {
+            id: tokenId,
+            name: `충전 허브 #${tokenId.toString()}`,
+            location,
+            price,
+            status: "sold",
+            chargerCount,
+          };
+        })
+        .filter(Boolean) as NFTData[];
+
+      console.log(`새 판매 완료 NFT ${soldNFTData.length}개 로드됨, 중복 제외`);
+
+      if (soldNFTData.length === 0) {
+        console.log("추가할 새 판매 완료 NFT가 없습니다.");
+        setSoldHasMore(false);
+        setLoadingMoreSold(false);
+        return;
+      }
+
+      // 판매 완료된 NFT 데이터에 추가
+      setSoldNfts((prev) => [...prev, ...soldNFTData]);
+
+      // 다음 페이지 정보 업데이트
       setSoldNextStart(result.nextStart ? Number(result.nextStart) : null);
       setSoldHasMore(!!result.nextStart);
     } catch (error) {
@@ -536,62 +517,68 @@ const NFTMarket = () => {
         return;
       }
 
-      const soldNFTDataPromises = result.items.map(async (listing: Listing) => {
-        const tokenId = listing.tokenId;
-        console.log(`판매 완료 NFT 정보 로드 중: ${tokenId.toString()}`);
+      // 메타데이터를 더 효율적으로 가져오기 위해 한 번에 모든 토큰 ID 배열을 구성
+      const tokenIds = result.items.map((listing) => listing.tokenId);
 
-        // 초기 로드가 아닐 경우 중복 확인 (초기 로드일 때는 이미 상태가 비어있음)
-        if (soldNextStart !== null) {
-          const isDuplicate = soldNfts.some(
-            (nft) => nft.id.toString() === tokenId.toString()
-          );
-          if (isDuplicate) {
-            console.log(
-              `중복 판매 완료 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`
+      // 모든 토큰의 메타데이터를 한 번의 호출로 가져옵니다
+      const batchMetadata = await actor.icrc7_token_metadata(tokenIds);
+
+      const soldNFTData = result.items
+        .map((listing: Listing, index) => {
+          const tokenId = listing.tokenId;
+          console.log(`판매 완료 NFT 정보 처리 중: ${tokenId.toString()}`);
+
+          // 초기 로드가 아닐 경우 중복 확인 (초기 로드일 때는 이미 상태가 비어있음)
+          if (soldNextStart !== null) {
+            const isDuplicate = soldNfts.some(
+              (nft) => nft.id.toString() === tokenId.toString()
             );
-            return null;
+            if (isDuplicate) {
+              console.log(
+                `중복 판매 완료 NFT 발견: ${tokenId.toString()}, 건너뜁니다.`
+              );
+              return null;
+            }
           }
-        }
 
-        const metadata = await actor.icrc7_token_metadata([tokenId]);
+          // 배치로 가져온 메타데이터 사용
+          const metadata = batchMetadata[index];
 
-        let location = "위치 정보 없음";
-        let chargerCount = 0;
-        let price = listing.price;
+          let location = "위치 정보 없음";
+          let chargerCount = 0;
+          let price = listing.price;
 
-        if (metadata && metadata.length > 0 && metadata[0] && metadata[0][0]) {
-          const metadataFields = metadata[0][0] as Array<
-            [string, { Text?: string; Nat?: bigint }]
-          >;
-          metadataFields.forEach(([key, value]) => {
-            if (key === "location" && value.Text) {
-              location = value.Text;
-            } else if (key === "chargerCount" && value.Nat) {
-              chargerCount = Number(value.Nat);
-            } else if (key === "price" && value.Nat) {
-              price = value.Nat;
-            }
-            if (key === "piggycell:location" && value.Text) {
-              location = value.Text;
-            } else if (key === "piggycell:charger_count" && value.Nat) {
-              chargerCount = Number(value.Nat);
-            }
-          });
-        }
+          if (metadata && metadata[0]) {
+            const metadataFields = metadata[0] as Array<
+              [string, { Text?: string; Nat?: bigint }]
+            >;
+            metadataFields.forEach(([key, value]) => {
+              if (key === "location" && value.Text) {
+                location = value.Text;
+              } else if (key === "chargerCount" && value.Nat) {
+                chargerCount = Number(value.Nat);
+              } else if (key === "price" && value.Nat) {
+                price = value.Nat;
+              }
+              if (key === "piggycell:location" && value.Text) {
+                location = value.Text;
+              } else if (key === "piggycell:charger_count" && value.Nat) {
+                chargerCount = Number(value.Nat);
+              }
+            });
+          }
 
-        return {
-          id: tokenId,
-          name: `충전 허브 #${tokenId.toString()}`,
-          location,
-          price,
-          status: "sold",
-          chargerCount,
-        };
-      });
+          return {
+            id: tokenId,
+            name: `충전 허브 #${tokenId.toString()}`,
+            location,
+            price,
+            status: "sold",
+            chargerCount,
+          };
+        })
+        .filter(Boolean) as NFTData[];
 
-      const soldNFTData = (await Promise.all(soldNFTDataPromises)).filter(
-        Boolean
-      ) as NFTData[];
       console.log(`새 판매 완료 NFT ${soldNFTData.length}개 로드됨, 중복 제외`);
 
       if (soldNFTData.length === 0) {
@@ -643,34 +630,39 @@ const NFTMarket = () => {
       setLoading(true);
       const actor = await createActor();
 
-      // 통계 데이터를 먼저 가져옴
-      const stats = await getMarketStats();
-      setMarketStats(stats);
-      console.log("통계 정보:", stats);
+      // Promise.all을 사용하여 필요한 모든 API 호출을 병렬로 실행
+      // 이전에는 getMarketStats()를 호출하고 나서 다시 getListings()를 호출했지만,
+      // 이제는 필요한 모든 API를 한 번에 호출하고 그 결과를 활용합니다.
+      const [totalSupply, listings, totalVolume] = await Promise.all([
+        actor.icrc7_total_supply(),
+        actor.getListings([], BigInt(8)), // 첫 페이지 NFT 데이터를 바로 가져옵니다
+        actor.getTotalVolume(),
+      ]);
 
-      console.log("초기 NFT 데이터 로딩 시작");
-      console.log("Actor 생성 완료");
+      console.log("모든 API 호출 완료");
+      console.log("총 NFT 발행량:", totalSupply.toString());
+      console.log("총 거래량:", totalVolume.toString());
+      console.log("마켓 리스팅 결과:", listings);
+      console.log("마켓 리스팅 항목 수:", listings.items.length);
 
-      const result = await actor.getListings([], BigInt(8));
-      console.log("마켓 리스팅 결과:", result);
-      console.log("마켓 리스팅 항목 수:", result.items.length);
-      console.log(
-        "마켓 리스팅 항목 세부 정보:",
-        JSON.stringify(
-          result.items,
-          (_, v) => (typeof v === "bigint" ? v.toString() : v),
-          2
-        )
-      );
+      // 통계 데이터 계산
+      const availableNFTs = Number(listings.total);
+      const totalSupplyNum = Number(totalSupply);
+      const soldNFTs = totalSupplyNum - availableNFTs;
 
-      // 중복 API 호출 제거 - 이미 getMarketStats에서 가져온 데이터 활용
-      console.log("전체 NFT 발행량:", stats.totalSupply);
-      console.log("총 거래량:", stats.totalVolume);
+      // 통계 데이터를 설정
+      setMarketStats({
+        totalSupply: totalSupplyNum,
+        availableNFTs,
+        soldNFTs,
+        totalVolume: Number(totalVolume),
+        stakedCount: 0, // 기본값
+        activeUsers: 0, // 기본값
+      });
 
-      if (result.items.length === 0) {
+      if (listings.items.length === 0) {
         console.log("판매 중인 NFT가 없음");
         setNfts([]);
-        // 이미 setMarketStats가 호출되었으므로 다시 설정할 필요 없음
         setHasMore(false);
 
         if (showMessage) {
@@ -685,7 +677,8 @@ const NFTMarket = () => {
         return;
       }
 
-      const nftDataPromises = result.items.map(async (listing) => {
+      // NFT 메타데이터를 병렬로 가져옵니다
+      const nftDataPromises = listings.items.map(async (listing) => {
         const tokenId = listing.tokenId;
         const metadata = await actor.icrc7_token_metadata([tokenId]);
 
@@ -717,30 +710,10 @@ const NFTMarket = () => {
 
       const nftData = await Promise.all(nftDataPromises);
       setNfts(nftData);
-      setNextStart(result.nextStart ? Number(result.nextStart) : null);
-      setHasMore(!!result.nextStart);
+      setNextStart(listings.nextStart ? Number(listings.nextStart) : null);
+      setHasMore(!!listings.nextStart);
 
-      const avail = Number(result.total);
-      const total = Number(stats.totalSupply);
-      const sold = total - avail;
-
-      console.log("통계 계산 상세:", {
-        "전체 NFT (totalSupply)": total,
-        "판매중 NFT (result.total)": avail,
-        "계산된 판매완료 NFT (totalSupply - result.total)": sold,
-        "현재 페이지 NFT 개수": nftData.length,
-        "모든 NFT 정보": nftData,
-      });
-
-      setMarketStats({
-        totalSupply: total,
-        availableNFTs: avail,
-        soldNFTs: sold,
-        totalVolume: Number(stats.totalVolume),
-        stakedCount: 0,
-        activeUsers: 0,
-      });
-
+      // 판매 완료된 NFT를 병렬로 가져옵니다
       await fetchSoldNFTs();
 
       if (showMessage) {
