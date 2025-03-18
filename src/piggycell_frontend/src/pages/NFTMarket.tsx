@@ -669,7 +669,7 @@ const NFTMarket = () => {
           message.success({
             content: "새로고침 완료!",
             key: "refreshMessage",
-            duration: 2,
+            duration: 1,
           });
         }
 
@@ -720,7 +720,7 @@ const NFTMarket = () => {
         message.success({
           content: "새로고침 완료!",
           key: "refreshMessage",
-          duration: 2,
+          duration: 1,
         });
       }
     } catch (error) {
@@ -730,7 +730,7 @@ const NFTMarket = () => {
         message.error({
           content: "NFT 데이터를 불러오는데 실패했습니다.",
           key: "refreshMessage",
-          duration: 2,
+          duration: 1,
         });
       }
     } finally {
@@ -791,7 +791,7 @@ const NFTMarket = () => {
         message.error({
           content: "NFT를 구매하려면 로그인이 필요합니다.",
           key: "loginRequired",
-          duration: 5,
+          duration: 1,
         });
         setBuyingNFT(null);
         return;
@@ -806,7 +806,7 @@ const NFTMarket = () => {
         message.error({
           content: "NFT를 구매하려면 로그인이 필요합니다.",
           key: "loginRequired",
-          duration: 5,
+          duration: 1,
         });
         setBuyingNFT(null);
         return;
@@ -1013,7 +1013,7 @@ const NFTMarket = () => {
         message.success({
           content: "NFT 구매가 완료되었습니다!",
           key: "buyMessage",
-          duration: 3,
+          duration: 1,
         });
 
         // 구매한 NFT 찾기

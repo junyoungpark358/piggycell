@@ -117,7 +117,7 @@ export const NFTCard: React.FC<NFTCardProps> = ({
       message.error({
         content: "NFT를 구매하려면 로그인이 필요합니다.",
         key: "loginRequired",
-        duration: 5,
+        duration: 1,
       });
     } else if (onBuy) {
       onBuy();

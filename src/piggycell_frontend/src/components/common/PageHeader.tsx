@@ -81,7 +81,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
           message.success({
             content: "잔액이 클립보드에 복사되었습니다!",
             icon: <CheckOutlined style={{ color: "#52c41a" }} />,
-            duration: 2,
+            duration: 1,
           });
 
           // 2초 후 복사 상태 초기화
@@ -105,7 +105,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, onRefresh }) => {
           message.success({
             content: "Principal ID가 클립보드에 복사되었습니다!",
             icon: <CheckOutlined style={{ color: "#52c41a" }} />,
-            duration: 2,
+            duration: 1,
           });
 
           // 2초 후 복사 상태 초기화

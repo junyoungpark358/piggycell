@@ -224,7 +224,7 @@ const TokenManagement: React.FC = () => {
           message.success({
             content: `${pgcAmount} PGC가 성공적으로 전송되었습니다.`,
             key: messageKey,
-            duration: 2,
+            duration: 1,
           });
 
           setIsTransferModalVisible(false);
@@ -259,7 +259,7 @@ const TokenManagement: React.FC = () => {
           message.error({
             content: `PGC 전송 실패: ${errorMsg}`,
             key: messageKey,
-            duration: 3,
+            duration: 1,
           });
         }
       } catch (error) {
@@ -267,7 +267,7 @@ const TokenManagement: React.FC = () => {
         message.error({
           content: "PGC 전송 중 오류가 발생했습니다.",
           key: messageKey,
-          duration: 3,
+          duration: 1,
         });
       }
     } catch (error) {
@@ -303,7 +303,7 @@ const TokenManagement: React.FC = () => {
         message.error({
           content: "새로고침 실패!",
           key: messageKey,
-          duration: 2,
+          duration: 1,
         });
       })
       .finally(() => {
@@ -312,7 +312,7 @@ const TokenManagement: React.FC = () => {
         message.success({
           content: "새로고침 완료!",
           key: messageKey,
-          duration: 2,
+          duration: 1,
         });
       });
   };

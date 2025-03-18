@@ -962,7 +962,7 @@ const Revenue = () => {
             message.success({
               content: "새로고침 완료!",
               key: "refreshMessage",
-              duration: 2,
+              duration: 1,
             });
           }
         })
@@ -973,7 +973,7 @@ const Revenue = () => {
             message.error({
               content: "데이터를 불러오는데 실패했습니다.",
               key: "refreshMessage",
-              duration: 2,
+              duration: 1,
             });
           }
         });
@@ -985,7 +985,7 @@ const Revenue = () => {
         message.error({
           content: "데이터를 불러오는데 실패했습니다.",
           key: "refreshMessage",
-          duration: 2,
+          duration: 1,
         });
       }
       setLoading(false);

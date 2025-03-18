@@ -148,7 +148,7 @@ const Staking = () => {
         message.success({
           content: "새로고침 완료!",
           key: "refreshMessage",
-          duration: 2,
+          duration: 1,
         });
       }
     } catch (error) {
@@ -159,7 +159,7 @@ const Staking = () => {
         message.error({
           content: "스테이킹 데이터를 불러오는데 실패했습니다.",
           key: "refreshMessage",
-          duration: 2,
+          duration: 1,
         });
       }
     } finally {

@@ -475,7 +475,7 @@ const NFTManagement = () => {
       message.success({
         content: "새로고침 완료!",
         key: messageKey,
-        duration: 2,
+        duration: 1,
       });
     } catch (error) {
       console.error("새로고침 실패:", error);
@@ -483,7 +483,7 @@ const NFTManagement = () => {
       message.error({
         content: "새로고침 실패!",
         key: "refreshMessage",
-        duration: 2,
+        duration: 1,
       });
     } finally {
       setLoading(false); // 성공/실패 여부와 관계없이 로딩 상태 해제

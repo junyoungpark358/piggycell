@@ -198,7 +198,7 @@ const AdminDashboard = () => {
       message.error({
         content: "거래 내역을 불러오는 중 오류가 발생했습니다.",
         key: "loadingTransactions",
-        duration: 3,
+        duration: 1,
       });
     }
   };
@@ -308,7 +308,7 @@ const AdminDashboard = () => {
       message.success({
         content: "새로고침 완료!",
         key: messageKey,
-        duration: 2,
+        duration: 1,
       });
       console.log("[DEBUG] 새로고침 완료");
     } catch (error) {
@@ -316,7 +316,7 @@ const AdminDashboard = () => {
       message.error({
         content: "새로고침 실패!",
         key: messageKey,
-        duration: 2,
+        duration: 1,
       });
     } finally {
       setLoading(false);
@@ -357,14 +357,14 @@ const AdminDashboard = () => {
         message.success({
           content: "관리자가 성공적으로 추가되었습니다.",
           key: "addAdmin",
-          duration: 2,
+          duration: 1,
         });
         handleAddAdminCancel();
       } else {
         message.error({
           content: `관리자 추가 실패: ${result.err}`,
           key: "addAdmin",
-          duration: 3,
+          duration: 1,
         });
       }
     } catch (error) {
@@ -372,7 +372,7 @@ const AdminDashboard = () => {
       message.error({
         content: "관리자 추가 중 오류가 발생했습니다.",
         key: "addAdmin",
-        duration: 3,
+        duration: 1,
       });
     } finally {
       setAddingAdmin(false);
@@ -413,14 +413,14 @@ const AdminDashboard = () => {
         message.success({
           content: "관리자가 성공적으로 삭제되었습니다.",
           key: "removeAdmin",
-          duration: 2,
+          duration: 1,
         });
         handleRemoveAdminCancel();
       } else {
         message.error({
           content: `관리자 삭제 실패: ${result.err}`,
           key: "removeAdmin",
-          duration: 3,
+          duration: 1,
         });
       }
     } catch (error) {
@@ -428,7 +428,7 @@ const AdminDashboard = () => {
       message.error({
         content: "관리자 삭제 중 오류가 발생했습니다.",
         key: "removeAdmin",
-        duration: 3,
+        duration: 1,
       });
     } finally {
       setRemovingAdmin(false);
