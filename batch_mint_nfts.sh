@@ -4,6 +4,10 @@
 # NFT 개수 설정 (기본값: 5)
 NFT_COUNT=${1:-5}
 
+# 네트워크 설정 (기본값: ic)
+NETWORK=${2:-"ic"}
+echo "사용 네트워크: $NETWORK"
+
 # 한국 지명 배열 (실제 존재하는 지명으로 구성)
 declare -a LOCATIONS=(
   # 서울
@@ -242,8 +246,8 @@ for ((i=1; i<=NFT_COUNT; i++)); do
   echo "충전기 수: $CHARGER_COUNT"
   echo "가격: $PRICE (raw units) - $CHARGER_COUNT PGC"
 
-  # mint_nft.sh 스크립트 호출
-  ./mint_nft.sh "$LOCATION" "$CHARGER_COUNT" "$PRICE"
+  # mint_nft.sh 스크립트 호출 (네트워크 파라미터 전달)
+  ./mint_nft.sh "$LOCATION" "$CHARGER_COUNT" "$PRICE" "$NETWORK"
   RESULT=$?
 
   # 결과 카운터 업데이트
@@ -263,3 +267,9 @@ echo "총 시도: $NFT_COUNT"
 echo "성공: $SUCCESS_COUNT"
 echo "실패: $FAIL_COUNT"
 echo "사용된 위치: ${#USED_LOCATIONS[@]}"
+
+# 사용 방법 출력 (작성 완료 후)
+echo -e "\n사용 방법 예시:"
+echo "  ./batch_mint_nfts.sh                # 기본값 사용 (5개 NFT, 메인넷)"
+echo "  ./batch_mint_nfts.sh 10             # 10개 NFT 생성 (메인넷)"
+echo "  ./batch_mint_nfts.sh 10 local       # 10개 NFT 생성 (로컬 네트워크)"
