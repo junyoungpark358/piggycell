@@ -1,4 +1,4 @@
-import { Row, Col, Tabs, Empty } from "antd";
+import { Row, Col, Tabs, Empty, Spin } from "antd";
 import {
   ThunderboltOutlined,
   ShoppingCartOutlined,
@@ -246,6 +246,10 @@ const Home = () => {
                       />
                     </Col>
                   ))
+                ) : loading ? (
+                  <Col span={24} className="my-5 text-center">
+                    <Spin size="large" />
+                  </Col>
                 ) : (
                   <Col span={24}>
                     <Empty description="보유 중인 NFT가 없습니다." />
@@ -275,6 +279,10 @@ const Home = () => {
                       />
                     </Col>
                   ))
+                ) : loading ? (
+                  <Col span={24} className="my-5 text-center">
+                    <Spin size="large" />
+                  </Col>
                 ) : (
                   <Col span={24}>
                     <Empty description="스테이킹 중인 NFT가 없습니다." />
@@ -285,6 +293,11 @@ const Home = () => {
           },
         ]}
       />
+
+      {/* 로딩 상태에 따른 추가 정보 표시 */}
+      <div className="mt-6 text-center text-gray-500">
+        {loading && <p>NFT 데이터를 불러오는 중입니다...</p>}
+      </div>
     </div>
   );
 };
